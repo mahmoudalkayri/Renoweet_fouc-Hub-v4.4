@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1324">
+  <meta name="description" content="Renoweet Focus Hub v4.4 — operations, accounting, VAT, cash, focus and goals.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>Renoweet Focus Hub v4.4</title>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand-row">
+    <div class="brand-mark">R</div>
+    <div class="brand-copy"><h1>Renoweet Focus Hub <small>v4.4</small></h1><p>Business · Accounting · Focus · Goals</p></div>
+    <div class="status-stack"><span id="storageBadge" class="status-badge" data-state="loading" role="status" aria-live="polite">Database: loading</span><span id="onlineBadge" class="status-badge">Checking…</span><button id="installBtn" class="install-btn hidden" type="button">Install</button></div>
+  </div>
+</header>
+<nav class="tabs" aria-label="Main navigation">
+  <button class="tab active" data-view="home">Home</button>
+  <button class="tab" data-view="goals">Focus & Goals</button>
+  <button class="tab" data-view="expenses">Expense Optimizer</button>
+  <button class="tab" data-view="data">Data</button>
+</nav>
+<main>
+  <section id="home" class="view active-view">
+    <section class="hero-grid">
+      <div class="focus-card reminder-shell">
+        <div class="section-kicker">FOCUS NOW</div>
+        <div id="reminderCard" class="reminder-card" tabindex="0" aria-live="polite"><p id="reminderText"></p></div>
+        <div class="reminder-controls"><button id="prevReminder" aria-label="Previous reminder">←</button><div id="reminderDots" class="dots"></div><button id="nextReminder" aria-label="Next reminder">→</button></div>
+        <p class="microcopy">Changes automatically every 10 seconds. Swipe left/right on the card.</p>
+      </div>
+      <div class="focus-card goal-snapshot">
+        <div class="section-kicker">JULY 2027 TARGET</div>
+        <h2>Physical work is no longer the main source of my income.</h2>
+        <div class="progress-track"><div id="headlineProgress" class="progress-fill"></div></div>
+        <div class="goal-mini-grid"><div><span>Target date</span><strong>31 Jul 2027</strong></div><div><span>Current progress</span><strong id="headlineProgressLabel">0%</strong></div></div>
+        <button class="secondary-action" data-open-view="goals">Update progress</button>
+      </div>
+    </section>
+
+    <section class="focus-card">
+      <div class="section-heading"><div><div class="section-kicker">YOUR CONTROL CENTER</div><h2>Open the tools that move Renoweet forward</h2></div></div>
+      <div id="linkGrid" class="link-grid"></div>
+      <p class="microcopy">The hub works offline. Renoweet OS, Bookkeeping and BOD are hosted with this hub; CV/Profile opens your public profile. Each tile reuses its own named browser window when the browser allows it.</p>
+    </section>
+
+    <section class="dashboard-grid">
+      <div class="focus-card"><div class="section-kicker">TODAY'S FOCUS</div><h2>One useful action</h2><div id="todayAction" class="action-callout"></div><button id="newActionBtn" class="secondary-action">Give me another</button></div>
+      <div class="focus-card"><div class="section-kicker">MONEY LEAK</div><h2>Storage box</h2><div class="money-number">€124<span>/month</span></div><p>That is <strong>€1,488/year</strong> before considering travel, time, or the value of the stored items.</p><button class="secondary-action" data-open-view="expenses">Run the decision</button></div>
+    </section>
+  </section>
+
+  <section id="goals" class="view">
+    <section class="focus-card">
+      <div class="section-heading"><div><div class="section-kicker">GOALS</div><h2>Goals, dates and progress</h2></div><button id="addGoalBtn" class="primary-action">+ Add goal</button></div>
+      <div id="goalsList" class="stack-list"></div>
+    </section>
+    <section class="focus-card">
+      <div class="section-heading"><div><div class="section-kicker">METRICS</div><h2>Numbers that tell me if I am moving upstream</h2></div><button id="addMetricBtn" class="primary-action">+ Add metric</button></div>
+      <div id="metricsList" class="metrics-grid"></div>
+    </section>
+  </section>
+
+  <section id="expenses" class="view">
+    <section class="focus-card">
+      <div class="section-heading"><div><div class="section-kicker">EXPENSE OPTIMIZER</div><h2>Keep, reduce, replace, sell, or cancel?</h2></div><button id="addExpenseBtn" class="primary-action">+ Add expense</button></div>
+      <p class="intro-note">This is not just a budget list. It asks whether an expense earns money, saves enough time, protects something valuable, or is simply being kept because it already exists.</p>
+      <div id="expensesList" class="stack-list"></div>
+    </section>
+    <section class="focus-card decision-lab">
+      <div class="section-kicker">QUICK PURCHASE TEST</div><h2>Before I buy or keep something</h2>
+      <div class="form-grid">
+        <label>Item<input id="qItem" placeholder="e.g. storage unit"></label>
+        <label>Cost (€)<input id="qCost" type="number" min="0" step="0.01" placeholder="124"></label>
+        <label>Frequency<select id="qFrequency"><option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="once">One-time</option></select></label>
+        <label>Last used<select id="qLastUsed"><option value="1">This week</option><option value="2">This month</option><option value="3">1–3 months ago</option><option value="4">3–6 months ago</option><option value="5">6–12 months ago</option><option value="6">Over a year ago</option></select></label>
+        <label>Income value (0–5)<input id="qIncome" type="range" min="0" max="5" value="2"></label>
+        <label>Time saved (0–5)<input id="qTime" type="range" min="0" max="5" value="2"></label>
+        <label>Replacement difficulty (0–5)<input id="qReplace" type="range" min="0" max="5" value="2"></label>
+        <label>Used regularly? (0–5)<input id="qUse" type="range" min="0" max="5" value="2"></label>
+      </div>
+      <button id="evaluateBtn" class="primary-action">Evaluate value</button>
+      <div id="quickResult" class="quick-result hidden"></div>
+    </section>
+  </section>
+
+  <section id="data" class="view">
+    <section class="focus-card">
+      <div class="section-kicker">FOCUS HUB DATABASE</div><h2>Your changes save automatically</h2>
+      <p class="intro-note">Focus, goals, metrics, reminders and expense-optimizer records are stored in the private Hub database. A browser copy keeps the Hub usable offline and syncs when you reconnect. Renoweet OS, Bookkeeping and BOD records remain in their existing Google Drive database.</p>
+      <div class="button-row"><button id="exportBtn" class="primary-action">Export backup</button><label class="file-button">Import backup<input id="importInput" type="file" accept="application/json"></label><button id="resetBtn" class="danger-action">Reset starter data</button></div>
+    </section>
+    <section class="focus-card"><div class="section-kicker">OFFLINE</div><h2>Installable PWA</h2><p>The Hub keeps a local working copy when you are offline. Chrome/Edge can install it on desktop and Android. On iPhone/iPad, use Safari → Share → Add to Home Screen.</p></section>
+  </section>
+<section class="panel"><h2>2026 Q3 legacy migration</h2><p>Controlled import with original YYYY-DDMMNNN invoice numbers preserved, duplicate protection and Drive recovery.</p><a class="app-link" href="Renoweet-Legacy-Import-2026-Q3.html">Open safe Q3 import</a></section>
+</main>
+
+<dialog id="editDialog"><form method="dialog" id="editForm"><div class="dialog-head"><h2 id="dialogTitle">Edit</h2><button value="cancel" class="icon-btn" aria-label="Close">×</button></div><div id="dialogFields"></div><div class="dialog-actions"><button value="cancel" class="secondary-action">Cancel</button><button id="dialogSaveBtn" value="default" class="primary-action">Save</button></div></form></dialog>
+<script src="app.js"></script>
+</body>
+</html>

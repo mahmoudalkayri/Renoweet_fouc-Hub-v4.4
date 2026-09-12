@@ -1,0 +1,42 @@
+{
+  "schema": "renoweet.year",
+  "schemaVersion": 2,
+  "meta": {
+    "year": 2026,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-09-10T00:00:00.000Z",
+    "revision": 84,
+    "status": "active",
+    "appVersion": "drive-v2.0",
+    "lastUpdatedBy": "dev_example",
+    "sections": {
+      "osRevision": 31,
+      "bookkeepingRevision": 53
+    }
+  },
+  "periods": {
+    "2026-Q1": {"status":"closed","closedAt":"2026-04-20T10:00:00.000Z","archiveFileId":"drive_file_q1","archiveChecksum":"example","closedRevision":20,"btwStatus":"Filed","filedDate":"2026-04-20","actualAmount":"","note":""},
+    "2026-Q2": {"status":"closed","closedAt":"2026-07-20T10:00:00.000Z","archiveFileId":"drive_file_q2","archiveChecksum":"example","closedRevision":48,"btwStatus":"Filed","filedDate":"2026-07-20","actualAmount":"","note":""},
+    "2026-Q3": {"status":"open","closedAt":null,"archiveFileId":null,"archiveChecksum":null,"closedRevision":null,"btwStatus":"Draft","filedDate":"","actualAmount":"","note":""},
+    "2026-Q4": {"status":"open","closedAt":null,"archiveFileId":null,"archiveChecksum":null,"closedRevision":null}
+  },
+  "integrity": {
+    "algorithm": "SHA-256",
+    "checksum": "calculated-by-the-app",
+    "recordCount": 0
+  },
+  "os": {
+    "projects": [],
+    "bookkeeping": [],
+    "deleted": []
+  },
+  "bookkeeping": {
+    "invoices": [],
+    "expenses": [],
+    "fuel": [],
+    "auto": [],
+    "deleted": [],
+    "control": {}
+  },
+  "audit": []
+}
