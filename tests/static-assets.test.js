@@ -21,4 +21,7 @@ if(bookkeepingUi.includes('<img src="icons/icon.svg" alt="Renoweet">'))throw new
 if(!bookkeepingUi.includes("document.querySelector('header .brand img')"))throw new Error('Invoice preview is not connected to the established Renoweet invoice logo.');
 for(const required of ['onclick="printInvoices()"','onclick="printExpenses()"','window.printInvoices=invoicePrintReport','window.printExpenses=expensePrintReport'])if(!bookkeepingUi.includes(required))throw new Error(`Bookkeeping print workflow is missing ${required}`);
 for(const required of ['thead{display:table-header-group}','counter(page)','Complete invoice register','Complete expense register'])if(!(bookkeeping+bookkeepingUi).includes(required))throw new Error(`Print report layout is missing ${required}`);
+const osPage=fs.readFileSync(path.join(root,'Renoweet-OS-Drive-v2.2.html'),'utf8');
+const osDrive=fs.readFileSync(path.join(root,'renoweet-os-drive-adapter-v3.6.js'),'utf8');
+for(const required of ['normalizeRecoveredProject','restoreProjectRecoveryFile','Restore project file'])if(!(osPage+osDrive).includes(required))throw new Error(`OS project recovery is missing ${required}`);
 console.log('Static asset checks passed.');
