@@ -23,5 +23,11 @@ for(const required of ['onclick="printInvoices()"','onclick="printExpenses()"','
 for(const required of ['thead{display:table-header-group}','counter(page)','Complete invoice register','Complete expense register'])if(!(bookkeeping+bookkeepingUi).includes(required))throw new Error(`Print report layout is missing ${required}`);
 const osPage=fs.readFileSync(path.join(root,'Renoweet-OS-Drive-v2.2.html'),'utf8');
 const osDrive=fs.readFileSync(path.join(root,'renoweet-os-drive-adapter-v3.6.js'),'utf8');
+const bookkeepingDrive=fs.readFileSync(path.join(root,'renoweet-bookkeeping-drive-adapter-v3.7.js'),'utf8');
 for(const required of ['normalizeRecoveredProject','restoreProjectRecoveryFile','Restore project file'])if(!(osPage+osDrive).includes(required))throw new Error(`OS project recovery is missing ${required}`);
+for(const required of ["if($('inv_number'))","p.invoice.date=$('inv_date').value","p.invoice.dueDays=+$('inv_due').value","if(!p.invoice.number)p.invoice.number=nextInvoice(p.invoice.date)"])if(!osPage.includes(required))throw new Error(`OS → Bookkeeping invoice handoff is missing ${required}`);
+for(const obsolete of ["if($('i_number'))","p.invoice.date=$('i_date').value","p.invoice.dueDays=+$('i_due').value"])if(osPage.includes(obsolete))throw new Error(`OS invoice form still uses obsolete field mapping ${obsolete}`);
+for(const required of ['bookkeepingQueuedAt','allOSQueueRows','osPendingRows','OS invoices waiting to import'])if(!bookkeepingDrive.includes(required))throw new Error(`Bookkeeping queue verification is missing ${required}`);
+if(!bookkeepingDrive.includes('Connect Drive to check OS invoices'))throw new Error('Bookkeeping must not report zero OS invoices before Drive has been checked.');
+if(bookkeepingDrive.includes("sy.textContent='0 OS invoices waiting to import'"))throw new Error('Bookkeeping still shows an unverified zero before Drive connection.');
 console.log('Static asset checks passed.');
