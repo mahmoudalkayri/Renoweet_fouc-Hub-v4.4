@@ -66,36 +66,53 @@ async function createBinaryFile(name,parentId,bytes,mime){const boundary='renowe
 async function updateTextFile(id,text,mime='application/json'){const r=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(id)}?uploadType=media&fields=id,name,modifiedTime,version,md5Checksum,parents`,{method:'PATCH',headers:{'Content-Type':mime},body:text});return r.json()}
 async function getMeta(id){return (await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=id,name,mimeType,modifiedTime,version,md5Checksum,parents`)).json()}async function getText(id){return (await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`)).text()}async function getBytes(id){return (await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`)).arrayBuffer()}
 async function usableMeta(id,expectedName=null,expectedMime=null){if(!id)return null;try{const m=await getMeta(id);if(!m?.id)return null;if(expectedName&&m.name!==expectedName)return null;if(expectedMime&&m.mimeType!==expectedMime)return null;return m}catch(e){return null}}
-async function ensureFolder(name,parentId=null,cacheKey=null){if(cacheKey){const remembered=await usableMeta(localStorage.getItem(cacheKey),name,'application/vnd.google-apps.folder');if(remembered)return remembered}const parentQ=parentId?` and '${escQ(parentId)}' in parents`:'';const files=await listFiles(`name='${escQ(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parentQ}`);const folder=files[0]||await createMetadata({name,mimeType:'application/vnd.google-apps.folder',parents:parentId?[parentId]:undefined});if(cacheKey)localStorage.setItem(cacheKey,folder.id);return folder}
+async function ensureFolder(name,parentId=null,cacheKey=null){const parentQ=parentId?` and '${escQ(parentId)}' in parents`:'';const files=await listFiles(`name='${escQ(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parentQ}`),remembered=cacheKey?await usableMeta(localStorage.getItem(cacheKey),name,'application/vnd.google-apps.folder'):null,candidates=[],seen=new Set();for(const f of [remembered,...files]){if(!f?.id||seen.has(f.id))continue;if(parentId&&!(f.parents||[]).includes(parentId))continue;seen.add(f.id);candidates.push(f)}if(candidates.length>1){const e=new Error(`Multiple live “${name}” folders were found in Google Drive. Renoweet stopped before choosing one. Keep the current folder and rename or move the duplicate, then reconnect.`);e.name='RenoweetDuplicateFolderError';e.files=clone(candidates);throw e}const folder=candidates[0]||await createMetadata({name,mimeType:'application/vnd.google-apps.folder',parents:parentId?[parentId]:undefined});if(cacheKey)localStorage.setItem(cacheKey,folder.id);return folder}
 async function ensureTree(){const root=await ensureFolder(ROOT_FOLDER,null,LS.folderId),active=await ensureFolder(ACTIVE_FOLDER,root.id,LS.activeFolderId),archives=await ensureFolder(ARCHIVE_FOLDER,root.id,LS.archivesFolderId),recovery=await ensureFolder(RECOVERY_FOLDER,root.id,LS.recoveryFolderId);return {root,active,archives,recovery}}
 function activeName(year=currentYear()){return `Renoweet-${safeYear(year)}.json`}
-async function findActive(year=currentYear()){
-  year=safeYear(year);
-  const tree=await ensureTree(),name=activeName(year),yearKey=LS.activeYearId+year;
-  // Robust reconnect: Drive can contain duplicate Renoweet folders/files after an earlier
-  // interrupted setup. Do not trust the first filename match. Collect every file this
-  // OAuth app can access, validate each canonical database, and choose the highest revision.
-  const ids=[];
-  for(const id of [localStorage.getItem(yearKey),localStorage.getItem(LS.activeId)])if(id)ids.push(id);
-  try{for(const f of await listFiles(`name='${escQ(name)}' and trashed=false`))ids.push(f.id)}catch(e){console.warn('Global active-file scan failed',e)}
-  try{for(const f of await listFiles(`name='${escQ(name)}' and trashed=false and '${escQ(tree.active.id)}' in parents`))ids.push(f.id)}catch(e){console.warn('Active-folder scan failed',e)}
-  const seen=new Set(),candidates=[];
-  for(const id of ids){
-    if(!id||seen.has(id))continue;seen.add(id);
-    try{
-      const meta=await usableMeta(id,name);if(!meta)continue;
-      const text=await getText(id),parsed=JSON.parse(text),data=await verifyCanonical(parsed);
-      if(Number(data?.meta?.year)!==Number(year))continue;
-      candidates.push({meta,data,revision:Number(data?.meta?.revision||0),modified:String(meta.modifiedTime||'')});
-    }catch(e){console.warn('Ignoring invalid Renoweet year candidate',id,e)}
-  }
-  candidates.sort((a,b)=>b.revision-a.revision||b.modified.localeCompare(a.modified));
-  const best=candidates[0]?.meta||null;
-  if(best){localStorage.setItem(yearKey,best.id);localStorage.setItem(LS.activeId,best.id)}
-  return {tree,file:best};
+function duplicateDatabaseError(year,files){
+ const details=(files||[]).map(f=>`${f.name||activeName(year)} — ${f.id}${f.modifiedTime?` — modified ${f.modifiedTime}`:''}`).join('\n');
+ const e=new Error(`Multiple live Renoweet-${year}.json databases were found in the Active folder. Renoweet stopped before reading or overwriting either file. Keep the correct file in Active and move the other copy outside Active, then reconnect.\n\n${details}`);
+ e.name='RenoweetDuplicateDatabaseError';e.files=clone(files||[]);return e
 }
-function blankManifest(){return {schema:'renoweet.manifest',schemaVersion:1,updatedAt:now(),activeYear:currentYear(),years:{}}}
-async function loadManifest(create=true){const tree=await ensureTree();let file=await usableMeta(localStorage.getItem(LS.manifestId),MANIFEST_NAME);if(!file){const files=await listFiles(`name='${MANIFEST_NAME}' and trashed=false and '${escQ(tree.root.id)}' in parents`);file=files[0]||null}if(!file){if(!create)return null;const m=blankManifest(),f=await createTextFile(MANIFEST_NAME,tree.root.id,JSON.stringify(m,null,2));localStorage.setItem(LS.manifestId,f.id);return {data:m,file:f}}localStorage.setItem(LS.manifestId,file.id);try{const data=JSON.parse(await getText(file.id));if(data.schema!=='renoweet.manifest')throw 0;data.years=data.years||{};return {data,file}}catch(e){throw new Error('Renoweet manifest is invalid. Live data was not changed.') }}
+async function validateActiveMeta(meta,year,activeFolderId){
+ if(!meta?.id||meta.name!==activeName(year)||!(meta.parents||[]).includes(activeFolderId))return null;
+ const text=await getText(meta.id),data=await verifyCanonical(JSON.parse(text));
+ if(Number(data?.meta?.year)!==Number(year))throw new Error(`${meta.name} has the wrong accounting year.`);
+ return {meta,data}
+}
+async function findActive(year=currentYear()){
+ year=safeYear(year);
+ const tree=await ensureTree(),name=activeName(year),yearKey=LS.activeYearId+year;
+ const liveFiles=await listFiles(`name='${escQ(name)}' and trashed=false and '${escQ(tree.active.id)}' in parents`);
+ if(liveFiles.length>1)throw duplicateDatabaseError(year,liveFiles);
+
+ // The manifest's exact Drive file ID is the source of truth. Browser-cached IDs are
+ // hints only and can never redirect Renoweet to a same-named file outside Active.
+ let manifest=null,manifestId='';
+ try{manifest=await loadManifest(false);manifestId=String(manifest?.data?.years?.[String(year)]?.activeFileId||'')}catch(e){console.warn('Could not read authoritative file ID from manifest',e);throw e}
+ if(manifestId){
+  const meta=await usableMeta(manifestId,name);
+  if(meta){
+   if(!(meta.parents||[]).includes(tree.active.id))throw new Error(`The manifest points to ${name}, but that file is no longer in the Active folder. Renoweet stopped to avoid creating or selecting a second live database.`);
+   if(liveFiles[0]&&liveFiles[0].id!==meta.id)throw duplicateDatabaseError(year,[meta,liveFiles[0]]);
+   await validateActiveMeta(meta,year,tree.active.id);
+   localStorage.setItem(yearKey,meta.id);localStorage.setItem(LS.activeId,meta.id);
+   return {tree,file:meta,authoritativeFileId:meta.id,duplicateCount:0}
+  }
+  if(liveFiles.length)throw new Error(`The manifest's authoritative ${name} file (${manifestId}) is unavailable, while another same-named file exists in Active. Renoweet stopped instead of switching databases automatically.`)
+  throw new Error(`The manifest's authoritative ${name} file (${manifestId}) is unavailable. Restore that file to Active or repair the manifest before saving.`)
+ }
+
+ const only=liveFiles[0]||null;
+ if(only){
+  await validateActiveMeta(only,year,tree.active.id);
+  localStorage.setItem(yearKey,only.id);localStorage.setItem(LS.activeId,only.id);
+  await updateManifestYear(year,{activeFileId:only.id,authoritativeSince:now()});
+ }
+ return {tree,file:only,authoritativeFileId:only?.id||'',duplicateCount:0};
+}
+function blankManifest(){return {schema:'renoweet.manifest',schemaVersion:2,updatedAt:now(),activeYear:currentYear(),years:{}}}
+async function loadManifest(create=true){const tree=await ensureTree();const files=await listFiles(`name='${MANIFEST_NAME}' and trashed=false and '${escQ(tree.root.id)}' in parents`);if(files.length>1){const e=new Error('Multiple Renoweet-manifest.json files were found in the Renoweet Data folder. Renoweet stopped so it cannot select a different database identity by mistake.');e.name='RenoweetDuplicateManifestError';e.files=clone(files);throw e}let file=files[0]||null;if(!file){const remembered=await usableMeta(localStorage.getItem(LS.manifestId),MANIFEST_NAME);if(remembered&&(remembered.parents||[]).includes(tree.root.id))file=remembered}if(!file){if(!create)return null;const m=blankManifest(),f=await createTextFile(MANIFEST_NAME,tree.root.id,JSON.stringify(m,null,2));localStorage.setItem(LS.manifestId,f.id);return {data:m,file:f}}localStorage.setItem(LS.manifestId,file.id);try{const data=JSON.parse(await getText(file.id));if(data.schema!=='renoweet.manifest')throw 0;data.schemaVersion=Math.max(2,Number(data.schemaVersion)||1);data.years=data.years||{};return {data,file}}catch(e){throw new Error('Renoweet manifest is invalid. Live data was not changed.') }}
 async function saveManifest(manifest,file){manifest.updatedAt=now();const text=JSON.stringify(manifest,null,2);const f=await updateTextFile(file.id,text);const back=await getText(file.id);if(await sha256Text(back)!==await sha256Text(text))throw new Error('Manifest verification failed.');return {data:manifest,file:f}}
 async function updateManifestYear(year,patch){const m=await loadManifest(true);m.data.activeYear=year;m.data.years[String(year)]={...(m.data.years[String(year)]||{}),...patch};return saveManifest(m.data,m.file)}
 async function maybeRecovery(remote,force=false,reason='autosave'){const year=remote.data.meta.year,key=LS.lastRecovery+year,last=Number(localStorage.getItem(key)||0);if(!force&&Date.now()-last<RECOVERY_INTERVAL_MS)return null;const tree=await ensureTree(),stamp=new Date().toISOString().replace(/[:.]/g,'-'),name=`Renoweet-${year}-r${String(remote.data.meta.revision).padStart(6,'0')}-${stamp}.json`,sealed=await sealCanonical(remote.data),file=await createTextFile(name,tree.recovery.id,JSON.stringify(sealed,null,2));localStorage.setItem(key,String(Date.now()));const files=(await listFiles(`trashed=false and '${escQ(tree.recovery.id)}' in parents`)).filter(f=>new RegExp(`^Renoweet-${year}-r`).test(f.name)).sort((a,b)=>String(b.modifiedTime).localeCompare(String(a.modifiedTime)));for(const f of files.slice(RECOVERY_KEEP)){try{await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(f.id)}`,{method:'DELETE'})}catch(e){console.warn('Could not prune old recovery snapshot',e)}}return {...file,reason}}
@@ -142,7 +159,12 @@ async function listAvailableYears(){
   return {activeYear,years:[...years].filter(y=>Number.isInteger(y)&&y>=2000&&y<=2100).sort((a,b)=>b-a)};
 }
 async function loadExistingYear(year){return loadYear(year,false)}
+async function inspectDatabaseFiles(year=currentYear()){
+ year=safeYear(year);const tree=await ensureTree(),name=activeName(year),files=await listFiles(`name='${escQ(name)}' and trashed=false`),live=files.filter(f=>(f.parents||[]).includes(tree.active.id)),outside=files.filter(f=>!(f.parents||[]).includes(tree.active.id));let authoritativeFileId='';
+ try{authoritativeFileId=String((await loadManifest(false))?.data?.years?.[String(year)]?.activeFileId||'')}catch(e){}
+ return {year,name,authoritativeFileId,live,outside,duplicateLive:live.length>1}
+}
 
 function configure(){const existing=clientId(),id=prompt('Google OAuth Web Client ID\n\nCreate this once in Google Cloud Console. It is not a secret and may be stored in this browser.',existing);if(id!==null)setClientId(id);return clientId()}function getCachedYear(year=currentYear()){return cacheGet('year:'+safeYear(year))}
-Object.assign(Core,{SCHEMA_VERSION,APP_VERSION,DEFAULT_GOOGLE_CLIENT_ID,DRIVE_SCOPE,blankCanonical,normalizeCanonical,verifyCanonical,sealCanonical,sha256Text,computeChecksum,countRecords,deviceId,clientId,setClientId,configure,authorize,ensureTree,loadYear,loadExistingYear,listAvailableYears,saveSection,markQuarterClosed,reopenQuarter,updatePeriodInfo,downloadJSON,downloadXLSX,canonicalToWorkbook,createArchiveOnDrive,createJsonArchiveOnDrive,createFinalArchives,downloadCompleteBackup,loadManifest,listArchives,listRecovery,readDriveJsonById,getBytes,getCachedYear,currentYear,activeName,clone,quarterFromDate});window.RenoweetDrive=Core;
+Object.assign(Core,{SCHEMA_VERSION,APP_VERSION,DEFAULT_GOOGLE_CLIENT_ID,DRIVE_SCOPE,blankCanonical,normalizeCanonical,verifyCanonical,sealCanonical,sha256Text,computeChecksum,countRecords,deviceId,clientId,setClientId,configure,authorize,hasAccessToken:()=>!!accessToken(),ensureTree,loadYear,loadExistingYear,listAvailableYears,inspectDatabaseFiles,saveSection,markQuarterClosed,reopenQuarter,updatePeriodInfo,downloadJSON,downloadXLSX,canonicalToWorkbook,createArchiveOnDrive,createJsonArchiveOnDrive,createFinalArchives,downloadCompleteBackup,loadManifest,listArchives,listRecovery,readDriveJsonById,getBytes,getCachedYear,currentYear,activeName,clone,quarterFromDate});window.RenoweetDrive=Core;
 })();

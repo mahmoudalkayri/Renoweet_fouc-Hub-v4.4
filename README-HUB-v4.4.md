@@ -28,3 +28,14 @@ v4.4 upgrades Bookkeeping from independent dashboard formulas to one shared acco
 Existing v4.3 records are read without a destructive conversion. Legacy Paid invoices still count as received cash until an explicit payment record exists. Legacy Parking and Other values are presented as separate invoice lines while keeping the stored invoice total and VAT intact. New v4.4 fields are saved into the same yearly Google Drive JSON and included in JSON/XLSX archives.
 
 Open `index.html`, then choose **Bookkeeping**. Connect Google Drive as before.
+
+## Project-save and Drive identity recovery update
+
+- The manifest's exact `activeFileId` is authoritative for each yearly database.
+- Only `Renoweet-YYYY.json` inside `Renoweet Data/Active` is treated as live; same-named files elsewhere are reported and ignored.
+- Duplicate live databases, manifests, or Renoweet data folders stop safely instead of selecting the newest-looking copy.
+- Project forms write a protected local draft on every input/change and whenever the page is refreshed, hidden, or closed.
+- The Save button verifies the exact Project ID in the browser safety database before closing the editor.
+- Google Drive synchronization runs after the local save, shows a separate verified/pending state, and retries interrupted saves after reconnecting.
+- Existing Google authorization is reused after a refresh when the browser session still holds a valid token.
+- Every invoice renderer shows `Rekeninghouder: Mahmoud Idris` with IBAN `NL45INGB0111929547`.

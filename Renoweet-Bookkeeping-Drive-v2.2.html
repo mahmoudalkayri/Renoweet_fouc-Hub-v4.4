@@ -1347,7 +1347,7 @@ function showInvoicePreview(r){
        ${other?`<div class="ros-doc-summary-row"><span class="label">Overige kosten</span><strong>${euro.format(other)}</strong></div>`:""}
        <div class="ros-doc-summary-row grand"><span class="label">Totaal</span><strong>${euro.format(grand)}</strong></div>
      </div>
-     <div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${payDays} ${payDays===1?"dag":"dagen"}</b> na factuurdatum op <b>NL45INGB0111929547</b> onder vermelding van factuurnummer ${esc(r["Invoice #"]||"")}.</p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>www.renoweet.nl</b>.</p></div>
+     <div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${payDays} ${payDays===1?"dag":"dagen"}</b> na factuurdatum op <b>NL45INGB0111929547</b> onder vermelding van factuurnummer ${esc(r["Invoice #"]||"")}.</p><p><b>Rekeninghouder: Mahmoud Idris</b></p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>www.renoweet.nl</b>.</p></div>
     </div>
     <div class="ros-invoice-footer"><span>Renoweet • Slim en Duurzaam. Voor elke klus.</span><span>Factuur ${esc(r["Invoice #"]||"")}</span></div>
    </section>

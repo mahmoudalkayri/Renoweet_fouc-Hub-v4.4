@@ -482,6 +482,8 @@ let activeDbName=(localStorage.getItem(ACTIVE_DB_NAME_KEY)||'').trim();
 let restoredLocalCache=false, localCacheDirty=false, lastSyncedDb=null;
 let projectShadows=new Map(), staleFileAlerted=false;
 let formDirty=false, backupFolderHandle=null, lastDbStatus={ok:false,msg:'Not connected',detail:''};
+const PROJECT_DRAFT_KEY='renoweet-project-draft-v44';
+let projectDraftTimer=null;
 const AUTO_BACKUP_FOLDER_NAME='Renoweet OS Backups';
 const BACKUP_HANDLE_KEY='renoweetOSBackupFolder';
 const GOOGLE_CAL_SCOPE='https://www.googleapis.com/auth/calendar.events';
@@ -576,7 +578,7 @@ async function eraseLocalCache(){
  }
 }
 async function verifyPermission(h,ask=false){if(!h)return false;let o={mode:'readwrite'};if(await h.queryPermission(o)==='granted')return true;if(ask&&await h.requestPermission(o)==='granted')return true;return false}
-function dbState(ok,msg,detail=''){ lastDbStatus={ok:!!ok,msg:String(msg||''),detail:String(detail||'')}; $('dbDot').className='dot '+(ok?'ok':'warn');$('dbStatus').textContent=msg;$('dbDetail').textContent=detail;$('saveNowBtn').disabled=!fileHandle }
+function dbState(ok,msg,detail=''){ lastDbStatus={ok:!!ok,msg:String(msg||''),detail:String(detail||'')}; $('dbDot').className='dot '+(ok?'ok':'warn');$('dbStatus').textContent=msg;$('dbDetail').textContent=detail;const driveState=window.renoweetDriveOS?.state;$('saveNowBtn').disabled=driveState?(!driveState.connected||!!driveState.readOnly):!fileHandle }
 
 function openLocalCacheDb(){return new Promise((resolve,reject)=>{let r=indexedDB.open(LOCAL_CACHE_DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(LOCAL_CACHE_STORE))r.result.createObjectStore(LOCAL_CACHE_STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function cacheBrowserState(dirty=true){
@@ -587,7 +589,8 @@ async function cacheBrowserState(dirty=true){
   const record={db:structuredClone(db),syncedDb:lastSyncedDb?structuredClone(lastSyncedDb):null,savedAt:new Date().toISOString(),dirty:localCacheDirty,databaseName:activeDbName||''};
   tx.objectStore(LOCAL_CACHE_STORE).put(record,databaseCacheKey());
   await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});
- }catch(e){console.warn('Could not cache Renoweet data locally.',e)}
+  return true
+ }catch(e){console.warn('Could not cache Renoweet data locally.',e);return false}
 }
 async function readBrowserCache(name=activeDbName){
  try{
@@ -618,6 +621,37 @@ async function restoreBrowserCache(){
  else dbState(false,'Local copy restored',`Last cached ${stamp}${dbLabel} • reconnect the same XLSX to save to OneDrive.`);
  render();return true
 }
+function projectDraftStorageKey(){return `${PROJECT_DRAFT_KEY}::${new Date().getFullYear()}`}
+function clearProjectDraftRecovery(projectId=''){
+ try{const raw=localStorage.getItem(projectDraftStorageKey());if(!raw)return;const saved=JSON.parse(raw);if(!projectId||saved?.project?.id===projectId)localStorage.removeItem(projectDraftStorageKey())}catch(e){localStorage.removeItem(projectDraftStorageKey())}
+}
+function saveProjectDraftRecoveryNow(){
+ clearTimeout(projectDraftTimer);projectDraftTimer=null;
+ const p=getP();if(!p||!currentProjectId)return false;
+ updateProjectFromVisibleForm(p);p.updated=nowStamp();
+ const isNew=!!(draftProject&&draftProject.id===p.id);
+ try{localStorage.setItem(projectDraftStorageKey(),JSON.stringify({schema:'renoweet.project-draft',version:1,savedAt:p.updated,isNew,tab:currentTab,project:cloneSafe(p)}))}catch(e){console.warn('Could not write emergency project draft',e)}
+ formDirty=true;localCacheDirty=true;cacheBrowserState(true);
+ if(window.renoweetDriveOS?.state?.connected)dbState(true,'Saved locally • sync pending',`Project ${p.id} is protected on this device; Drive autosave will verify it.`);
+ else dbState(false,'Saved locally • Drive pending',`Project ${p.id} is protected on this device. Reconnect Google Drive to sync.`);
+ return true
+}
+function queueProjectDraftRecovery(){clearTimeout(projectDraftTimer);projectDraftTimer=setTimeout(saveProjectDraftRecoveryNow,250)}
+async function restoreProjectDraftRecovery(){
+ let saved=null;try{saved=JSON.parse(localStorage.getItem(projectDraftStorageKey())||'null')}catch(e){clearProjectDraftRecovery();return false}
+ const p=saved?.project;if(saved?.schema!=='renoweet.project-draft'||!p?.id)return false;
+ const existingIndex=(db.projects||[]).findIndex(x=>x.id===p.id);
+ if(existingIndex>=0&&JSON.stringify(db.projects[existingIndex])===JSON.stringify(p)){clearProjectDraftRecovery(p.id);return false}
+ if(saved.isNew&&existingIndex<0)draftProject=normalizeProjectDraft(p);
+ else{
+  const recovered=normalizeProjectDraft(p);
+  if(existingIndex>=0)db.projects[existingIndex]=recovered;else db.projects.unshift(recovered);
+  draftProject=null;
+ }
+ currentProjectId=p.id;currentTab=saved.tab||'intake';formDirty=true;localCacheDirty=true;
+ await cacheBrowserState(true);render();$('projectModal').classList.add('open');$('modalTitle').textContent=(getP()?.title||'Recovered project draft');$('modalMeta').textContent=`${p.id} • recovered from this device`;renderTabs();toast('Unsaved project restored');return true
+}
+async function verifyProjectCached(projectId){const cached=await readBrowserCache(activeDbName);return !!cached?.db?.projects?.some(p=>p.id===projectId)}
 async function switchDatabaseContext(selectedName){
  selectedName=cleanDatabaseName(selectedName);
  if(!selectedName)return {switched:false,cache:null};
@@ -1155,6 +1189,12 @@ function runDatabaseHealthCheck(){const issues=databaseHealthIssues();if(!issues
 function parseDeletedProject(row){
  try{const p=JSON.parse(String(row?.['Original JSON']||''));return p&&typeof p==='object'?p:null}catch(e){return null}
 }
+function normalizeProjectDraft(raw){
+ const seed=blankProject(),copy=raw&&typeof raw==='object'&&!Array.isArray(raw)?JSON.parse(JSON.stringify(raw)):{};
+ const p={...seed,...copy,customer:{...seed.customer,...(copy.customer||{})},quote:{...seed.quote,...(copy.quote||{})},invoice:{...seed.invoice,...(copy.invoice||{})},acceptance:{...seed.acceptance,...(copy.acceptance||{})},schedule:{...seed.schedule,...(copy.schedule||{})}};
+ for(const key of ['estimate','materials','documents','payments','purchaseOrders','activity','followUps','checklist'])p[key]=Array.isArray(copy[key])?copy[key]:seed[key];
+ p.id=String(copy.id||seed.id);return p
+}
 function normalizeRecoveredProject(payload){
  const raw=payload?.project||payload;if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('This file does not contain a Renoweet project.');
  const id=String(raw.id||'').trim();if(!/^P[A-Z0-9-]{8,}$/i.test(id))throw new Error('The recovery file has no valid Project ID.');
@@ -1207,8 +1247,8 @@ function render(){let root=$('viewRoot');if(currentView==='dashboard')root.inner
 function getP(){if(draftProject&&draftProject.id===currentProjectId)return draftProject;return db.projects.find(p=>p.id===currentProjectId)}
 const tabs=[['intake','Intake'],['scope','Scope'],['estimate','Estimate'],['quote','Quotation'],['materials','Materials'],['documents','Documents & Photos'],['payments','Payments'],['orders','Orders'],['schedule','Schedule'],['followups','Follow-up'],['acceptance','Acceptance'],['messages','Messages'],['invoice','Invoice'],['activity','Activity'],['checklist','Checklist'],['projectbackup','Backup']];
 function openProject(id,tab='intake'){draftProject=null;pendingPhotoFiles=[];formDirty=false;currentProjectId=id;currentTab=tab;let p=getP();if(!p)return;$('projectModal').classList.add('open');$('modalTitle').textContent=p.title||'New project';$('modalMeta').textContent=`${p.id} • ${p.stage}`;renderTabs()}
-function startNewProject(){draftProject=blankProject();pendingPhotoFiles=[];formDirty=false;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${draftProject.id} • Not saved yet`;renderTabs()}
-function closeProject(){if(formDirty&&!confirm('This project form has unsaved changes. Close without saving them?'))return;if(draftProject&&currentProjectId===draftProject.id){draftProject=null;pendingPhotoFiles=[]}formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render()}
+function startNewProject(){draftProject=blankProject();pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${draftProject.id} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
+function closeProject(){if(formDirty&&!confirm('This project has locally protected changes. Discard this draft/edit and close?'))return;const closingId=currentProjectId;if(draftProject&&closingId===draftProject.id){draftProject=null;pendingPhotoFiles=[]}clearProjectDraftRecovery(closingId);formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render()}
 function renderTabs(){let p=getP();$('projectTabs').innerHTML=tabs.map(([k,l])=>`<button class="${currentTab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`).join('');$('projectTabContent').innerHTML=tabHTML(p,currentTab);bindTab()}
 function switchTab(t){saveProjectFromForm(false);currentTab=t;renderTabs()}
 function tabHTML(p,t){
@@ -1593,7 +1633,7 @@ function invoiceHTML(p){
       ${t.parking?`<div class="ros-doc-summary-row"><span class="label">Parkeerkosten</span><strong>${money(t.parking)}</strong></div>`:''}
       <div class="ros-doc-summary-row grand"><span class="label">Totaal</span><strong>${money(grand)}</strong></div>
     </div>
-    <div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${+p.invoice.dueDays||3} dagen</b> na factuurdatum op <b>NL45INGB0111929547</b> onder vermelding van factuurnummer ${esc(p.invoice.number||'DRAFT')}.</p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>www.renoweet.nl</b>.</p></div>
+    <div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${+p.invoice.dueDays||3} dagen</b> na factuurdatum op <b>NL45INGB0111929547</b> onder vermelding van factuurnummer ${esc(p.invoice.number||'DRAFT')}.</p><p><b>Rekeninghouder: Mahmoud Idris</b></p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>www.renoweet.nl</b>.</p></div>
    </div>
    <div class="ros-invoice-footer"><span>Renoweet • Slim en Duurzaam. Voor elke klus.</span><span>Factuur ${esc(p.invoice.number||'DRAFT')}</span></div>
   </section>
@@ -1813,19 +1853,20 @@ function markAcceptedNow(){let p=getP();if(!p)return;p.acceptance={...(p.accepta
 
 function msgCard(t,m){return `<div class="card"><h3>${t}</h3><textarea style="min-height:150px">${esc(m)}</textarea><button class="btn" onclick="copyText(this.previousElementSibling.value)">Copy</button></div>`}
 
-function bindTab(){const body=$('tabBody');if(body){body.querySelectorAll('input,textarea,select').forEach(el=>{el.addEventListener('input',()=>formDirty=true,{once:false});el.addEventListener('change',()=>formDirty=true,{once:false})})}let inp=$('photoInput');if(inp)inp.onchange=e=>{formDirty=true;pendingPhotoFiles=[...e.target.files];let b=$('photoPreview');b.innerHTML='';pendingPhotoFiles.slice(0,8).forEach(f=>{let i=document.createElement('img');i.src=URL.createObjectURL(f);i.style.cssText='width:92px;height:72px;object-fit:cover;border-radius:9px;border:1px solid var(--line)';b.appendChild(i)});if(pendingPhotoFiles.length){let n=document.createElement('div');n.className='small';n.style.width='100%';n.textContent=`${pendingPhotoFiles.length} photo(s) ready — saved when you press Save.`;b.appendChild(n)}}}
+function bindTab(){const body=$('projectTabContent');if(body){body.querySelectorAll('input,textarea,select').forEach(el=>{el.addEventListener('input',()=>{formDirty=true;queueProjectDraftRecovery()},{once:false});el.addEventListener('change',()=>{formDirty=true;queueProjectDraftRecovery()},{once:false})})}let inp=$('photoInput');if(inp)inp.onchange=e=>{formDirty=true;pendingPhotoFiles=[...e.target.files];queueProjectDraftRecovery();let b=$('photoPreview');b.innerHTML='';pendingPhotoFiles.slice(0,8).forEach(f=>{let i=document.createElement('img');i.src=URL.createObjectURL(f);i.style.cssText='width:92px;height:72px;object-fit:cover;border-radius:9px;border:1px solid var(--line)';b.appendChild(i)});if(pendingPhotoFiles.length){let n=document.createElement('div');n.className='small';n.style.width='100%';n.textContent=`${pendingPhotoFiles.length} photo(s) ready — saved when you press Save.`;b.appendChild(n)}}}
 function readEstimate(p){let rs=document.querySelectorAll('#estRows tr');if(rs.length)p.estimate=[...rs].map((r,i)=>({id:p.estimate[i]?.id||lineid(),desc:r.querySelector('.e_desc').value,qty:+r.querySelector('.e_qty').value||0,unit:r.querySelector('.e_unit').value,rate:+r.querySelector('.e_rate').value||0}))}
 function readMaterials(p){let rs=document.querySelectorAll('#matRows tr');if(rs.length)p.materials=[...rs].map((r,i)=>({id:p.materials[i]?.id||lineid(),desc:r.querySelector('.m_desc').value,qty:r.querySelector('.m_qty').value,supplier:r.querySelector('.m_supplier').value,cost:+r.querySelector('.m_cost').value||0}))}
 function normalizePhoneForStorage(raw){let t=String(raw||'').trim();if(!t)return '';let d=t.replace(/\D/g,'');if(d.startsWith('0031'))d='31'+d.slice(4);if(d.startsWith('316')&&d.length===11)return `+31 6 ${d.slice(3,7)} ${d.slice(7)}`;if(d.startsWith('06')&&d.length===10)return `06 ${d.slice(2,6)} ${d.slice(6)}`;return t.replace(/\s+/g,' ')}
 function findExistingCustomerFor(p){const phone=normalizeWhatsAppNumber(p.customer?.phone),email=String(p.customer?.email||'').trim().toLowerCase();return (db.projects||[]).find(x=>x.id!==p.id&&((phone&&normalizeWhatsAppNumber(x.customer?.phone)===phone)||(email&&String(x.customer?.email||'').trim().toLowerCase()===email)))}
-function saveProjectFromForm(show=true){let p=getP();if(!p)return;if($('f_title')){p.title=$('f_title').value;p.stage=$('f_stage').value;p.customer.name=$('f_name').value;p.customer.phone=normalizePhoneForStorage($('f_phone').value);p.customer.email=$('f_email').value;p.customer.address=$('f_address').value;p.description=$('f_description').value;p.notes=$('f_notes').value}if($('f_scope'))p.scope=$('f_scope').value;readEstimate(p);readMaterials(p);if($('s_start'))p.schedule={...p.schedule,start:$('s_start').value,end:$('s_end').value||$('s_start').value,time:$('s_time').value,endTime:$('s_endtime')?$('s_endtime').value:(p.schedule.endTime||''),notes:$('s_notes').value,shareClient:!!$('s_share_client')?.checked,inviteEmail:($('s_invite_email')?.value||'').trim()};if($('q_number')){p.quote.number=$('q_number').value;p.quote.date=$('q_date').value;p.quote.validDays=+$('q_valid').value||14;p.quote.parking=+$('q_parking').value||0;p.quote.travel=+$('q_travel').value||0;p.quote.exclusions=$('q_exclusions').value;p.quote.paymentTerms=$('q_payment_terms').value;p.quote.advancePct=+$('q_advance_pct')?.value||0;p.quote.installments=+$('q_installments')?.value||0;p.quote.assumptions=$('q_assumptions').value}if($('inv_number')){p.invoice.number=$('inv_number').value.trim();p.invoice.date=$('inv_date').value;p.invoice.dueDays=+$('inv_due').value||3}document.querySelectorAll('.c_done').forEach(c=>{if(p.checklist[c.dataset.i])p.checklist[c.dataset.i].done=c.checked});p.updated=nowStamp();formDirty=false;scheduleSave();if(show)toast()}
+function updateProjectFromVisibleForm(p){if(!p)return;if($('f_title')){p.title=$('f_title').value;p.stage=$('f_stage').value;p.customer.name=$('f_name').value;p.customer.phone=normalizePhoneForStorage($('f_phone').value);p.customer.email=$('f_email').value;p.customer.address=$('f_address').value;p.description=$('f_description').value;p.notes=$('f_notes').value}if($('f_scope'))p.scope=$('f_scope').value;readEstimate(p);readMaterials(p);if($('s_start'))p.schedule={...p.schedule,start:$('s_start').value,end:$('s_end').value||$('s_start').value,time:$('s_time').value,endTime:$('s_endtime')?$('s_endtime').value:(p.schedule.endTime||''),notes:$('s_notes').value,shareClient:!!$('s_share_client')?.checked,inviteEmail:($('s_invite_email')?.value||'').trim()};if($('q_number')){p.quote.number=$('q_number').value;p.quote.date=$('q_date').value;p.quote.validDays=+$('q_valid').value||14;p.quote.parking=+$('q_parking').value||0;p.quote.travel=+$('q_travel').value||0;p.quote.exclusions=$('q_exclusions').value;p.quote.paymentTerms=$('q_payment_terms').value;p.quote.advancePct=+$('q_advance_pct')?.value||0;p.quote.installments=+$('q_installments')?.value||0;p.quote.assumptions=$('q_assumptions').value}if($('inv_number')){p.invoice.number=$('inv_number').value.trim();p.invoice.date=$('inv_date').value;p.invoice.dueDays=+$('inv_due').value||3}document.querySelectorAll('.c_done').forEach(c=>{if(p.checklist[c.dataset.i])p.checklist[c.dataset.i].done=c.checked})}
+function saveProjectFromForm(show=true){let p=getP();if(!p)return;updateProjectFromVisibleForm(p);p.updated=nowStamp();try{localStorage.setItem(projectDraftStorageKey(),JSON.stringify({schema:'renoweet.project-draft',version:1,savedAt:p.updated,isNew:!!(draftProject&&draftProject.id===p.id),tab:currentTab,project:cloneSafe(p)}))}catch(e){}formDirty=false;scheduleSave();if(show)toast('Saved locally • syncing')}
 async function saveProjectAndClose(){let p=getP();if(!p)return;saveProjectFromForm(false);const isDraft=!!(draftProject&&p.id===draftProject.id);if(isDraft){if(!String(p.customer?.name||'').trim()){alert('Customer name is required before a new project can be saved.');currentTab='intake';renderTabs();return}if(!String(p.customer?.phone||'').trim()){alert('Phone number is required before a new project can be saved.');currentTab='intake';renderTabs();return}const existing=findExistingCustomerFor(p);if(existing){const use=confirm(`This phone/email already belongs to an existing customer:
 
 ${existing.customer.name||'Unnamed customer'}
 ${existing.customer.phone||''}
 ${existing.customer.email||''}
 
-Use the existing customer details for this new project?`);if(use)p.customer={...existing.customer,...p.customer,name:existing.customer.name||p.customer.name,phone:existing.customer.phone||p.customer.phone,email:existing.customer.email||p.customer.email,address:p.customer.address||existing.customer.address}}db.projects.unshift(p);draftProject=null;resetProjectShadows()}if(pendingPhotoFiles.length){try{const ok=await savePendingPhotosToFolder(p);if(!ok)alert('Project saved, but selected photos were not stored because the photos folder is not connected.')}catch(e){alert('Project saved, but photos could not be stored: '+(e.message||e))}}p.updated=nowStamp();formDirty=false;scheduleSave();if(window.renoweetDriveOS?.state?.connected){const driveSaved=await window.renoweetDriveOS.save(true);if(!driveSaved){alert('The project is still safe in this browser, but Google Drive did not confirm the save. Keep this page open and use Save now before leaving.');return}}$('projectModal').classList.remove('open');currentProjectId=null;render();toast(isDraft?'Project created':'Saved')}
+Use the existing customer details for this new project?`);if(use)p.customer={...existing.customer,...p.customer,name:existing.customer.name||p.customer.name,phone:existing.customer.phone||p.customer.phone,email:existing.customer.email||p.customer.email,address:p.customer.address||existing.customer.address}}db.projects.unshift(p);draftProject=null;resetProjectShadows()}if(pendingPhotoFiles.length){try{const ok=await savePendingPhotosToFolder(p);if(!ok)alert('Project saved, but selected photos were not stored because the photos folder is not connected.')}catch(e){alert('Project saved, but photos could not be stored: '+(e.message||e))}}p.updated=nowStamp();formDirty=false;const localSaved=await cacheBrowserState(true);const localVerified=localSaved&&await verifyProjectCached(p.id);if(!localVerified){formDirty=true;alert(`Project ${p.id} could not be verified in this device's safety database. The editor will remain open; copy important text before closing.`);return}clearProjectDraftRecovery(p.id);let driveSaved=false;if(window.renoweetDriveOS?.state?.connected)driveSaved=await window.renoweetDriveOS.save(true,p.id);else scheduleSave();$('projectModal').classList.remove('open');currentProjectId=null;render();if(driveSaved)toast(isDraft?'Project created • Drive verified':'Saved • Drive verified');else{dbState(false,'Saved locally • Drive sync pending',`Project ${p.id} is verified on this device. Reconnect Drive or use Save now.`);toast(isDraft?'Project created locally':'Saved locally')}}
 function addEstimate(){let p=getP();readEstimate(p);p.estimate.push({id:lineid(),desc:'',qty:1,unit:'uur',rate:62.5});renderTabs()}
 function removeEst(i){let p=getP();readEstimate(p);p.estimate.splice(i,1);renderTabs()}
 function addMaterial(){let p=getP();readMaterials(p);p.materials.push({id:lineid(),desc:'',qty:1,supplier:'',cost:0});renderTabs()}
@@ -2188,7 +2229,9 @@ $('closeModalBtn').onclick=closeProject;
 $('quickSearchBtn').onclick=()=>{$('searchModal').classList.add('open');$('globalSearch').value='';$('globalSearch').focus();renderSearch('')}
 $('globalSearch').oninput=e=>renderSearch(e.target.value);
 $('connectBtn').onclick=connectWorkbook;$('resetXlsxBtn').onclick=resetXlsxConnection;$('eraseLocalCacheBtn').onclick=eraseLocalCache;$('saveNowBtn').onclick=()=>saveWorkbook(true);
-window.addEventListener('beforeunload',e=>{if(formDirty){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if(formDirty){saveProjectDraftRecoveryNow();e.preventDefault();e.returnValue=''}});
+window.addEventListener('pagehide',()=>{if(currentProjectId)saveProjectDraftRecoveryNow()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&currentProjectId)saveProjectDraftRecoveryNow()});
 
 (async()=>{
  // Restore the still-valid Google Calendar access token after a page refresh.
@@ -2197,6 +2240,7 @@ window.addEventListener('beforeunload',e=>{if(formDirty){e.preventDefault();e.re
  try{let ph=await rememberedPhotosFolder();if(ph&&await verifyPermission(ph,false))photosFolderHandle=ph}catch(e){}
  render();dbState(false,'Not connected',activeDbName?`Last database on this device: ${activeDbName}. Connect that file or choose another quarterly XLSX.`:'Choose your quarterly Renoweet OS XLSX from OneDrive.');
  await restoreBrowserCache();
+ await restoreProjectDraftRecovery();
  if(!('showOpenFilePicker' in window)){
   if(restoredLocalCache)dbState(false,'Local copy restored','Your data is available on this device. Reconnect XLSX on a supported browser/device to write changes to OneDrive.');
   else dbState(false,'Browser limitation','Interface works here, but direct XLSX write needs supported Edge/Chrome file access.');
