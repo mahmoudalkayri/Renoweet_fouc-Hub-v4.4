@@ -30,4 +30,33 @@ assert.equal(A.vatReport(book,period).outputVat,156);
 assert.equal(A.profitAndLoss(book,period).revenue,800);
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).outstanding,456);
 
-console.log('Accounting engine v4.4 tests passed.');
+const q4Invoice={...invoice,'Record ID':'INV_Q4','Invoice #':'2026-0110002',Date:'2026-10-01'};
+book.invoices.push(q4Invoice);
+const q4={start:'2026-10-01',end:'2026-12-31'};
+assert.equal(A.receivables(book,period),456,'receivables must include only invoices issued in the selected period');
+assert.equal(A.receivables(book,q4),1077,'changing quarter must change displayed receivables');
+assert.equal(A.periodRows(book,q4).invoices.length,1,'invoice table period rows must exclude other quarters');
+assert.ok(A.controls(book,new Date('2026-10-02'),q4).issues.every(x=>x.id!=='INV_1'),'quarter controls must exclude records from other quarters');
+
+const insuredDirect={
+  'Record ID':'EXP_INS_DIRECT',Date:'2026-09-15',Supplier:'Garage',Category:'Vehicle',Gross:6192.36,'Invoice VAT':1074.71,
+  'VAT deductible %':100,'Income tax deductible %':100,'Insurance contribution':5117.65,'Insurance payment route':'Direct to supplier',
+  'Business amount paid':1074.71,'Payment status':'Paid','Payment date':'2026-09-15','Receipt/File':'garage.pdf','Insurance company':'Insurer'
+};
+const directFacts=A.expenseFacts(insuredDirect);
+assert.equal(directFacts.deductibleVat,1074.71,'insurance must not reduce invoice VAT');
+assert.equal(directFacts.deductibleCost,0,'insurance contribution must reduce the net business cost');
+assert.equal(directFacts.businessPaid,1074.71,'direct insurer payment must leave only the business-paid amount as cash out');
+const directBook={invoices:[],expenses:[insuredDirect],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
+assert.equal(A.cashReport(directBook,period).cashOut,1074.71);
+assert.equal(A.cashReport(directBook,period).cashIn,0,'direct insurer-to-garage payment is not Renoweet cash received');
+assert.equal(A.profitAndLoss(directBook,period).operatingExpenses,0);
+
+const insuredReimbursed={...insuredDirect,'Record ID':'EXP_INS_REIMB','Insurance payment route':'Reimbursed Renoweet','Business amount paid':6192.36,'Insurance settlement date':'2026-09-16'};
+const reimbursedBook={invoices:[],expenses:[insuredReimbursed],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
+const reimbursedCash=A.cashReport(reimbursedBook,period);
+assert.equal(reimbursedCash.cashOut,6192.36);
+assert.equal(reimbursedCash.insuranceCashIn,5117.65);
+assert.equal(reimbursedCash.movement,-1074.71,'reimbursement route must preserve the same net cash effect');
+
+console.log('Accounting engine v4.4.1 tests passed.');

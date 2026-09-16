@@ -20,6 +20,7 @@ const bookkeepingUi=fs.readFileSync(path.join(root,'renoweet-bookkeeping-v4.4.js
 if(bookkeepingUi.includes('<img src="icons/icon.svg" alt="Renoweet">'))throw new Error('Invoice preview must not use the Hub app icon.');
 if(!bookkeepingUi.includes("document.querySelector('header .brand img')"))throw new Error('Invoice preview is not connected to the established Renoweet invoice logo.');
 for(const required of ['onclick="printInvoices()"','onclick="printExpenses()"','window.printInvoices=invoicePrintReport','window.printExpenses=expensePrintReport'])if(!bookkeepingUi.includes(required))throw new Error(`Bookkeeping print workflow is missing ${required}`);
+for(const required of ['Accounting core 4.4.1','expInsuranceContribution','Insurance payment route','Quarter receivables','Only invoices dated in the selected quarter','Only expenses dated in the selected quarter','A.receivables(data,p)','A.controls(data,new Date(),p)'])if(!bookkeepingUi.includes(required))throw new Error(`Bookkeeping v4.4.1 workflow is missing ${required}`);
 for(const required of ['thead{display:table-header-group}','counter(page)','Complete invoice register','Complete expense register'])if(!(bookkeeping+bookkeepingUi).includes(required))throw new Error(`Print report layout is missing ${required}`);
 const osPage=fs.readFileSync(path.join(root,'Renoweet-OS-Drive-v2.2.html'),'utf8');
 const osDrive=fs.readFileSync(path.join(root,'renoweet-os-drive-adapter-v3.6.js'),'utf8');

@@ -1,6 +1,6 @@
-# Renoweet Focus Hub v4.4
+# Renoweet Focus Hub v4.4.1
 
-v4.4 upgrades Bookkeeping from independent dashboard formulas to one shared accounting engine while preserving the v4.3 Drive, proof, recovery, quarter-locking and archive workflows.
+v4.4.1 makes the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
 ## Focus Hub database
 
@@ -20,6 +20,8 @@ v4.4 upgrades Bookkeeping from independent dashboard formulas to one shared acco
 - Credit notes reduce revenue, output VAT and receivables without deleting the issued invoice.
 - General, fuel and vehicle entries appear in one expense ledger and calculation path.
 - Expenses store invoice VAT, deductible VAT percentage, deductible VAT, income-tax deductible percentage and deductible cost separately.
+- Insured expenses store the insurer contribution, payment route, actual business payment, insurer and claim reference without reducing the supplier invoice VAT.
+- The selected quarter filters on-screen invoices, payments, expenses, receivables, health controls and reports, not only printed output.
 - Permanent Record IDs link invoices, expenses, payments, credit notes and proofs.
 - The Accounting Health score checks missing proof, VAT mismatches, duplicate invoice numbers, overdue/partial invoices and unallocated payments.
 

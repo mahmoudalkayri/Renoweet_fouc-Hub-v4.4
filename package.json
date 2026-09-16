@@ -1,5 +1,5 @@
 {
-  "name": "renoweet-focus-hub-v4.4",
+  "name": "renoweet-focus-hub-v4.4.1",
   "private": true,
   "scripts": {
     "build": "node scripts/build-site.mjs",
