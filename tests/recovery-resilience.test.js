@@ -37,6 +37,8 @@ for(const required of [
   'RenoweetDuplicateFolderError',
   'inspectDatabaseFiles'
 ])assert.ok(core.includes(required),`Drive identity protection is missing: ${required}`);
+for(const required of ['installRecoveryMerge','RenoweetRecoveryBaseChangedError','before-recovery-merge-install'])assert.ok(core.includes(required),`Verified full-database recovery is missing: ${required}`);
+for(const required of ['installRecoveryDatabase','Install recovery JSON','installRecovery:installRecoveryDatabase'])assert.ok(adapter.includes(required),`OS recovery installer is missing: ${required}`);
 assert.ok(!core.includes("for(const f of await listFiles(`name='${escQ(name)}' and trashed=false`))ids.push(f.id)"),'Drive core must not choose a global same-name file by revision.');
 
 for(const [name,text] of [['OS invoice',os],['Bookkeeping invoice',bookkeeping],['v4.4 invoice',bookkeepingV44]]){

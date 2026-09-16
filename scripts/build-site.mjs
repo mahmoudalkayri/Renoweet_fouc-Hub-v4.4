@@ -10,7 +10,8 @@ const runtimeFiles=[
   "renoweet-bookkeeping-drive-adapter-v3.7.js","renoweet-bookkeeping-enhancements-v4.3.js",
   "renoweet-accounting-engine-v4.4.js","renoweet-bookkeeping-v4.4.js","styles-accounting-v4.4.css",
   "renoweet-os-enhancements-v4.3.js","renoweet-bod-drive-adapter-v2.js",
-  "Renoweet-Legacy-Import-2026-Q3.html","migration-2026-q3.json"
+  "Renoweet-Legacy-Import-2026-Q3.html","migration-2026-q3.json",
+  "Renoweet-Legacy-XLSX-Import-v4.4.html","renoweet-legacy-xlsx-engine-v4.4.js"
 ];
 const binary=new Set([".png"]),assets={};
 for(const file of runtimeFiles){

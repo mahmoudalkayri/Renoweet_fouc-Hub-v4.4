@@ -2,7 +2,7 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
-const pages=['index.html','Renoweet-Bookkeeping-Drive-v2.2.html','Renoweet-OS-Drive-v2.2.html','Renoweet-BOD-Drive-v2.2.html'];
+const pages=['index.html','Renoweet-Bookkeeping-Drive-v2.2.html','Renoweet-OS-Drive-v2.2.html','Renoweet-BOD-Drive-v2.2.html','Renoweet-Legacy-XLSX-Import-v4.4.html'];
 const missing=[];
 for(const page of pages){
   const text=fs.readFileSync(path.join(root,page),'utf8');
@@ -25,6 +25,9 @@ const osPage=fs.readFileSync(path.join(root,'Renoweet-OS-Drive-v2.2.html'),'utf8
 const osDrive=fs.readFileSync(path.join(root,'renoweet-os-drive-adapter-v3.6.js'),'utf8');
 const bookkeepingDrive=fs.readFileSync(path.join(root,'renoweet-bookkeeping-drive-adapter-v3.7.js'),'utf8');
 for(const required of ['normalizeRecoveredProject','restoreProjectRecoveryFile','Restore project file'])if(!(osPage+osDrive).includes(required))throw new Error(`OS project recovery is missing ${required}`);
+for(const required of ['Import old quarterly XLSX','Open legacy importer','Renoweet-Legacy-XLSX-Import-v4.4.html'])if(!osDrive.includes(required))throw new Error(`OS legacy XLSX import is missing ${required}`);
+const legacyImport=fs.readFileSync(path.join(root,'Renoweet-Legacy-XLSX-Import-v4.4.html'),'utf8');
+for(const required of ['Choose the period before uploading','Download compatible JSON','Connect Drive and check duplicates','Import missing records','renoweet-legacy-xlsx-engine-v4.4.js'])if(!legacyImport.includes(required))throw new Error(`Legacy XLSX import workflow is missing ${required}`);
 for(const required of ["if($('inv_number'))","p.invoice.date=$('inv_date').value","p.invoice.dueDays=+$('inv_due').value","if(!p.invoice.number)p.invoice.number=nextInvoice(p.invoice.date)"])if(!osPage.includes(required))throw new Error(`OS → Bookkeeping invoice handoff is missing ${required}`);
 for(const obsolete of ["if($('i_number'))","p.invoice.date=$('i_date').value","p.invoice.dueDays=+$('i_due').value"])if(osPage.includes(obsolete))throw new Error(`OS invoice form still uses obsolete field mapping ${obsolete}`);
 for(const required of ['bookkeepingQueuedAt','allOSQueueRows','osPendingRows','OS invoices waiting to import'])if(!bookkeepingDrive.includes(required))throw new Error(`Bookkeeping queue verification is missing ${required}`);
