@@ -13,6 +13,8 @@ const expense={'Record ID':'EXP_1',Date:'2026-09-12',Supplier:'Supplier',Categor
 const book={invoices:[invoice],expenses:[expense],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
 const period={start:'2026-07-01',end:'2026-09-30'};
 
+assert.equal(A.excelSerial('2026-01-01'),46023,'calendar date must convert to a whole Excel day without timezone drift');
+assert.equal(A.iso(A.excelSerial('2026-01-01')),'2026-01-01','Excel date must round-trip to the same calendar date');
 assert.deepEqual(A.invoiceTotals(invoice),{net:900,vat:177,gross:1077,lines:A.parseLines(invoice)});
 assert.equal(A.vatReport(book,period).outputVat,177,'issued invoices must enter VAT before payment');
 assert.equal(A.vatReport(book,period).inputVat,10.5,'VAT return must use deductible VAT');
@@ -29,6 +31,10 @@ book.creditNotes.push({id:'CRN_1',invoiceId:'INV_1',date:'2026-09-14',net:100,va
 assert.equal(A.vatReport(book,period).outputVat,156);
 assert.equal(A.profitAndLoss(book,period).revenue,800);
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).outstanding,456);
+
+const overpaidBook={invoices:[invoice],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_TOO_MUCH',invoiceId:'INV_1',date:'2026-09-15',amount:5000}],creditNotes:[],deleted:[],control:{}};
+assert.equal(A.invoiceState(invoice,overpaidBook.payments,[]).overpaid,3923,'invoice state must expose an overpayment');
+assert.ok(A.controls(overpaidBook,new Date('2026-09-16'),period).issues.some(x=>x.kind==='payments'&&x.level==='error'&&x.message.includes('overpaid')),'control must flag existing overpayments');
 
 const q4Invoice={...invoice,'Record ID':'INV_Q4','Invoice #':'2026-0110002',Date:'2026-10-01'};
 book.invoices.push(q4Invoice);

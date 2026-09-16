@@ -15,12 +15,15 @@ for(const page of pages){
 }
 if(missing.length)throw new Error(`Missing local assets:\n${missing.join('\n')}`);
 const bookkeeping=fs.readFileSync(path.join(root,'Renoweet-Bookkeeping-Drive-v2.2.html'),'utf8');
+if(bookkeeping.includes('new Date(dateStr+"T00:00:00")'))throw new Error('Bookkeeping still converts date-only values through local midnight.');
+if(!bookkeeping.includes('Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]))'))throw new Error('Bookkeeping is missing timezone-safe date-only conversion.');
 for(const required of ['renoweet-accounting-engine-v4.4.js','renoweet-bookkeeping-v4.4.js','styles-accounting-v4.4.css'])if(!bookkeeping.includes(required))throw new Error(`Bookkeeping is missing ${required}`);
 const bookkeepingUi=fs.readFileSync(path.join(root,'renoweet-bookkeeping-v4.4.js'),'utf8');
 if(bookkeepingUi.includes('<img src="icons/icon.svg" alt="Renoweet">'))throw new Error('Invoice preview must not use the Hub app icon.');
 if(!bookkeepingUi.includes("document.querySelector('header .brand img')"))throw new Error('Invoice preview is not connected to the established Renoweet invoice logo.');
 for(const required of ['onclick="printInvoices()"','onclick="printExpenses()"','window.printInvoices=invoicePrintReport','window.printExpenses=expensePrintReport'])if(!bookkeepingUi.includes(required))throw new Error(`Bookkeeping print workflow is missing ${required}`);
 for(const required of ['Accounting core 4.4.1','expInsuranceContribution','Insurance payment route','Quarter receivables','Only invoices dated in the selected quarter','Only expenses dated in the selected quarter','A.receivables(data,p)','A.controls(data,new Date(),p)'])if(!bookkeepingUi.includes(required))throw new Error(`Bookkeeping v4.4.1 workflow is missing ${required}`);
+for(const required of ['Payment cannot exceed the invoice balance','editV44Payment','removeV44Payment','Removed entries remain in Control','s.outstanding>.009'])if(!bookkeepingUi.includes(required))throw new Error(`Payment correction control is missing ${required}`);
 for(const required of ['thead{display:table-header-group}','counter(page)','Complete invoice register','Complete expense register'])if(!(bookkeeping+bookkeepingUi).includes(required))throw new Error(`Print report layout is missing ${required}`);
 const osPage=fs.readFileSync(path.join(root,'Renoweet-OS-Drive-v2.2.html'),'utf8');
 const osDrive=fs.readFileSync(path.join(root,'renoweet-os-drive-adapter-v3.6.js'),'utf8');

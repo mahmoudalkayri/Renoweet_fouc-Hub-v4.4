@@ -14,11 +14,14 @@
 
   function asDate(v){
     if(v instanceof Date&&!isNaN(v))return v;
-    if(typeof v==='number'&&v>20000&&v<100000)return new Date(Date.UTC(1899,11,30)+v*86400000);
+    if(typeof v==='number'&&v>20000&&v<100000){const d=new Date(Date.UTC(1899,11,30)+Math.floor(v)*86400000);return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())}
     const s=text(v);if(!s)return null;
     const iso=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(iso)return new Date(+iso[1],+iso[2]-1,+iso[3]);
     const nl=s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);if(nl)return new Date(+nl[3],+nl[2]-1,+nl[1]);
     const d=new Date(s);return isNaN(d)?null:d;
+  }
+  function excelSerial(v){
+    if(v===null||v===undefined||v==='')return '';if(typeof v==='number')return Math.floor(v);const s=text(v).slice(0,10),m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return '';return (Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]))-Date.UTC(1899,11,30))/86400000;
   }
   function iso(v){const d=asDate(v);if(!d)return '';return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
   function inRange(v,period){const d=asDate(v);if(!d)return false;if(!period)return true;const a=period.start?asDate(period.start):null,b=period.end?asDate(period.end):null;return (!a||d>=a)&&(!b||d<=b)}
@@ -55,13 +58,13 @@
   function creditTotals(invoice,creditNotes=[]){return creditsFor(invoice,creditNotes).reduce((a,c)=>({net:round2(a.net+num(c.net??c.Net)),vat:round2(a.vat+num(c.vat??c.VAT)),gross:round2(a.gross+num(c.gross??c.Gross))}),{net:0,vat:0,gross:0})}
   function paymentTotal(invoice,payments=[]){const own=paymentsFor(invoice,payments);if(own.length)return round2(own.reduce((s,p)=>s+num(p.amount??p.Amount),0));return lower(invoice?.Status)==='paid'?invoiceTotals(invoice).gross:0}
   function invoiceState(invoice,payments=[],creditNotes=[],today=new Date()){
-    const stated=lower(invoice?.['Lifecycle status']||invoice?.Status),tot=invoiceTotals(invoice),credits=creditTotals(invoice,creditNotes),due=Math.max(0,round2(tot.gross-credits.gross)),paid=paymentTotal(invoice,payments),outstanding=Math.max(0,round2(due-paid));
-    if(['draft','unknown'].includes(stated)||(!text(invoice?.['Invoice #'])&&!text(invoice?.['Issued at'])))return {status:'draft',paid,outstanding:due};
-    if(['cancelled','credited'].includes(stated))return {status:stated,paid,outstanding:0};
-    if(outstanding<=.009)return {status:'paid',paid,outstanding:0};
-    const dueDate=asDate(invoice?.['Due date']||invoice?.dueDate);if(dueDate&&dueDate<today)return {status:'overdue',paid,outstanding};
-    if(paid>0)return {status:'partially_paid',paid,outstanding};
-    return {status:'issued',paid,outstanding};
+    const stated=lower(invoice?.['Lifecycle status']||invoice?.Status),tot=invoiceTotals(invoice),credits=creditTotals(invoice,creditNotes),due=Math.max(0,round2(tot.gross-credits.gross)),paid=paymentTotal(invoice,payments),outstanding=Math.max(0,round2(due-paid)),overpaid=Math.max(0,round2(paid-due));
+    if(['draft','unknown'].includes(stated)||(!text(invoice?.['Invoice #'])&&!text(invoice?.['Issued at'])))return {status:'draft',due,paid,outstanding:due,overpaid};
+    if(['cancelled','credited'].includes(stated))return {status:stated,due,paid,outstanding:0,overpaid};
+    if(outstanding<=.009)return {status:'paid',due,paid,outstanding:0,overpaid};
+    const dueDate=asDate(invoice?.['Due date']||invoice?.dueDate);if(dueDate&&dueDate<today)return {status:'overdue',due,paid,outstanding,overpaid};
+    if(paid>0)return {status:'partially_paid',due,paid,outstanding,overpaid};
+    return {status:'issued',due,paid,outstanding,overpaid};
   }
   function isIssued(invoice){return !['draft','unknown','cancelled'].includes(lower(invoiceState(invoice,[],[]).status))}
   function expenseFacts(row){
@@ -86,11 +89,11 @@
   function receivables(book,period){book=normalizeBookkeeping(book);return round2(book.invoices.filter(r=>inRange(r['Invoice date']||r.Date,period)).reduce((s,r)=>s+invoiceState(r,book.payments,book.creditNotes).outstanding,0))}
   function controls(book,today=new Date(),period){
     book=normalizeBookkeeping(book);const rows=periodRows(book,period),issues=[];const seen=new Map();
-    for(const r of rows.invoices){const no=text(r['Invoice #']),st=invoiceState(r,book.payments,book.creditNotes,today),t=invoiceTotals(r);if(no){seen.set(no,(seen.get(no)||0)+1)}if(isIssued(r)&&!no)issues.push({kind:'sales',level:'error',message:'Issued invoice without a number',id:invoiceId(r)});if(isIssued(r)&&!text(r.Customer))issues.push({kind:'sales',level:'error',message:`${no||'Invoice'} is missing a customer`,id:invoiceId(r)});if(isIssued(r)&&!text(r.Address))issues.push({kind:'sales',level:'warning',message:`${no||'Invoice'} is missing a customer address`,id:invoiceId(r)});if(st.status==='overdue')issues.push({kind:'sales',level:'warning',message:`${no||'Invoice'} is overdue (${round2(st.outstanding).toFixed(2)} outstanding)`,id:invoiceId(r)});if(st.status==='partially_paid')issues.push({kind:'payments',level:'info',message:`${no||'Invoice'} is partially paid`,id:invoiceId(r)});if(Math.abs(t.net+t.vat-t.gross)>.009)issues.push({kind:'vat',level:'error',message:`${no||'Invoice'} totals do not balance`,id:invoiceId(r)})}
+    for(const r of rows.invoices){const no=text(r['Invoice #']),st=invoiceState(r,book.payments,book.creditNotes,today),t=invoiceTotals(r);if(no){seen.set(no,(seen.get(no)||0)+1)}if(isIssued(r)&&!no)issues.push({kind:'sales',level:'error',message:'Issued invoice without a number',id:invoiceId(r)});if(isIssued(r)&&!text(r.Customer))issues.push({kind:'sales',level:'error',message:`${no||'Invoice'} is missing a customer`,id:invoiceId(r)});if(isIssued(r)&&!text(r.Address))issues.push({kind:'sales',level:'warning',message:`${no||'Invoice'} is missing a customer address`,id:invoiceId(r)});if(st.status==='overdue')issues.push({kind:'sales',level:'warning',message:`${no||'Invoice'} is overdue (${round2(st.outstanding).toFixed(2)} outstanding)`,id:invoiceId(r)});if(st.status==='partially_paid')issues.push({kind:'payments',level:'info',message:`${no||'Invoice'} is partially paid`,id:invoiceId(r)});if(st.overpaid>.009)issues.push({kind:'payments',level:'error',message:`${no||'Invoice'} is overpaid by ${round2(st.overpaid).toFixed(2)}`,id:invoiceId(r)});if(Math.abs(t.net+t.vat-t.gross)>.009)issues.push({kind:'vat',level:'error',message:`${no||'Invoice'} totals do not balance`,id:invoiceId(r)})}
     for(const [no,count] of seen)if(count>1)issues.push({kind:'sales',level:'error',message:`Duplicate invoice number ${no}`});
     for(const r of rows.expenses){const x=expenseFacts(r),label=text(r.Supplier)||'Expense';if(!text(r['Receipt/File']))issues.push({kind:'expenses',level:'error',message:`${label}: missing proof`,id:expenseId(r)});if(x.deductibleVat>x.invoiceVat+.009)issues.push({kind:'vat',level:'error',message:`${label}: deductible VAT exceeds invoice VAT`,id:expenseId(r)});if((x.vatPct<100||x.incomePct<100)&&!text(r.Review))issues.push({kind:'expenses',level:'warning',message:`${label}: mixed-use deduction needs review`,id:expenseId(r)});if(x.insuranceContribution>x.gross+.009)issues.push({kind:'insurance',level:'error',message:`${label}: insurance contribution exceeds the supplier invoice`,id:expenseId(r)});if(x.insuranceContribution&&x.insuranceRoute==='direct'&&Math.abs(x.businessPaid+x.insuranceContribution-x.gross)>.03)issues.push({kind:'insurance',level:'warning',message:`${label}: business payment plus direct insurance payment does not equal the supplier invoice`,id:expenseId(r)});if(x.insuranceContribution&&!text(r['Insurance company']))issues.push({kind:'insurance',level:'warning',message:`${label}: insurance company is missing`,id:expenseId(r)});const rate=inferRate(r),expected=rate==null?x.invoiceVat:round2(x.gross*rate/(100+rate));if(rate!=null&&Math.abs(expected-x.invoiceVat)>.03)issues.push({kind:'vat',level:'warning',message:`${label}: VAT differs from the selected rate`,id:expenseId(r)})}
     const validIds=new Set(book.invoices.map(invoiceId));for(const p of rows.payments)if(!validIds.has(paymentInvoiceId(p)))issues.push({kind:'payments',level:'error',message:'Payment is not allocated to an invoice',id:text(p.id||p['Payment ID'])});
     const penalty=issues.reduce((s,x)=>s+(x.level==='error'?10:x.level==='warning'?5:2),0);return {score:Math.max(0,100-penalty),issues};
   }
-  return {round2,num,text,makeId,asDate,iso,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,receivables,controls};
+  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,receivables,controls};
 });
