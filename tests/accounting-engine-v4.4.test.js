@@ -30,6 +30,23 @@ assert.deepEqual(A.invoiceSalesBreakdown(legacyParkingInvoice),{
   taxableNet:1700,zeroRatedNet:531.57,net:2231.57,vat:357,gross:2588.57
 },'legacy parking must be visible as a separate 0%-VAT invoice cost without changing the invoice total');
 
+const legacyPaidInvoice={...legacyParkingInvoice,'Paid date':'2026-01-04'};
+const legacyPaidBook={invoices:[legacyPaidInvoice],expenses:[],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
+assert.equal(A.paymentTotal(legacyPaidInvoice,legacyPaidBook.payments),0,'a Paid label alone must never invent a cash payment');
+assert.equal(A.cashReport(legacyPaidBook,{start:'2026-01-01',end:'2026-03-31'}).cashIn,0,'cash must come only from dated payment ledger rows');
+assert.equal(A.migrateLegacyPaidInvoices(legacyPaidBook).length,1,'a legacy Paid invoice with a paid date must receive one safe payment row');
+assert.equal(A.migrateLegacyPaidInvoices(legacyPaidBook).length,0,'legacy payment migration must be idempotent');
+assert.equal(A.paymentTotal(legacyPaidInvoice,legacyPaidBook.payments),2588.57);
+assert.equal(A.invoiceState(legacyPaidInvoice,legacyPaidBook.payments,[]).status,'paid');
+assert.equal(A.cashReport(legacyPaidBook,{start:'2026-01-01',end:'2026-03-31'}).cashIn,2588.57);
+assert.equal(A.paymentReconciliation(legacyPaidBook)[0].status,'ok');
+
+const mismatchedPaidBook={invoices:[legacyPaidInvoice],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_WRONG',invoiceId:'INV_LEGACY_PARKING',date:'2026-01-04',amount:256.06}],creditNotes:[],deleted:[],control:{}};
+assert.equal(A.migrateLegacyPaidInvoices(mismatchedPaidBook).length,0,'an existing mismatched payment must not be silently overwritten');
+assert.equal(A.paymentReconciliation(mismatchedPaidBook)[0].status,'mismatch');
+assert.equal(A.paymentReconciliation(mismatchedPaidBook)[0].difference,2332.51);
+assert.ok(A.controls(mismatchedPaidBook,new Date('2026-01-10'),{start:'2026-01-01',end:'2026-03-31'}).issues.some(x=>x.kind==='payments'&&x.message.includes('ledger payments are 256.06')),'payment mismatch must be explicit in Control');
+
 book.payments.push({id:'PAY_1',invoiceId:'INV_1',date:'2026-09-13',amount:500,method:'Bank'});
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).status,'partially_paid');
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).outstanding,577);

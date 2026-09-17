@@ -17,6 +17,8 @@ v4.4.1 makes the selected quarter authoritative across the Bookkeeping dashboard
 - Invoices use line items with quantity, net unit price and VAT rate.
 - Draft invoices have no permanent number. Issuing allocates the number; issued numbers are immutable.
 - Customer payments are separate records and support partial payment.
+- Cash received comes only from dated customer-payment records. Older Paid invoices with a paid date are migrated once into the payment ledger.
+- Paid invoices with an incorrect existing payment are flagged with the exact difference and an audited repair action instead of being silently changed.
 - Credit notes reduce revenue, output VAT and receivables without deleting the issued invoice.
 - General, fuel and vehicle entries appear in one expense ledger and calculation path.
 - Expenses store invoice VAT, deductible VAT percentage, deductible VAT, income-tax deductible percentage and deductible cost separately.
@@ -27,7 +29,7 @@ v4.4.1 makes the selected quarter authoritative across the Bookkeeping dashboard
 
 ## Compatibility
 
-Existing v4.3 records are read without a destructive conversion. Legacy Paid invoices still count as received cash until an explicit payment record exists. Legacy Parking and Other values are presented as separate invoice lines while keeping the stored invoice total and VAT intact. New v4.4 fields are saved into the same yearly Google Drive JSON and included in JSON/XLSX archives.
+Existing v4.3 records are read without a destructive conversion. A legacy Paid invoice with a real paid date receives one explicit, idempotent payment record; a conflicting payment remains untouched until it is reviewed. Legacy Parking and Other values are presented as separate invoice lines while keeping the stored invoice total and VAT intact. New v4.4 fields are saved into the same yearly Google Drive JSON and included in JSON/XLSX archives.
 
 Open `index.html`, then choose **Bookkeeping**. Connect Google Drive as before.
 
