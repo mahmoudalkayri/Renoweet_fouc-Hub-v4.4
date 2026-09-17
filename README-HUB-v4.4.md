@@ -1,6 +1,6 @@
-# Renoweet Focus Hub v4.4.3
+# Renoweet Focus Hub v4.4.4
 
-v4.4.3 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
+v4.4.4 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
 ## Focus Hub database
 
@@ -48,7 +48,7 @@ Open `index.html`, then choose **Bookkeeping**. Connect Google Drive as before.
 - Single-project JSON restore remains available under Advanced recovery for isolated lost-project cases; it is no longer the primary migration workflow.
 
 
-## v4.4.3 payment-timing reconciliation
+## v4.4.4 payment-timing reconciliation
 
 The dashboard now separates **Paid against Qx invoices** from **Cash received in Qx**. A green Paid invoice can legitimately have zero outstanding while its customer payment is dated in a later quarter; previously that difference was mathematically correct but visually confusing. Sales now shows any portion of an invoice paid outside the selected quarter, adds a Payment timing section with those rows, and lets you edit the payment date through the controlled closed-quarter correction workflow. The dashboard calculation also shows payments applied inside/outside the selected quarter so the cash figure can be traced directly to the dated cash ledger.
 

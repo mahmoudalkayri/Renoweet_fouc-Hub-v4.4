@@ -7,7 +7,7 @@
 (function(){
 'use strict';
 const Core={};
-const SCHEMA_VERSION=3, APP_VERSION='focus-hub-v4.4.3';
+const SCHEMA_VERSION=3, APP_VERSION='focus-hub-v4.4.4';
 const DEFAULT_GOOGLE_CLIENT_ID='819845217406-569349vod25m15sb2omm03do2h1ll976.apps.googleusercontent.com';
 const LS={clientId:'renoweet_google_client_id_v1',token:'renoweet_google_access_token_v1',tokenAt:'renoweet_google_token_at_v1',folderId:'renoweet_drive_folder_id_v1',activeFolderId:'renoweet_drive_active_folder_id_v26',archivesFolderId:'renoweet_drive_archives_folder_id_v26',recoveryFolderId:'renoweet_drive_recovery_folder_id_v26',manifestId:'renoweet_drive_manifest_id_v26',activeId:'renoweet_drive_active_id_v1',activeYearId:'renoweet_drive_active_year_id_v25_',year:'renoweet_drive_year_v1',deviceId:'renoweet_device_id_v2',lastRecovery:'renoweet_last_recovery_v2_'};
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';

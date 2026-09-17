@@ -41,6 +41,13 @@ assert.equal(A.invoiceState(legacyPaidInvoice,legacyPaidBook.payments,[]).status
 assert.equal(A.cashReport(legacyPaidBook,{start:'2026-01-01',end:'2026-03-31'}).cashIn,2588.57);
 assert.equal(A.paymentReconciliation(legacyPaidBook)[0].status,'ok');
 
+const wrongDatePaidBook={invoices:[legacyPaidInvoice],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_WRONG_DATE',invoiceId:'INV_LEGACY_PARKING','Invoice #':'2026-0101001',date:'2026-04-01',amount:2588.57}],creditNotes:[],deleted:[],control:{}};
+const wrongDateRec=A.paymentReconciliation(wrongDatePaidBook)[0];
+assert.equal(wrongDateRec.status,'date_mismatch','a Paid invoice must be flagged when its Paid date and ledger settlement date disagree');
+assert.equal(wrongDateRec.paidDate,'2026-01-04');
+assert.equal(wrongDateRec.settlementDate,'2026-04-01');
+assert.ok(A.controls(wrongDatePaidBook,new Date('2026-04-02'),{start:'2026-01-01',end:'2026-03-31'}).issues.some(x=>x.kind==='payments'&&x.message.includes('Paid date 2026-01-04')),'Control must expose payment-date mismatches');
+
 const timingBook={invoices:[{...legacyPaidInvoice,'Record ID':'INV_TIMING','Invoice #':'2026-TIMING','Paid date':'2026-04-05'}],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_TIMING_Q1',invoiceId:'INV_TIMING','Invoice #':'2026-TIMING',date:'2026-03-31',amount:100},{id:'PAY_TIMING_Q2',invoiceId:'INV_TIMING','Invoice #':'2026-TIMING',date:'2026-04-05',amount:2488.57}],creditNotes:[],deleted:[],control:{}};
 const timing=A.paymentTimingReport(timingBook,{start:'2026-01-01',end:'2026-03-31'});
 assert.equal(timing.appliedToPeriodInvoices,2588.57,'selected-quarter invoice settlement must include all linked payments regardless of payment quarter');
@@ -116,4 +123,4 @@ assert.equal(reimbursedCash.cashOut,6192.36);
 assert.equal(reimbursedCash.insuranceCashIn,5117.65);
 assert.equal(reimbursedCash.movement,-1074.71,'reimbursement route must preserve the same net cash effect');
 
-console.log('Accounting engine v4.4.3 tests passed.');
+console.log('Accounting engine v4.4.4 tests passed.');
