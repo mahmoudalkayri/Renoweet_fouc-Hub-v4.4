@@ -1,4 +1,4 @@
-/* Renoweet Accounting Engine v4.4.2
+/* Renoweet Accounting Engine v4.4.3
    Pure calculation layer shared by Dashboard, VAT, reports and control. */
 (function(root,factory){
   const api=factory();
@@ -113,6 +113,14 @@
   function cashReport(book,period){
     book=normalizeBookkeeping(book);const customerPayments=book.payments.filter(p=>inRange(p.date||p.Date,period)).reduce((s,p)=>s+num(p.amount??p.Amount),0),expenses=allExpenses(book),outgoing=expenses.filter(r=>lower(r['Payment status'])!=='unpaid'&&inRange(r['Payment date']||r['Document date']||r.Date,period)).reduce((s,r)=>s+expenseFacts(r).businessPaid,0),insuranceIncoming=expenses.filter(r=>expenseFacts(r).insuranceRoute==='reimbursed'&&inRange(r['Insurance settlement date']||r['Payment date']||r['Document date']||r.Date,period)).reduce((s,r)=>s+expenseFacts(r).insuranceCashIn,0),recordedCustomerCashIn=round2(customerPayments),legacyPaidCashIn=0,customerCashIn=recordedCustomerCashIn,insuranceCashIn=round2(insuranceIncoming),cashIn=round2(customerCashIn+insuranceCashIn),cashOut=round2(outgoing);return {recordedCustomerCashIn,legacyPaidCashIn,customerCashIn,insuranceCashIn,cashIn,cashOut,movement:round2(cashIn-cashOut)}
   }
+  function paymentTimingReport(book,period){
+    book=normalizeBookkeeping(book);
+    const invoices=book.invoices.filter(r=>inRange(r['Invoice date']||r.Date,period)),ids=new Set(invoices.map(invoiceId)),numbers=new Set(invoices.map(r=>text(r?.['Invoice #'])).filter(Boolean));
+    const linked=book.payments.filter(p=>ids.has(paymentInvoiceId(p))||numbers.has(text(p?.['Invoice #']))),inPeriodPayments=[],outsidePeriodPayments=[],undatedPayments=[];
+    for(const p of linked){const d=p.date||p.Date;if(!asDate(d))undatedPayments.push(p);else if(inRange(d,period))inPeriodPayments.push(p);else outsidePeriodPayments.push(p)}
+    const total=rows=>round2(rows.reduce((s,p)=>s+num(p.amount??p.Amount),0)),appliedToPeriodInvoices=total(linked),appliedInPeriod=total(inPeriodPayments),appliedOutsidePeriod=total(outsidePeriodPayments),appliedUndated=total(undatedPayments),cashInPeriod=round2(book.payments.filter(p=>inRange(p.date||p.Date,period)).reduce((s,p)=>s+num(p.amount??p.Amount),0)),cashFromOtherInvoicePeriods=round2(cashInPeriod-appliedInPeriod);
+    return {invoices,linkedPayments:linked,inPeriodPayments,outsidePeriodPayments,undatedPayments,appliedToPeriodInvoices,appliedInPeriod,appliedOutsidePeriod,appliedUndated,cashInPeriod,cashFromOtherInvoicePeriods};
+  }
   function receivables(book,period){book=normalizeBookkeeping(book);return round2(book.invoices.filter(r=>inRange(r['Invoice date']||r.Date,period)).reduce((s,r)=>s+invoiceState(r,book.payments,book.creditNotes).outstanding,0))}
   function controls(book,today=new Date(),period){
     book=normalizeBookkeeping(book);const rows=periodRows(book,period),issues=[];const seen=new Map();
@@ -123,5 +131,5 @@
     const validIds=new Set(book.invoices.map(invoiceId));for(const p of rows.payments)if(!validIds.has(paymentInvoiceId(p)))issues.push({kind:'payments',level:'error',message:'Payment is not allocated to an invoice',id:text(p.id||p['Payment ID'])});
     const penalty=issues.reduce((s,x)=>s+(x.level==='error'?10:x.level==='warning'?5:2),0);return {score:Math.max(0,100-penalty),issues};
   }
-  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceSalesBreakdown,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,markedPaid,paymentReconciliation,migrateLegacyPaidInvoices,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,receivables,controls};
+  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceSalesBreakdown,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,markedPaid,paymentReconciliation,migrateLegacyPaidInvoices,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,paymentTimingReport,receivables,controls};
 });

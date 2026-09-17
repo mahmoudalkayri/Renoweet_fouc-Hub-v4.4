@@ -41,6 +41,14 @@ assert.equal(A.invoiceState(legacyPaidInvoice,legacyPaidBook.payments,[]).status
 assert.equal(A.cashReport(legacyPaidBook,{start:'2026-01-01',end:'2026-03-31'}).cashIn,2588.57);
 assert.equal(A.paymentReconciliation(legacyPaidBook)[0].status,'ok');
 
+const timingBook={invoices:[{...legacyPaidInvoice,'Record ID':'INV_TIMING','Invoice #':'2026-TIMING','Paid date':'2026-04-05'}],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_TIMING_Q1',invoiceId:'INV_TIMING','Invoice #':'2026-TIMING',date:'2026-03-31',amount:100},{id:'PAY_TIMING_Q2',invoiceId:'INV_TIMING','Invoice #':'2026-TIMING',date:'2026-04-05',amount:2488.57}],creditNotes:[],deleted:[],control:{}};
+const timing=A.paymentTimingReport(timingBook,{start:'2026-01-01',end:'2026-03-31'});
+assert.equal(timing.appliedToPeriodInvoices,2588.57,'selected-quarter invoice settlement must include all linked payments regardless of payment quarter');
+assert.equal(timing.appliedInPeriod,100,'payment timing must identify the portion actually received inside the selected quarter');
+assert.equal(timing.appliedOutsidePeriod,2488.57,'payment timing must expose payments for selected-quarter invoices dated outside the quarter');
+assert.equal(timing.cashInPeriod,100,'cash in period must remain grouped by payment date');
+assert.equal(timing.outsidePeriodPayments.length,1,'outside-quarter payments must remain individually reviewable');
+
 const blockedLegacyPaidBook={invoices:[{...legacyPaidInvoice,'Record ID':'INV_BLOCKED'}],expenses:[],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
 assert.equal(A.migrateLegacyPaidInvoices(blockedLegacyPaidBook,null,()=>false).length,0,'closed-period UI must be able to suppress automatic legacy payment migration');
 assert.equal(blockedLegacyPaidBook.payments.length,0,'suppressed migration must not change the payment ledger');
@@ -108,4 +116,4 @@ assert.equal(reimbursedCash.cashOut,6192.36);
 assert.equal(reimbursedCash.insuranceCashIn,5117.65);
 assert.equal(reimbursedCash.movement,-1074.71,'reimbursement route must preserve the same net cash effect');
 
-console.log('Accounting engine v4.4.2 tests passed.');
+console.log('Accounting engine v4.4.3 tests passed.');

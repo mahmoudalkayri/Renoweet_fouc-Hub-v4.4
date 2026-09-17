@@ -1,6 +1,6 @@
-# Renoweet Focus Hub v4.4.2
+# Renoweet Focus Hub v4.4.3
 
-v4.4.2 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
+v4.4.3 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
 ## Focus Hub database
 
@@ -46,6 +46,11 @@ Open `index.html`, then choose **Bookkeeping**. Connect Google Drive as before.
 - OS > Database can install a verified merged recovery JSON. It checks the exact source checksum, creates a Drive Recovery snapshot, and refuses to overwrite a live database that changed after the merge was prepared.
 - OS > Database includes a quarter-controlled Legacy XLSX Import workflow. It previews invoices, projects and expenses, creates deterministic internal IDs, treats invoice numbers as duplicate controls, skips records already present, and creates Drive recovery snapshots before importing OS or bookkeeping data.
 - Single-project JSON restore remains available under Advanced recovery for isolated lost-project cases; it is no longer the primary migration workflow.
+
+
+## v4.4.3 payment-timing reconciliation
+
+The dashboard now separates **Paid against Qx invoices** from **Cash received in Qx**. A green Paid invoice can legitimately have zero outstanding while its customer payment is dated in a later quarter; previously that difference was mathematically correct but visually confusing. Sales now shows any portion of an invoice paid outside the selected quarter, adds a Payment timing section with those rows, and lets you edit the payment date through the controlled closed-quarter correction workflow. The dashboard calculation also shows payments applied inside/outside the selected quarter so the cash figure can be traced directly to the dated cash ledger.
 
 ## v4.4.2 closed-quarter payment correction fix
 
