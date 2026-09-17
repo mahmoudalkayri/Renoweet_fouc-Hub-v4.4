@@ -1,4 +1,4 @@
-/* Renoweet Accounting Engine v4.4.1
+/* Renoweet Accounting Engine v4.4.2
    Pure calculation layer shared by Dashboard, VAT, reports and control. */
 (function(root,factory){
   const api=factory();
@@ -70,10 +70,11 @@
       return {invoice,invoiceId:invoiceId(invoice),invoiceNumber:text(invoice?.['Invoice #']),isMarkedPaid,paidDate,due,paid,difference,payments,status};
     });
   }
-  function migrateLegacyPaidInvoices(book,period){
+  function migrateLegacyPaidInvoices(book,period,allowItem=null){
     book=normalizeBookkeeping(book);const added=[];
     for(const item of paymentReconciliation(book,period)){
       if(item.status!=='missing_payment'||!item.paidDate||item.due<=.009)continue;
+      if(typeof allowItem==='function'&&!allowItem(item))continue;
       const id=`PAY_MIG_${item.invoiceId.replace(/[^a-z0-9_-]/gi,'_')}`;
       if(book.payments.some(p=>text(p.id||p['Payment ID'])===id))continue;
       const payment={id,invoiceId:item.invoiceId,'Invoice #':item.invoiceNumber,date:item.paidDate,amount:item.due,method:'Bank',reference:'Recovered from legacy Paid status',source:'legacy-paid-status-migration','Migration version':'4.4.1-payment-ledger-v1'};

@@ -1,6 +1,6 @@
-# Renoweet Focus Hub v4.4.1
+# Renoweet Focus Hub v4.4.2
 
-v4.4.1 makes the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
+v4.4.2 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
 ## Focus Hub database
 
@@ -46,3 +46,11 @@ Open `index.html`, then choose **Bookkeeping**. Connect Google Drive as before.
 - OS > Database can install a verified merged recovery JSON. It checks the exact source checksum, creates a Drive Recovery snapshot, and refuses to overwrite a live database that changed after the merge was prepared.
 - OS > Database includes a quarter-controlled Legacy XLSX Import workflow. It previews invoices, projects and expenses, creates deterministic internal IDs, treats invoice numbers as duplicate controls, skips records already present, and creates Drive recovery snapshots before importing OS or bookkeeping data.
 - Single-project JSON restore remains available under Advanced recovery for isolated lost-project cases; it is no longer the primary migration workflow.
+
+## v4.4.2 closed-quarter payment correction fix
+
+- The header **Reopen Qx** button now calls the quarter action without accidentally passing the browser click event as the quarter number. This fixes the no-op reopen/close button behavior.
+- Imported invoices marked Paid are no longer auto-migrated into a closed quarter and left only in the browser. Closed-period payment mismatches stay visible until they are deliberately repaired.
+- Payment repair, payment edit/removal, and saving a Paid imported invoice can reopen only the affected quarter(s), including a correction that crosses Q1 and Q2. Each reopen is written to the existing audit trail and old quarter archives remain unchanged.
+- After a correction, closing the quarter creates a replacement archive while retaining prior archive metadata in history.
+- Closed-period protection now checks both the old and new record dates, so moving a record out of a closed quarter cannot bypass the lock.

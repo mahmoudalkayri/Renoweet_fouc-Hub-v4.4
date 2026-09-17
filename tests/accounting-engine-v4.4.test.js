@@ -41,6 +41,10 @@ assert.equal(A.invoiceState(legacyPaidInvoice,legacyPaidBook.payments,[]).status
 assert.equal(A.cashReport(legacyPaidBook,{start:'2026-01-01',end:'2026-03-31'}).cashIn,2588.57);
 assert.equal(A.paymentReconciliation(legacyPaidBook)[0].status,'ok');
 
+const blockedLegacyPaidBook={invoices:[{...legacyPaidInvoice,'Record ID':'INV_BLOCKED'}],expenses:[],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
+assert.equal(A.migrateLegacyPaidInvoices(blockedLegacyPaidBook,null,()=>false).length,0,'closed-period UI must be able to suppress automatic legacy payment migration');
+assert.equal(blockedLegacyPaidBook.payments.length,0,'suppressed migration must not change the payment ledger');
+
 const mismatchedPaidBook={invoices:[legacyPaidInvoice],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_WRONG',invoiceId:'INV_LEGACY_PARKING',date:'2026-01-04',amount:256.06}],creditNotes:[],deleted:[],control:{}};
 assert.equal(A.migrateLegacyPaidInvoices(mismatchedPaidBook).length,0,'an existing mismatched payment must not be silently overwritten');
 assert.equal(A.paymentReconciliation(mismatchedPaidBook)[0].status,'mismatch');
@@ -104,4 +108,4 @@ assert.equal(reimbursedCash.cashOut,6192.36);
 assert.equal(reimbursedCash.insuranceCashIn,5117.65);
 assert.equal(reimbursedCash.movement,-1074.71,'reimbursement route must preserve the same net cash effect');
 
-console.log('Accounting engine v4.4.1 tests passed.');
+console.log('Accounting engine v4.4.2 tests passed.');
