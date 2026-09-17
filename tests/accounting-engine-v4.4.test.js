@@ -36,9 +36,23 @@ assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('202
 assert.equal(A.cashReport(book,period).cashIn,500);
 
 book.creditNotes.push({id:'CRN_1',invoiceId:'INV_1',date:'2026-09-14',net:100,vat:21,gross:121});
+assert.equal(A.vatReport(book,period).issuedSalesGross,1077,'original issued invoice total must remain visible before credit notes');
+assert.equal(A.vatReport(book,period).creditGross,121,'credit notes must be reported separately from issued invoices');
+assert.equal(A.vatReport(book,period).salesGross,956,'net invoiced value must deduct credit notes');
+assert.equal(A.vatReport(book,period).issuedOutputVat,177,'original sales VAT must remain visible before credit notes');
+assert.equal(A.vatReport(book,period).creditVat,21,'credit VAT must be explicit');
 assert.equal(A.vatReport(book,period).outputVat,156);
 assert.equal(A.profitAndLoss(book,period).revenue,800);
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).outstanding,456);
+
+const screenshotTotalsBook={
+  invoices:[{'Record ID':'INV_SCREEN','Invoice #':'2026-SCREEN',Date:'2026-09-01',Status:'Open','Line items JSON':JSON.stringify([{description:'Quarter invoices',quantity:1,unitNet:8378.81,vatRate:0,vatTreatment:'CUSTOM',vatAmount:1501.37}])}],
+  expenses:[],fuel:[],auto:[],payments:[],creditNotes:[{id:'CRN_SCREEN',invoiceId:'INV_SCREEN',date:'2026-09-15',net:255.63,vat:0,gross:255.63}],deleted:[],control:{}
+};
+const screenshotReport=A.vatReport(screenshotTotalsBook,period);
+assert.equal(screenshotReport.issuedSalesGross,9880.18,'issued-invoice card must show the original invoice total before credits');
+assert.equal(screenshotReport.creditGross,255.63,'the hidden deduction must be shown as a separate credit-note total');
+assert.equal(screenshotReport.salesGross,9624.55,'net invoiced value after credits must remain separately available');
 
 const overpaidBook={invoices:[invoice],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_TOO_MUCH',invoiceId:'INV_1',date:'2026-09-15',amount:5000}],creditNotes:[],deleted:[],control:{}};
 assert.equal(A.invoiceState(invoice,overpaidBook.payments,[]).overpaid,3923,'invoice state must expose an overpayment');
