@@ -37,18 +37,21 @@
     if(Array.isArray(lines)&&lines.length)return lines.map((x,i)=>({
       id:text(x.id)||`line_${i+1}`,description:text(x.description)||'Work',quantity:num(x.quantity)||1,unitNet:num(x.unitNet),vatRate:num(x.vatRate),vatTreatment:normalizeTreatment(x.vatTreatment,num(x.vatRate)),vatAmount:x.vatAmount==null?null:num(x.vatAmount)
     }));
-    const gross=num(invoice?.['Gross incl. VAT']??invoice?.totalInclVat),vat=num(invoice?.VAT??invoice?.vatTotal),net=round2(gross-vat),parking=Math.max(0,num(invoice?.Parking)),other=Math.max(0,num(invoice?.['Other costs'])),rate=inferRate(invoice,'Gross incl. VAT');
+    const gross=num(invoice?.['Gross incl. VAT']??invoice?.totalInclVat),vat=num(invoice?.VAT??invoice?.vatTotal),net=round2(gross-vat),parking=Math.max(0,num(invoice?.Parking)),other=Math.max(0,num(invoice?.['Other costs'])),storedRate=num(invoice?.['VAT rate']??invoice?.vatRate),rate=[21,9,0].includes(storedRate)?storedRate:inferRate(invoice,'Gross incl. VAT');
     const main=Math.max(0,round2(net-parking-other)),out=[];
     if(main||(!parking&&!other))out.push({id:'legacy_work',description:text(invoice?.['Work description'])||'Work',quantity:1,unitNet:main,vatRate:rate??0,vatTreatment:normalizeTreatment(invoice?.['VAT treatment'],rate),vatAmount:null});
-    if(parking)out.push({id:'legacy_parking',description:'Parking recharge',quantity:1,unitNet:parking,vatRate:rate??0,vatTreatment:normalizeTreatment(invoice?.['VAT treatment'],rate),vatAmount:null});
-    if(other)out.push({id:'legacy_other',description:'Other costs',quantity:1,unitNet:other,vatRate:rate??0,vatTreatment:normalizeTreatment(invoice?.['VAT treatment'],rate),vatAmount:null});
-    if((rate==null||out.reduce((s,l)=>s+round2(l.unitNet*l.vatRate/100),0)!==round2(vat))&&out.length)out[0].vatAmount=round2(vat-out.slice(1).reduce((s,l)=>s+round2(l.unitNet*l.vatRate/100),0));
+    if(parking)out.push({id:'legacy_parking',description:'Parking recharge',quantity:1,unitNet:parking,vatRate:0,vatTreatment:'NL_ZERO',vatAmount:0});
+    if(other)out.push({id:'legacy_other',description:'Other costs',quantity:1,unitNet:other,vatRate:0,vatTreatment:'NL_ZERO',vatAmount:0});
+    if(out.reduce((s,l)=>s+lineTotals(l).vat,0)!==round2(vat)&&out.length)out[0].vatAmount=round2(vat);
     return out;
   }
   function lineTotals(line){const net=round2((num(line.quantity)||1)*num(line.unitNet)),vat=round2(line.vatAmount==null?net*num(line.vatRate)/100:num(line.vatAmount));return {net,vat,gross:round2(net+vat)}}
   function invoiceTotals(invoice){
     const lines=parseLines(invoice);if(!lines.length){const gross=num(invoice?.['Gross incl. VAT']),vat=num(invoice?.VAT);return {net:round2(gross-vat),vat:round2(vat),gross:round2(gross),lines:[]}}
     const t=lines.reduce((a,l)=>{const x=lineTotals(l);a.net+=x.net;a.vat+=x.vat;return a},{net:0,vat:0});return {net:round2(t.net),vat:round2(t.vat),gross:round2(t.net+t.vat),lines};
+  }
+  function invoiceSalesBreakdown(invoice){
+    const totals=invoiceTotals(invoice),parts=totals.lines.reduce((a,l)=>{const t=lineTotals(l),treatment=normalizeTreatment(l.vatTreatment,num(l.vatRate)),zero=num(l.vatRate)===0||/(ZERO|EXEMPT|OUT_OF_SCOPE)/.test(treatment);if(zero)a.zeroRatedNet+=t.net;else a.taxableNet+=t.net;return a},{taxableNet:0,zeroRatedNet:0});return {taxableNet:round2(parts.taxableNet),zeroRatedNet:round2(parts.zeroRatedNet),net:totals.net,vat:totals.vat,gross:totals.gross};
   }
   const invoiceId=r=>text(r?.['Record ID']||r?._rid||r?.id||r?.['Invoice #']);
   const expenseId=r=>text(r?.['Record ID']||r?._rid||r?.id||r?.['Receipt/File']);
@@ -84,7 +87,7 @@
     const grossProfit=round2(revenue-direct),result=round2(grossProfit-operating);return {revenue:round2(revenue),directCosts:round2(direct),grossProfit,operatingExpenses:round2(operating),insuranceContributions:round2(insuranceContributions),operatingProfit:result,estimatedTaxableProfit:result};
   }
   function cashReport(book,period){
-    book=normalizeBookkeeping(book);const customerPayments=book.payments.filter(p=>inRange(p.date||p.Date,period)).reduce((s,p)=>s+num(p.amount??p.Amount),0),legacy=book.invoices.filter(r=>lower(r.Status)==='paid'&&!paymentsFor(r,book.payments).length&&inRange(r['Paid date']||r['Invoice date']||r.Date,period)).reduce((s,r)=>s+invoiceTotals(r).gross,0),expenses=allExpenses(book),outgoing=expenses.filter(r=>lower(r['Payment status'])!=='unpaid'&&inRange(r['Payment date']||r['Document date']||r.Date,period)).reduce((s,r)=>s+expenseFacts(r).businessPaid,0),insuranceIncoming=expenses.filter(r=>expenseFacts(r).insuranceRoute==='reimbursed'&&inRange(r['Insurance settlement date']||r['Payment date']||r['Document date']||r.Date,period)).reduce((s,r)=>s+expenseFacts(r).insuranceCashIn,0),customerCashIn=round2(customerPayments+legacy),insuranceCashIn=round2(insuranceIncoming),cashIn=round2(customerCashIn+insuranceCashIn),cashOut=round2(outgoing);return {customerCashIn,insuranceCashIn,cashIn,cashOut,movement:round2(cashIn-cashOut)}
+    book=normalizeBookkeeping(book);const customerPayments=book.payments.filter(p=>inRange(p.date||p.Date,period)).reduce((s,p)=>s+num(p.amount??p.Amount),0),legacy=book.invoices.filter(r=>lower(r.Status)==='paid'&&!paymentsFor(r,book.payments).length&&inRange(r['Paid date']||r['Invoice date']||r.Date,period)).reduce((s,r)=>s+invoiceTotals(r).gross,0),expenses=allExpenses(book),outgoing=expenses.filter(r=>lower(r['Payment status'])!=='unpaid'&&inRange(r['Payment date']||r['Document date']||r.Date,period)).reduce((s,r)=>s+expenseFacts(r).businessPaid,0),insuranceIncoming=expenses.filter(r=>expenseFacts(r).insuranceRoute==='reimbursed'&&inRange(r['Insurance settlement date']||r['Payment date']||r['Document date']||r.Date,period)).reduce((s,r)=>s+expenseFacts(r).insuranceCashIn,0),recordedCustomerCashIn=round2(customerPayments),legacyPaidCashIn=round2(legacy),customerCashIn=round2(recordedCustomerCashIn+legacyPaidCashIn),insuranceCashIn=round2(insuranceIncoming),cashIn=round2(customerCashIn+insuranceCashIn),cashOut=round2(outgoing);return {recordedCustomerCashIn,legacyPaidCashIn,customerCashIn,insuranceCashIn,cashIn,cashOut,movement:round2(cashIn-cashOut)}
   }
   function receivables(book,period){book=normalizeBookkeeping(book);return round2(book.invoices.filter(r=>inRange(r['Invoice date']||r.Date,period)).reduce((s,r)=>s+invoiceState(r,book.payments,book.creditNotes).outstanding,0))}
   function controls(book,today=new Date(),period){
@@ -95,5 +98,5 @@
     const validIds=new Set(book.invoices.map(invoiceId));for(const p of rows.payments)if(!validIds.has(paymentInvoiceId(p)))issues.push({kind:'payments',level:'error',message:'Payment is not allocated to an invoice',id:text(p.id||p['Payment ID'])});
     const penalty=issues.reduce((s,x)=>s+(x.level==='error'?10:x.level==='warning'?5:2),0);return {score:Math.max(0,100-penalty),issues};
   }
-  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,receivables,controls};
+  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceSalesBreakdown,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,receivables,controls};
 });

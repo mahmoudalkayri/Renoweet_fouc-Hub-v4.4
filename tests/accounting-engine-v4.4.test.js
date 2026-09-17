@@ -22,6 +22,14 @@ assert.equal(A.expenseFacts(expense).deductibleCost,88.4,'non-deductible VAT mus
 assert.equal(A.profitAndLoss(book,period).revenue,900,'P&L must recognise issued revenue');
 assert.equal(A.cashReport(book,period).cashIn,0,'unpaid issued invoice must not count as cash');
 
+const legacyParkingInvoice={
+  'Record ID':'INV_LEGACY_PARKING','Invoice #':'2026-0101001',Date:'2026-01-01',Customer:'Nextgenhome',Status:'Paid',
+  'Gross incl. VAT':2588.57,VAT:357,Parking:531.57,'Other costs':0,'VAT rate':21,'Work description':'Carpentry work'
+};
+assert.deepEqual(A.invoiceSalesBreakdown(legacyParkingInvoice),{
+  taxableNet:1700,zeroRatedNet:531.57,net:2231.57,vat:357,gross:2588.57
+},'legacy parking must be visible as a separate 0%-VAT invoice cost without changing the invoice total');
+
 book.payments.push({id:'PAY_1',invoiceId:'INV_1',date:'2026-09-13',amount:500,method:'Bank'});
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).status,'partially_paid');
 assert.equal(A.invoiceState(invoice,book.payments,book.creditNotes,new Date('2026-09-14')).outstanding,577);
