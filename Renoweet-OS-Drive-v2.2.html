@@ -320,7 +320,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
  <main class="content">
   <div class="topbar">
    <div><h1 id="pageTitle">Dashboard</h1><div class="sub" id="pageSub">From first contact to invoice, review and referral.</div></div>
-   <div class="actions"><button class="btn" id="quickSearchBtn">Search</button><button class="btn primary" id="newProjectBtn">+ New project</button></div>
+   <div class="actions"><button class="btn" type="button" onclick="window.open('./Renoweet-Project-Notebook.html','focus_project_notebook')">Project Notebook</button><button class="btn" id="quickSearchBtn">Search</button><button class="btn primary" id="newProjectBtn">+ New project</button></div>
   </div>
   <div class="statusbar">
    <span class="dot" id="dbDot"></span><b id="dbStatus">Not connected</b><span class="small" id="dbDetail">Choose your Renoweet OS XLSX from OneDrive.</span>
@@ -2272,5 +2272,6 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="./renoweet-os-drive-adapter-v3.6.js"></script>
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
+<script src="./renoweet-os-project-bridge-v1.js"></script>
 </body>
 </html>

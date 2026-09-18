@@ -2,6 +2,15 @@
 
 v4.4.4 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
+## Project Notebook integration
+
+- The Hub now includes **Project Notebook**, a bilingual site-survey and scope-confirmation tool with filled-report and blank-paper printing.
+- Creating or duplicating a notebook project creates one linked Renoweet OS project with a permanent OS Project ID.
+- The link writes through the existing OS browser safety database and queue. When Renoweet OS is open it accepts the project immediately; otherwise it accepts it on the next OS load.
+- OS keeps its existing Google Drive merge, verification, retry and recovery behavior. The notebook does not replace or bypass those safeguards.
+- Notebook photos remain local, are included in its JSON backup and are limited to 10 per project. Adding beyond the limit requires confirmation before the oldest photos are removed.
+- Deleting a notebook does not delete the linked OS project.
+
 ## Focus Hub database
 
 - Focus Hub goals, metrics, reminders, today’s focus and expense-optimizer records save automatically to the private hosted database.

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1d5274">
+  <meta name="description" content="Renoweet projectopnames, scopebevestiging en fotologboeken.">
+  <title>Renoweet · Projectopnames</title>
+  <link rel="icon" type="image/png" href="icons/renoweet-logo.png">
+  <link rel="stylesheet" href="styles-project-notebook.css">
+</head>
+<body>
+  <header class="topbar no-print">
+    <div class="topbar-inner">
+      <button class="brand-button" id="homeBtn" type="button" aria-label="Renoweet projecten">
+        <img src="icons/renoweet-logo.png" alt="Renoweet.nl">
+        <span><strong>Renoweet</strong><small data-i18n="projectPortal">Project portal</small></span>
+      </button>
+      <div class="top-actions">
+        <div class="sync-pill" id="syncPill"><span class="sync-dot"></span><span id="syncText">Lokaal</span></div>
+        <div class="language-switch" role="group" aria-label="Language / Taal">
+          <button type="button" data-lang="nl" class="active">NL</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="btn btn-quiet" id="openOsBtn" type="button" data-i18n="openOs">Open OS</button>
+        <button class="btn btn-quiet" id="accountBtn" type="button" data-i18n="dataManagement">Gegevens</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="dashboardView" class="view hidden">
+      <div class="view-shell">
+        <div id="localBanner" class="setup-banner">
+          <div>
+            <strong data-i18n="localMode">Lokale database</strong>
+            <span data-i18n="localModeCopy">Projecten blijven op dit apparaat en worden bij aanmaak gekoppeld aan Renoweet OS.</span>
+          </div>
+          <button class="btn btn-outline" type="button" id="setupHelpBtn" data-i18n="exportJson">JSON exporteren</button>
+        </div>
+        <div class="dashboard-head">
+          <div>
+            <p class="kicker">RENOWEET.NL</p>
+            <h1 data-i18n="projects">Projecten</h1>
+            <p class="muted" data-i18n="projectsCopy">Open een werkopname of maak een nieuw project.</p>
+          </div>
+          <button class="btn btn-primary" type="button" id="newProjectBtn"><span aria-hidden="true">＋</span><span data-i18n="newProject">Nieuw project</span></button>
+        </div>
+        <div class="project-toolbar">
+          <label class="search-box"><span aria-hidden="true">⌕</span><input id="projectSearch" type="search" data-i18n-placeholder="searchProjects" placeholder="Zoek op klant, adres of project"></label>
+          <select id="statusFilter" aria-label="Projectstatus">
+            <option value="" data-i18n="allStatuses">Alle statussen</option>
+            <option value="lead" data-i18n="statusLead">Aanvraag</option>
+            <option value="inspection" data-i18n="statusInspection">Opname</option>
+            <option value="quote" data-i18n="statusQuote">Offerte</option>
+            <option value="active" data-i18n="statusActive">In uitvoering</option>
+            <option value="done" data-i18n="statusDone">Afgerond</option>
+          </select>
+        </div>
+        <div id="projectList" class="project-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="editorView" class="view hidden">
+      <div class="editor-toolbar no-print">
+        <div class="editor-toolbar-inner">
+          <button class="btn btn-quiet" id="backBtn" type="button">← <span data-i18n="projects">Projecten</span></button>
+          <div class="editor-project-name"><strong id="toolbarProjectTitle"></strong><span id="saveState" data-i18n="saved">Opgeslagen</span></div>
+          <div class="editor-actions">
+            <button class="btn btn-outline" id="printBlankBtn" type="button" data-i18n="printBlank">Blanco formulier</button>
+            <button class="btn btn-primary" id="printReportBtn" type="button" data-i18n="printReport">Rapport / PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-shell" id="report">
+        <div class="print-cover print-only">
+          <img src="icons/renoweet-logo.png" alt="Renoweet.nl">
+          <div><strong>Renoweet.nl</strong><span data-i18n="inspectionReport">Werkopname &amp; scopebevestiging</span></div>
+        </div>
+
+        <section class="project-hero report-section">
+          <div class="hero-copy">
+            <p class="kicker" data-i18n="inspectionReport">Werkopname &amp; scopebevestiging</p>
+            <input class="title-input" id="projectTitle" data-field="title" data-paper-keep data-i18n-placeholder="projectTitlePlaceholder" placeholder="Projectnaam">
+            <div class="hero-address"><input id="address" data-field="address" data-paper-keep data-i18n-placeholder="address" placeholder="Adres"></div>
+          </div>
+          <div class="hero-status">
+            <label><span data-i18n="projectStatus">Projectstatus</span>
+              <select id="projectStatus" data-field="status" data-paper-keep>
+                <option value="lead" data-i18n="statusLead">Aanvraag</option>
+                <option value="inspection" data-i18n="statusInspection">Opname</option>
+                <option value="quote" data-i18n="statusQuote">Offerte</option>
+                <option value="active" data-i18n="statusActive">In uitvoering</option>
+                <option value="done" data-i18n="statusDone">Afgerond</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <nav class="section-nav no-print" aria-label="Rapportonderdelen">
+          <a href="#detailsSection" data-i18n="details">Project</a>
+          <a href="#customerSection" data-i18n="customerInput">Klantinput</a>
+          <a href="#scopeSection" data-i18n="scope">Scope</a>
+          <a href="#checksSection" data-i18n="checks">Vooronderzoek</a>
+          <a href="#notesSection" data-i18n="notes">Notities</a>
+          <a href="#measureSection" data-i18n="measurements">Maten</a>
+          <a href="#photosSection" data-i18n="photos">Foto's</a>
+          <a href="#approvalSection" data-i18n="approval">Bevestiging</a>
+        </nav>
+
+        <section class="report-section" id="detailsSection">
+          <div class="section-heading"><span class="section-number">1</span><div><h2 data-i18n="projectDetails">Project- en klantgegevens</h2><p data-i18n="projectDetailsCopy">Basisgegevens voor de werkopname en opvolging.</p></div></div>
+          <div class="form-grid cols-3">
+            <label><span data-i18n="clientName">Klantnaam</span><input data-field="clientName" data-paper-keep></label>
+            <label><span data-i18n="email">E-mailadres</span><input type="email" data-field="clientEmail" data-paper-keep></label>
+            <label><span data-i18n="phone">Telefoon</span><input type="tel" data-field="clientPhone" data-paper-keep></label>
+            <label><span data-i18n="visitDate">Datum opname</span><input type="date" data-field="visitDate" data-paper-keep></label>
+            <label><span data-i18n="desiredStart">Gewenste start</span><input type="date" data-field="desiredStart" data-paper-keep></label>
+            <label><span data-i18n="surveyor">Opnemer / aannemer</span><input data-field="surveyor" data-paper-keep></label>
+          </div>
+        </section>
+
+        <section class="report-section page-break" id="customerSection">
+          <div class="section-heading"><span class="section-number">2</span><div><h2 data-i18n="customerInput">Klantinput vóór de opname</h2><p data-i18n="customerInputCopy">Bewaar de oorspronkelijke aanvraag, wensen en aangeleverde beelden bij het project.</p></div></div>
+          <div class="form-grid cols-2">
+            <label><span data-i18n="customerComments">Bericht / opmerkingen van klant</span><textarea data-field="customerComments" data-paper-clear data-i18n-placeholder="customerCommentsPlaceholder" placeholder="Plak hier het bericht dat de klant vooraf heeft gestuurd…"></textarea></label>
+            <label><span data-i18n="intakeSummary">Samenvatting en vragen voor bezoek</span><textarea data-field="intakeSummary" data-paper-clear data-i18n-placeholder="intakeSummaryPlaceholder" placeholder="Belangrijkste wensen, ontbrekende informatie en punten om te controleren…"></textarea></label>
+          </div>
+          <div class="upload-row no-print">
+            <label class="btn btn-outline file-button"><span data-i18n="addCustomerFiles">Foto's / tekeningen toevoegen</span><input id="previsitUpload" type="file" accept="image/*" multiple></label>
+            <span class="muted small" data-i18n="uploadHint">Maximaal 10 foto's per project. Bij overschrijding wordt na waarschuwing de oudste verwijderd.</span>
+            <span class="status-badge photo-limit-indicator">0 / 10</span>
+          </div>
+          <div id="previsitPhotos" class="photo-grid"></div>
+          <div class="paper-photo-notes print-only"><h3 data-i18n="customerFiles">Aangeleverde bestanden / tekeningen</h3><div class="paper-lines"></div></div>
+        </section>
+
+        <section class="report-section" id="scopeSection">
+          <div class="section-heading with-action"><span class="section-number">3</span><div><h2 data-i18n="scope">Scope en afbakening</h2><p data-i18n="scopeCopy">Bevestig ieder onderdeel en leg afwijkingen of uitsluitingen vast.</p></div><button class="btn btn-outline no-print" id="addScopeBtn" type="button">＋ <span data-i18n="addScope">Onderdeel</span></button></div>
+          <div id="scopeList" class="scope-list"></div>
+        </section>
+
+        <section class="report-section" id="checksSection">
+          <div class="section-heading"><span class="section-number">4</span><div><h2 data-i18n="checks">Vooronderzoek en randvoorwaarden</h2><p data-i18n="checksCopy">Controlepunten vóór offerte en uitvoering.</p></div></div>
+          <div id="checkList" class="check-grid"></div>
+          <label class="block-field"><span data-i18n="constraints">Aanvullende randvoorwaarden / documenten</span><textarea data-field="constraints" data-paper-clear></textarea></label>
+        </section>
+
+        <section class="report-section page-break" id="notesSection">
+          <div class="section-heading"><span class="section-number">5</span><div><h2 data-i18n="notes">Opnamenotities per discipline</h2><p data-i18n="notesCopy">Bestaande toestand, uitvoeringskeuze en afwerking.</p></div></div>
+          <div id="disciplineNotes" class="notes-grid"></div>
+        </section>
+
+        <section class="report-section" id="measureSection">
+          <div class="section-heading with-action"><span class="section-number">6</span><div><h2 data-i18n="measurements">Maten, aansluitpunten en besluiten</h2><p data-i18n="measurementsCopy">Leg meetpunten en afspraken vast voor offerte en uitvoering.</p></div><button class="btn btn-outline no-print" id="addMeasureBtn" type="button">＋ <span data-i18n="row">Regel</span></button></div>
+          <div class="table-wrap"><table><thead><tr><th data-i18n="position">Ruimte / positie</th><th data-i18n="item">Onderdeel</th><th data-i18n="measure">Maat / hoogte</th><th data-i18n="decision">Besluit / actie</th><th class="no-print"></th></tr></thead><tbody id="measureBody"></tbody></table></div>
+        </section>
+
+        <section class="report-section page-break" id="photosSection">
+          <div class="section-heading"><span class="section-number">7</span><div><h2 data-i18n="sitePhotos">Fotologboek op locatie</h2><p data-i18n="sitePhotosCopy">Maak foto's en noteer direct wat zichtbaar is en welke actie nodig is.</p></div></div>
+          <div class="upload-row no-print">
+            <label class="btn btn-primary file-button"><span data-i18n="takePhoto">Foto maken</span><input id="cameraUpload" type="file" accept="image/*" capture="environment" multiple></label>
+            <label class="btn btn-outline file-button"><span data-i18n="choosePhotos">Uit bibliotheek</span><input id="siteUpload" type="file" accept="image/*" multiple></label>
+            <span class="status-badge photo-limit-indicator">0 / 10</span>
+          </div>
+          <div id="sitePhotos" class="photo-grid"></div>
+          <div class="paper-photo-notes print-only"><h3 data-i18n="photoNotes">Foto- en observatienotities</h3><div class="paper-lines tall"></div></div>
+        </section>
+
+        <section class="report-section" id="summarySection">
+          <div class="section-heading"><span class="section-number">8</span><div><h2 data-i18n="followUp">Openstaande punten en vervolg</h2><p data-i18n="followUpCopy">Niet-bevestigde scopepunten worden automatisch samengevat.</p></div></div>
+          <div id="openItems"></div>
+          <div class="form-grid cols-2 top-gap">
+            <label><span data-i18n="clientActions">Acties klant</span><textarea data-field="clientActions" data-paper-clear></textarea></label>
+            <label><span data-i18n="contractorActions">Acties Renoweet / vakpartners</span><textarea data-field="contractorActions" data-paper-clear></textarea></label>
+            <label><span data-i18n="quoteBasis">Offerte-uitgangspunten en stelposten</span><textarea data-field="quoteBasis" data-paper-clear></textarea></label>
+            <label><span data-i18n="planning">Voorgestelde planning</span><textarea data-field="planning" data-paper-clear></textarea></label>
+          </div>
+        </section>
+
+        <section class="report-section page-break" id="approvalSection">
+          <div class="section-heading"><span class="section-number">9</span><div><h2 data-i18n="approval">Bevestiging werkopname</h2><p data-i18n="approvalCopy">Dit legt de besproken uitgangspunten vast en is geen definitieve prijsopgave of uitvoeringsopdracht.</p></div></div>
+          <label class="approval-check"><input type="checkbox" data-field="scopeConfirmed" data-paper-clear><span data-i18n="confirmationText">Scope, uitsluitingen, openstaande punten en notities zijn gezamenlijk doorgenomen. Wijzigingen worden vóór uitvoering schriftelijk bevestigd.</span></label>
+          <div class="signature-grid">
+            <div class="signature-card"><h3 data-i18n="client">Klant</h3><input data-field="clientSignName" data-paper-keep data-i18n-placeholder="name" placeholder="Naam"><canvas id="clientSignature" width="900" height="300"></canvas><button class="btn btn-quiet btn-small no-print" type="button" data-clear-signature="clientSignature" data-i18n="clear">Wissen</button></div>
+            <div class="signature-card"><h3>Renoweet</h3><input data-field="contractorSignName" data-paper-keep data-i18n-placeholder="name" placeholder="Naam"><canvas id="contractorSignature" width="900" height="300"></canvas><button class="btn btn-quiet btn-small no-print" type="button" data-clear-signature="contractorSignature" data-i18n="clear">Wissen</button></div>
+          </div>
+          <div class="form-grid cols-3 top-gap"><label><span data-i18n="confirmationDate">Datum bevestiging</span><input type="date" data-field="approvalDate" data-paper-clear></label><label><span data-i18n="quoteDue">Offerte uiterlijk</span><input type="date" data-field="quoteDate" data-paper-clear></label><label><span data-i18n="targetCompletion">Beoogde oplevering</span><input data-field="targetFinish" data-paper-clear></label></div>
+        </section>
+
+        <footer class="report-footer"><img src="icons/renoweet-logo.png" alt=""><span>Renoweet.nl</span><span id="footerProject"></span></footer>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="projectDialog" class="modal">
+    <form method="dialog" id="projectForm">
+      <div class="modal-head"><div><p class="kicker">RENOWEET.NL</p><h2 data-i18n="newProject">Nieuw project</h2></div><button class="icon-btn" type="button" data-close-dialog="projectDialog" aria-label="Sluiten">×</button></div>
+      <div class="form-grid cols-2">
+        <label><span data-i18n="projectName">Projectnaam</span><input id="newTitle" required data-i18n-placeholder="projectNameExample" placeholder="Bijv. verbouwing appartement"></label>
+        <label><span data-i18n="clientName">Klantnaam</span><input id="newClient"></label>
+        <label class="span-2"><span data-i18n="address">Adres</span><input id="newAddress"></label>
+        <label><span data-i18n="visitDate">Datum opname</span><input id="newVisitDate" type="date"></label>
+        <label><span data-i18n="desiredStart">Gewenste start</span><input id="newStartDate" type="date"></label>
+        <label class="span-2"><span data-i18n="customerComments">Bericht / opmerkingen van klant</span><textarea id="newComments" data-i18n-placeholder="customerCommentsPlaceholder"></textarea></label>
+      </div>
+      <div class="modal-actions"><button class="btn btn-quiet" type="button" data-close-dialog="projectDialog" data-i18n="cancel">Annuleren</button><button class="btn btn-primary" id="createProjectBtn" type="submit" data-i18n="createProject">Project maken</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="accountDialog" class="modal compact-modal">
+    <div class="modal-head"><div><p class="kicker">RENOWEET.NL</p><h2 data-i18n="dataManagement">Gegevens</h2></div><button class="icon-btn" type="button" data-close-dialog="accountDialog" aria-label="Sluiten">×</button></div>
+    <div id="accountContent"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <input id="jsonImportInput" type="file" accept="application/json,.json" hidden>
+  <script src="renoweet-os-project-bridge-v1.js"></script>
+  <script src="renoweet-project-notebook.js"></script>
+</body>
+</html>
