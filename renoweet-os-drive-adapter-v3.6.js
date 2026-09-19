@@ -160,7 +160,8 @@ setTimeout(()=>{
     window.sendToBookkeeping=async function(){
       const api=window.renoweetDriveOS;
       if(api?.state?.readOnly){alert(`Historical year ${api.state.year} is read-only.`);return}
-      original.apply(this,arguments);
+      const queued=original.apply(this,arguments);
+      if(queued===false)return;
       if(api?.state?.connected){
         const ok=await api.save(true);
         if(ok){

@@ -27,7 +27,7 @@ const legacyParkingInvoice={
   'Gross incl. VAT':2588.57,VAT:357,Parking:531.57,'Other costs':0,'VAT rate':21,'Work description':'Carpentry work'
 };
 assert.deepEqual(A.invoiceSalesBreakdown(legacyParkingInvoice),{
-  taxableNet:1700,zeroRatedNet:531.57,net:2231.57,vat:357,gross:2588.57
+  taxableNet:1700,zeroRatedNet:531.57,reverseChargeNet:0,net:2231.57,vat:357,gross:2588.57
 },'legacy parking must be visible as a separate 0%-VAT invoice cost without changing the invoice total');
 
 const legacyPaidInvoice={...legacyParkingInvoice,'Paid date':'2026-01-04'};
@@ -122,5 +122,19 @@ const reimbursedCash=A.cashReport(reimbursedBook,period);
 assert.equal(reimbursedCash.cashOut,6192.36);
 assert.equal(reimbursedCash.insuranceCashIn,5117.65);
 assert.equal(reimbursedCash.movement,-1074.71,'reimbursement route must preserve the same net cash effect');
+
+const reverseChargeInvoice={
+  'Record ID':'INV_REVERSE','Invoice #':'2026-REVERSE',Date:'2026-09-18',Customer:'Main contractor','Customer VAT ID':'NL123456789B01',Address:'Amsterdam',Status:'Open',
+  'VAT treatment':'REVERSE_CHARGE_NL','VAT rate':21,
+  'Line items JSON':JSON.stringify([{description:'Subcontract construction work',quantity:1,unitNet:1000,vatRate:0,vatTreatment:'REVERSE_CHARGE_NL',vatReferenceRate:21,vatAmount:0}])
+};
+assert.deepEqual(A.invoiceTotals(reverseChargeInvoice),{net:1000,vat:0,gross:1000,lines:A.parseLines(reverseChargeInvoice)},'BTW verlegd must not add output VAT to the invoice');
+assert.deepEqual(A.invoiceSalesBreakdown(reverseChargeInvoice),{taxableNet:0,zeroRatedNet:0,reverseChargeNet:1000,net:1000,vat:0,gross:1000},'reverse-charge turnover must stay separate from ordinary 0% turnover');
+const reverseBook={invoices:[reverseChargeInvoice],expenses:[],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};
+assert.equal(A.vatReport(reverseBook,period).reverseChargeNet,1000,'VAT report must expose domestic reverse-charge turnover separately');
+assert.equal(A.vatReport(reverseBook,period).outputVat,0,'reverse-charge sale must add no output VAT');
+assert.ok(!A.controls(reverseBook,new Date('2026-09-19'),period).issues.some(x=>x.message.includes('missing the customer')), 'reverse-charge invoice with a customer VAT ID must pass the VAT-ID control');
+const reverseMissingVat={...reverseChargeInvoice,'Record ID':'INV_REVERSE_MISSING','Invoice #':'2026-REVERSE-MISSING','Customer VAT ID':''};
+assert.ok(A.controls({...reverseBook,invoices:[reverseMissingVat]},new Date('2026-09-19'),period).issues.some(x=>x.kind==='vat'&&x.message.includes("missing the customer's VAT ID")),'reverse-charge invoice without customer VAT ID must be blocked by control');
 
 console.log('Accounting engine v4.4.4 tests passed.');

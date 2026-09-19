@@ -1851,25 +1851,34 @@ function osDateToSerial(v){
   return excelSerial(String(v).slice(0,10));
 }
 function osInvoiceToBookkeeping(r){
-  const total=n(r["Total incl VAT"]);
-  const vat=n(r["VAT"]);
-  const parking=n(r["Parking"]);
-  const other=n(r["Other costs"]);
-  const netBeforeVat=Math.max(0,total-vat);
+  const total=n(r["Total incl VAT"]),vat=n(r["VAT"]),parking=n(r["Parking"]),other=n(r["Other costs"]),rate=Number.isFinite(Number(r["VAT rate"]))?Number(r["VAT rate"]):inferVatRate({"Gross incl. VAT":total,"VAT":vat},true),rawTreatment=String(r["VAT treatment"]||'').trim().toUpperCase();
+  const treatment=rawTreatment||(rate===21?'NL_HIGH':rate===9?'NL_LOW':rate===0?'NL_ZERO':'CUSTOM'),netBeforeVat=Math.max(0,total-vat);
+  let lines=[];
+  try{const parsed=JSON.parse(r["Line items JSON"]||'[]');if(Array.isArray(parsed))lines=parsed}catch(e){}
+  if(!lines.length){
+    const main=Math.max(0,netBeforeVat-parking-other),lineRate=['REVERSE_CHARGE_NL','NL_ZERO'].includes(treatment)?0:(Number.isFinite(rate)?rate:0);
+    if(main||(!parking&&!other))lines.push({description:r["Description"]||r["Project"]||'Work',quantity:1,unitNet:main,vatRate:lineRate,vatTreatment:treatment,vatReferenceRate:treatment==='REVERSE_CHARGE_NL'?(Number.isFinite(rate)&&rate?rate:21):null,vatAmount:['REVERSE_CHARGE_NL','NL_ZERO'].includes(treatment)?0:null});
+    if(parking)lines.push({description:'Parking recharge',quantity:1,unitNet:parking,vatRate:0,vatTreatment:'NL_ZERO',vatAmount:0});
+    if(other)lines.push({description:'Other costs',quantity:1,unitNet:other,vatRate:0,vatTreatment:'NL_ZERO',vatAmount:0});
+  }
   return {
     "Invoice #":String(r["Invoice number"]||"").trim(),
     "Date":osDateToSerial(r["Invoice date"]),
+    "Invoice date":osDateToSerial(r["Invoice date"]),
     "Customer":r["Customer"]||"",
+    "Customer VAT ID":r["Customer VAT ID"]||"",
     "Address":r["Address"]||"",
     "Work description":r["Description"]||r["Project"]||"",
     "Contact":[r["Email"]||"",r["Phone"]||""].filter(Boolean).join(" • "),
     "Phone":r["Phone"]||"",
     "Email":r["Email"]||"",
+    "Line items JSON":JSON.stringify(lines),
+    "VAT treatment":treatment,
     "Gross incl. VAT":total,
     "Parking":parking,
     "Other costs":other,
     "VAT":vat,
-    "VAT rate":inferVatRate({"Gross incl. VAT":total,"VAT":vat},true),
+    "VAT rate":Number.isFinite(rate)?rate:0,
     "Net revenue":netBeforeVat,
     "Status":r["Status"]==="Paid"?"Paid":"Open",
     "Due date":osDateToSerial(r["Due date"]),
