@@ -6,7 +6,10 @@ v4.4.4 keeps the selected quarter authoritative across the Bookkeeping dashboard
 
 - The Hub now includes **Project Notebook**, a bilingual site-survey and scope-confirmation tool with filled-report and blank-paper printing.
 - Creating or duplicating a notebook project creates one linked Renoweet OS project with a permanent OS Project ID.
-- The link writes through the existing OS browser safety database and queue. When Renoweet OS is open it accepts the project immediately; otherwise it accepts it on the next OS load.
+- Project Notebook also lists open OS projects whose stage is **Lead** and that have not been queued to Bookkeeping. Select **Work in notebook** to open an existing OS lead without creating a second OS project.
+- Duplicate protection uses the permanent OS Project ID first. Manual notebook creation also reuses an exact open OS lead match on project title plus customer or address instead of creating a duplicate.
+- Notebook scope, survey checks, measurements, notes, planning and confirmation metadata are stored under the linked OS project's `siteSurvey` contract-basis snapshot. Later notebook saves update that survey/scope data while preserving OS estimates, materials, payments, invoice data and the OS execution checklist.
+- The link writes through the existing OS browser safety database and queue. When Renoweet OS is open it accepts updates immediately; otherwise it accepts them on the next OS load and then follows the normal Drive save path.
 - OS keeps its existing Google Drive merge, verification, retry and recovery behavior. The notebook does not replace or bypass those safeguards.
 - Notebook photos remain local, are included in its JSON backup and are limited to 10 per project. Adding beyond the limit requires confirmation before the oldest photos are removed.
 - Deleting a notebook does not delete the linked OS project.

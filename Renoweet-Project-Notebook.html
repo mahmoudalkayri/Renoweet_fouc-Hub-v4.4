@@ -46,6 +46,14 @@
           </div>
           <button class="btn btn-primary" type="button" id="newProjectBtn"><span aria-hidden="true">＋</span><span data-i18n="newProject">Nieuw project</span></button>
         </div>
+        <section class="os-project-panel no-print" aria-labelledby="osProjectsTitle">
+          <div class="os-project-panel-head">
+            <div><p class="kicker">RENOWEET OS</p><h2 id="osProjectsTitle" data-i18n="osProjects">Open OS-projecten</h2><p class="muted" data-i18n="osProjectsCopy">Lead-projecten die nog niet naar Bookkeeping zijn gestuurd. Open ze hier als projectnotitieboek; de OS Project ID voorkomt dubbele projecten.</p></div>
+            <button class="btn btn-outline" id="refreshOsProjectsBtn" type="button" data-i18n="refreshOs">Vernieuwen</button>
+          </div>
+          <div id="osProjectList" class="os-project-list" aria-live="polite"></div>
+        </section>
+
         <div class="project-toolbar">
           <label class="search-box"><span aria-hidden="true">⌕</span><input id="projectSearch" type="search" data-i18n-placeholder="searchProjects" placeholder="Zoek op klant, adres of project"></label>
           <select id="statusFilter" aria-label="Projectstatus">

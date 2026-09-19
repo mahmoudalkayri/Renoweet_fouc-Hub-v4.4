@@ -51,11 +51,13 @@ const notebook=fs.readFileSync(path.join(root,'renoweet-project-notebook.js'),'u
 const bridge=fs.readFileSync(path.join(root,'renoweet-os-project-bridge-v1.js'),'utf8');
 for(const required of ['./Renoweet-Project-Notebook.html','focus_project_notebook'])if(!hub.includes(required))throw new Error(`Hub notebook entry is missing ${required}`);
 for(const required of ['createFromNotebook','osProjectId','projectCreated','MAX_PHOTOS = 10'])if(!notebook.includes(required))throw new Error(`Project Notebook integration is missing ${required}`);
+for(const required of ['listOpenProjects','notebookSeedFromOs','syncFromNotebook','isEligibleOpenProject','contractBasisVersion'])if(!(notebook+bridge).includes(required))throw new Error(`Project Notebook OS lead workflow is missing ${required}`);
+for(const required of ['Open OS-projecten','osProjectList','refreshOsProjectsBtn'])if(!fs.readFileSync(path.join(root,'Renoweet-Project-Notebook.html'),'utf8').includes(required))throw new Error(`Project Notebook OS selector UI is missing ${required}`);
 for(const required of ['renoweet-os-local-cache-v1','project-created','cacheBrowserState(true)','scheduleSave()'])if(!(bridge+osPage).includes(required))throw new Error(`OS project bridge is missing ${required}`);
 if(!osPage.includes('renoweet-os-project-bridge-v1.js'))throw new Error('Renoweet OS does not load the Project Notebook bridge.');
 const bodPage=fs.readFileSync(path.join(root,'Renoweet-BOD-Drive-v2.2.html'),'utf8');
 const bodDrive=fs.readFileSync(path.join(root,'renoweet-bod-drive-adapter-v2.js'),'utf8');
 for(const required of ['renoweet-accounting-engine-v4.4.js','bookkeepingPayments','creditNotes','A.invoiceState(r,book.payments,book.creditNotes)','A.vatReport(book,period)','A.profitAndLoss(book,period)','invoiceOutstanding'])if(!bodPage.includes(required))throw new Error(`BOD ledger accounting integration is missing ${required}`);
 for(const required of ['(bk.payments||[])','(bk.creditNotes||[])',"rows(wb,'Customer Payments')", "rows(wb,'Credit Notes')",'bookkeepingPayments'])if(!bodDrive.includes(required))throw new Error(`BOD Drive ledger import is missing ${required}`);
-if(!fs.readFileSync(path.join(root,'service-worker.js'),'utf8').includes('renoweet-focus-hub-v4.4.4-23'))throw new Error('Service-worker cache version was not bumped for the Project Notebook integration.');
+if(!fs.readFileSync(path.join(root,'service-worker.js'),'utf8').includes('renoweet-focus-hub-v4.4.4-24'))throw new Error('Service-worker cache version was not bumped for the Project Notebook integration.');
 console.log('Static asset checks passed.');
