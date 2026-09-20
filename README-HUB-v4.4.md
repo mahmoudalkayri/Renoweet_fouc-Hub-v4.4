@@ -2,6 +2,12 @@
 
 v4.4.4 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
+## Auto & Fuel quarter consistency
+
+- Auto & Fuel now follows the selected quarter and sorts the newest expenses first.
+- Fuel and Automobile chosen from the main Expenses form are saved to their matching ledgers and appear in Auto & Fuel immediately.
+- Older Fuel/Vehicle entries accidentally stored under General remain visible in the correct Auto & Fuel section and move safely to the matching ledger when edited.
+
 ## Project Notebook integration
 
 - The Hub now includes **Project Notebook**, a bilingual site-survey and scope-confirmation tool with filled-report and blank-paper printing.

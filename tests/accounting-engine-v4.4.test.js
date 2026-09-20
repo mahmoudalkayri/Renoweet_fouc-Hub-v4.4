@@ -123,6 +123,23 @@ assert.equal(reimbursedCash.cashOut,6192.36);
 assert.equal(reimbursedCash.insuranceCashIn,5117.65);
 assert.equal(reimbursedCash.movement,-1074.71,'reimbursement route must preserve the same net cash effect');
 
+const categorizedExpenseBook={
+  invoices:[],payments:[],creditNotes:[],deleted:[],control:{},
+  expenses:[
+    {'Record ID':'EXP_GENERAL_Q3',Date:'2026-08-01',Category:'General',Gross:121,VAT:21},
+    {'Record ID':'EXP_MISFILED_FUEL_Q3',Date:'2026-08-02',Category:'Fuel',Gross:60.5,VAT:10.5},
+    {'Record ID':'EXP_MISFILED_AUTO_Q2',Date:'2026-05-02',Category:'Vehicle',Gross:242,VAT:42}
+  ],
+  fuel:[{'Record ID':'EXP_FUEL_Q3',Date:'2026-09-02',Category:'Fuel',Gross:100,VAT:17.36}],
+  auto:[{'Record ID':'EXP_AUTO_Q3',Date:'2026-07-02',Category:'Vehicle',Gross:300,VAT:52.07}]
+};
+assert.equal(A.expenseMainCategory(categorizedExpenseBook.expenses[1],'General'),'Fuel','legacy fuel saved in the general ledger must still classify as Fuel');
+assert.equal(A.expenseMainCategory(categorizedExpenseBook.expenses[2],'General'),'Automobile','legacy vehicle saved in the general ledger must still classify as Automobile');
+const categorizedQ3=A.categorizedExpenses(categorizedExpenseBook,period);
+assert.deepEqual(categorizedQ3.map(x=>x.r['Record ID']).sort(),['EXP_AUTO_Q3','EXP_FUEL_Q3','EXP_GENERAL_Q3','EXP_MISFILED_FUEL_Q3'],'Auto & Fuel classification must first filter every source ledger to the selected quarter');
+assert.equal(categorizedQ3.filter(x=>x.mainCategory==='Fuel').length,2,'Fuel view must include both the fuel ledger and misfiled general-expense fuel');
+assert.equal(categorizedQ3.filter(x=>x.mainCategory==='Automobile').length,1,'Automobile view must exclude the Q2 vehicle while Q3 is selected');
+
 const reverseChargeInvoice={
   'Record ID':'INV_REVERSE','Invoice #':'2026-REVERSE',Date:'2026-09-18',Customer:'Main contractor','Customer VAT ID':'NL123456789B01',Address:'Amsterdam',Status:'Open',
   'VAT treatment':'REVERSE_CHARGE_NL','VAT rate':21,

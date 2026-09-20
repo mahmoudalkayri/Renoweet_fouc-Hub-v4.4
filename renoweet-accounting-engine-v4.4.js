@@ -105,6 +105,28 @@
     const gross=round2(num(row?.Gross??row?.grossAmount)),invoiceVat=round2(num(row?.['Invoice VAT']??row?.VAT??row?.invoiceVAT)),net=round2(gross-invoiceVat),vatPct=Math.max(0,Math.min(100,num(row?.['VAT deductible %']??row?.vatDeductiblePercent??100))),deductibleVat=round2(row?.['Deductible VAT']!==undefined?num(row['Deductible VAT']):invoiceVat*vatPct/100),incomePct=Math.max(0,Math.min(100,num(row?.['Income tax deductible %']??row?.incomeTaxDeductiblePercent??row?.['Business use %']??100))),costBase=round2(net+(invoiceVat-deductibleVat)),insuranceContribution=Math.max(0,round2(num(row?.['Insurance contribution']??row?.insuranceContribution))),insuranceRoute=lower(row?.['Insurance payment route']??row?.insurancePaymentRoute)==='reimbursed renoweet'?'reimbursed':'direct',storedBefore=row?.['Deductible cost before insurance'],deductibleCostBeforeInsurance=round2(storedBefore!==undefined?num(storedBefore):(insuranceContribution?costBase*incomePct/100:(row?.['Deductible cost']!==undefined?num(row['Deductible cost']):costBase*incomePct/100))),storedAfter=row?.['Deductible cost after insurance'],deductibleCost=round2(storedAfter!==undefined?num(storedAfter):insuranceContribution?Math.max(0,deductibleCostBeforeInsurance-insuranceContribution):deductibleCostBeforeInsurance),storedPaid=row?.['Business amount paid'],businessPaid=round2(storedPaid!==undefined?num(storedPaid):(insuranceRoute==='direct'?Math.max(0,gross-insuranceContribution):gross)),insuranceCashIn=insuranceRoute==='reimbursed'?insuranceContribution:0;
     return {gross,invoiceVat,net,vatPct,deductibleVat,incomePct,costBase,deductibleCostBeforeInsurance,insuranceContribution,insuranceRoute,businessPaid,insuranceCashIn,deductibleCost,vatTreatment:normalizeTreatment(row?.['VAT treatment'],inferRate(row))};
   }
+  function expenseMainCategory(row,sourceType='General'){
+    const explicit=lower(row?.['Main category']||row?.mainCategory||row?.['Expense type']);
+    if(/^(fuel|brandstof)$/.test(explicit))return 'Fuel';
+    if(/^(automobile|auto|vehicle|car)$/.test(explicit))return 'Automobile';
+    if(explicit==='general')return 'General';
+    const source=lower(sourceType);
+    if(source==='fuel')return 'Fuel';
+    if(/^(automobile|auto)$/.test(source))return 'Automobile';
+    const category=lower(row?.Category);
+    if(/^(fuel|brandstof|petrol|gasoline|diesel|benzine|charging|laadkosten)$/.test(category))return 'Fuel';
+    if(/^(automobile|auto|vehicle|car|garage|parking|oil|filter|onderhoud|reparatie)$/.test(category))return 'Automobile';
+    return 'General';
+  }
+  function categorizedExpenses(book,period){
+    book=normalizeBookkeeping(book);
+    const rows=[
+      ...book.expenses.map((r,index)=>({r,type:'General',index})),
+      ...book.fuel.map((r,index)=>({r,type:'Fuel',index})),
+      ...book.auto.map((r,index)=>({r,type:'Automobile',index}))
+    ].map(x=>({...x,mainCategory:expenseMainCategory(x.r,x.type)}));
+    return period?rows.filter(x=>inRange(x.r?.['Document date']||x.r?.Date,period)):rows;
+  }
   function allExpenses(book){return [...(book?.expenses||[]).map(r=>({...r,_ledgerCategory:text(r.Category)||'Other'})),...(book?.fuel||[]).map(r=>({...r,_ledgerCategory:'Fuel','Legacy type':'Fuel'})),...(book?.auto||[]).map(r=>({...r,_ledgerCategory:text(r.Category)||'Vehicle','Legacy type':'Automobile'}))]}
   function normalizeBookkeeping(book){book=book&&typeof book==='object'?book:{};for(const k of ['invoices','expenses','fuel','auto','payments','creditNotes','deleted'])if(!Array.isArray(book[k]))book[k]=[];book.control=book.control&&typeof book.control==='object'?book.control:{};return book}
   function periodRows(book,period){book=normalizeBookkeeping(book);return {invoices:book.invoices.filter(r=>inRange(r['Invoice date']||r.Date,period)),expenses:allExpenses(book).filter(r=>inRange(r['Document date']||r.Date,period)),payments:book.payments.filter(r=>inRange(r.date||r.Date,period)),creditNotes:book.creditNotes.filter(r=>inRange(r.date||r.Date,period))}}
@@ -139,5 +161,5 @@
     const validIds=new Set(book.invoices.map(invoiceId));for(const p of rows.payments)if(!validIds.has(paymentInvoiceId(p)))issues.push({kind:'payments',level:'error',message:'Payment is not allocated to an invoice',id:text(p.id||p['Payment ID'])});
     const penalty=issues.reduce((s,x)=>s+(x.level==='error'?10:x.level==='warning'?5:2),0);return {score:Math.max(0,100-penalty),issues};
   }
-  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceSalesBreakdown,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,markedPaid,paymentReconciliation,migrateLegacyPaidInvoices,invoiceState,isIssued,expenseFacts,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,paymentTimingReport,receivables,controls};
+  return {round2,num,text,makeId,asDate,iso,excelSerial,inRange,inferRate,parseLines,lineTotals,invoiceTotals,invoiceSalesBreakdown,invoiceId,expenseId,paymentsFor,creditsFor,creditTotals,paymentTotal,markedPaid,paymentReconciliation,migrateLegacyPaidInvoices,invoiceState,isIssued,expenseFacts,expenseMainCategory,categorizedExpenses,allExpenses,normalizeBookkeeping,periodRows,vatReport,profitAndLoss,cashReport,paymentTimingReport,receivables,controls};
 });

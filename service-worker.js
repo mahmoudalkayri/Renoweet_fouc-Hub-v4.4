@@ -1,4 +1,4 @@
-const CACHE_NAME="renoweet-focus-hub-v4.4.4-25";
+const CACHE_NAME="renoweet-focus-hub-v4.4.4-26";
 const APP_SHELL=[
   "./","./index.html","./styles.css","./app.js","./manifest.webmanifest",
   "./icons/icon.svg","./icons/apple-touch-icon.png",
