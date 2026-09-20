@@ -154,4 +154,37 @@ assert.ok(!A.controls(reverseBook,new Date('2026-09-19'),period).issues.some(x=>
 const reverseMissingVat={...reverseChargeInvoice,'Record ID':'INV_REVERSE_MISSING','Invoice #':'2026-REVERSE-MISSING','Customer VAT ID':''};
 assert.ok(A.controls({...reverseBook,invoices:[reverseMissingVat]},new Date('2026-09-19'),period).issues.some(x=>x.kind==='vat'&&x.message.includes("missing the customer's VAT ID")),'reverse-charge invoice without customer VAT ID must be blocked by control');
 
+const receivedReverseExpense={'Record ID':'EXP_RC','Document date':'2026-09-18',Supplier:'Subcontractor',Category:'Subcontractor',Gross:1000,'Invoice VAT':0,'VAT treatment':'REVERSE_CHARGE_NL','Reverse-charge reference rate':21,'VAT deductible %':100,'Income tax deductible %':100,'Receipt/File':'subcontractor.pdf'};
+const receivedReverseFacts=A.expenseFacts(receivedReverseExpense);
+assert.equal(receivedReverseFacts.reverseChargeVat,210,'received reverse charge must calculate the VAT due from the reference rate');
+assert.equal(receivedReverseFacts.deductibleVat,210,'fully deductible reverse-charge VAT must also enter input VAT');
+assert.equal(receivedReverseFacts.deductibleCost,1000,'fully deductible reverse-charge VAT must not inflate the subcontractor cost');
+const clientInvoice={'Record ID':'INV_CLIENT','Invoice #':'2026-CLIENT',Date:'2026-09-18',Customer:'Client',Status:'Open','Line items JSON':JSON.stringify([{description:'Project work',quantity:1,unitNet:1500,vatRate:21,vatTreatment:'NL_HIGH'}])};
+const receivedReverseBook={invoices:[clientInvoice],expenses:[receivedReverseExpense],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{VATAccountingBasis:'invoice'}};
+const receivedReverseVat=A.vatReport(receivedReverseBook,period);
+assert.equal(receivedReverseVat.outputVat,315);
+assert.equal(receivedReverseVat.purchaseReverseChargeVat,210,'received reverse-charge VAT must remain visible as VAT due');
+assert.equal(receivedReverseVat.inputVat,210,'the same VAT must be deductible when business use is 100%');
+assert.equal(receivedReverseVat.position,315,'fully deductible received reverse charge must have zero net VAT effect');
+assert.equal(receivedReverseVat.reverseNlBase,1000,'domestic reverse-charge base must be exposed for rubriek 2a');
+
+const mixedInvoice={'Record ID':'INV_MIX','Invoice #':'2026-MIX',Date:'2026-09-20',Customer:'Mixed',Status:'Open','Line items JSON':JSON.stringify([{description:'Normal work',quantity:1,unitNet:800,vatRate:21,vatTreatment:'NL_HIGH'},{description:'Reverse work',quantity:1,unitNet:200,vatRate:0,vatTreatment:'REVERSE_CHARGE_NL'}])};
+assert.deepEqual(A.allocateCredit(mixedInvoice,584),{taxableNet:400,reverseChargeNet:100,zeroRatedNet:0,net:500,vat:84,gross:584},'a partial credit must preserve the invoice VAT-category proportions');
+
+const cashInvoice={'Record ID':'INV_CASH','Invoice #':'2026-CASH',Date:'2026-06-20',Customer:'Cash basis client',Status:'Open','Line items JSON':JSON.stringify([{description:'Work',quantity:1,unitNet:100,vatRate:21,vatTreatment:'NL_HIGH'}])};
+const cashBasisBook={invoices:[cashInvoice],expenses:[],fuel:[],auto:[],payments:[{id:'PAY_CASH',invoiceId:'INV_CASH',date:'2026-07-15',amount:60.5}],creditNotes:[],deleted:[],control:{VATAccountingBasis:'cash'}};
+const cashBasisVat=A.vatReport(cashBasisBook,period);
+assert.equal(cashBasisVat.salesNet,0,'profit-and-loss invoice sales must remain quarter based');
+assert.equal(cashBasisVat.vatSalesNet,50,'cash basis must recognise the paid proportion in the payment quarter');
+assert.equal(cashBasisVat.outputVat,10.5,'cash basis output VAT must follow dated customer payments');
+
+const q4VehicleBook={invoices:[],expenses:[],fuel:[{'Record ID':'FUEL_Q4',Date:'2026-10-10',Gross:121,VAT:21,'Receipt/File':'fuel.pdf'}],auto:[],payments:[],creditNotes:[],deleted:[],control:{VehiclePrivateUseVatByYear:{2026:300},VehiclePrivateUseConfirmedByYear:{2026:true}}};
+assert.equal(A.vatReport(q4VehicleBook,q4).vehiclePrivateUseVat,300,'private-use vehicle correction must apply in Q4');
+assert.equal(A.vatReport(q4VehicleBook,q4).position,279,'Q4 vehicle correction must be added before deductible purchase VAT');
+
+const adjustedBook={...receivedReverseBook,control:{PeriodAdjustments:{'2026-Q3':{depreciation:100,otherProfitAdjustment:-50}}}};
+const adjustedProfit=A.profitAndLoss(adjustedBook,{...period,year:2026,quarter:3});
+assert.equal(adjustedProfit.operatingProfit,500);
+assert.equal(adjustedProfit.estimatedTaxableProfit,350,'depreciation and signed period adjustments must feed the taxable-profit helper');
+
 console.log('Accounting engine v4.4.4 tests passed.');

@@ -1,5 +1,13 @@
 # Renoweet Focus Hub v4.4.4
 
+## Accounting improvements
+
+- Select invoice-basis (`factuurstelsel`) or cash-basis (`kasstelsel`) VAT reporting; invoice-basis remains the safe default.
+- Received `BTW verlegd` expenses now show the reverse-charge VAT due and deductible input VAT separately instead of behaving like ordinary 0% expenses.
+- Credit notes preserve mixed VAT-category proportions, including taxable, reverse-charge, and 0% lines.
+- Q4 supports a reviewed private-use vehicle VAT correction, and Reports supports period depreciation and signed profit adjustments.
+- Cash reporting now labels supplier cash paid and net movement clearly, and explains that the result is not a bank balance or free-cash figure.
+
 v4.4.4 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
 ## Auto & Fuel quarter consistency
