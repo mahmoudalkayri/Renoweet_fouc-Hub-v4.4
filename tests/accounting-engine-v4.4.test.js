@@ -187,4 +187,14 @@ const adjustedProfit=A.profitAndLoss(adjustedBook,{...period,year:2026,quarter:3
 assert.equal(adjustedProfit.operatingProfit,500);
 assert.equal(adjustedProfit.estimatedTaxableProfit,350,'depreciation and signed period adjustments must feed the taxable-profit helper');
 
+const annualPlanningBook={...receivedReverseBook,control:{PeriodAdjustments:{'2026-Q1':{depreciation:50,otherProfitAdjustment:0},'2026-Q3':{depreciation:100,otherProfitAdjustment:-50}},YearTaxSettings:{2026:{reservePercent:30,otherBox1Income:200,entrepreneurDeductions:100,profitExemption:50,provisionalTaxPaid:25}}}};
+const annualProfit=A.annualProfitAndLoss(annualPlanningBook,2026);
+assert.equal(annualProfit.operatingProfit,500,'annual report must combine all recorded transactions in the year');
+assert.equal(annualProfit.depreciation,150,'annual report must total depreciation across all four quarter adjustment records');
+assert.equal(annualProfit.estimatedTaxableProfit,300,'annual taxable business profit must include every quarter adjustment');
+const annualPlan=A.annualTaxPlanning(annualPlanningBook,2026);
+assert.equal(annualPlan.planningTaxableBase,350,'annual planning base must include manual personal-tax planning inputs');
+assert.equal(annualPlan.estimatedTaxReserve,105,'annual reserve must use the saved planning percentage');
+assert.equal(annualPlan.remainingReserve,80,'provisional tax already paid must reduce the remaining reserve');
+
 console.log('Accounting engine v4.4.4 tests passed.');

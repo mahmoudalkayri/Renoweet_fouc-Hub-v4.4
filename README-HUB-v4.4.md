@@ -7,6 +7,9 @@
 - Credit notes preserve mixed VAT-category proportions, including taxable, reverse-charge, and 0% lines.
 - Q4 supports a reviewed private-use vehicle VAT correction, and Reports supports period depreciation and signed profit adjustments.
 - Cash reporting now labels supplier cash paid and net movement clearly, and explains that the result is not a bank balance or free-cash figure.
+- Reports now include a year-wide income-tax planning card that combines all four quarters, totals depreciation and adjustments, and tracks a configurable tax reserve against provisional tax already paid.
+- The report tables reserve separate space for descriptions and euro amounts so long labels no longer collide with values on narrower screens.
+- This tailored build opens on cash-basis VAT reporting unless the user explicitly saves invoice basis.
 
 v4.4.4 keeps the selected quarter authoritative across the Bookkeeping dashboard, Sales, Expenses, Reports, VAT, Control and printed registers. It also separates supplier invoices, insurance contributions, actual Renoweet cash paid, deductible VAT and net business cost.
 
