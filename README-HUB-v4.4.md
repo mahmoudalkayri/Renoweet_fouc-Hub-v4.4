@@ -14,6 +14,8 @@ The Reports tab now includes a year-end workspace that keeps the annual tax-prep
 
 These records are included in the verified Drive JSON, browser/XLSX backups, year archives, checksums and audit counts. The pack is a preparation and control aid, not an official tax assessment.
 
+Compatibility fix: existing checksummed yearly databases are now authenticated in their original stored shape before the new Tax Pack collections are added. This allows a valid pre-Tax-Pack Drive database to open safely while genuine checksum changes remain blocked.
+
 ## Accounting improvements
 
 - Select invoice-basis (`factuurstelsel`) or cash-basis (`kasstelsel`) VAT reporting; invoice-basis remains the safe default.
