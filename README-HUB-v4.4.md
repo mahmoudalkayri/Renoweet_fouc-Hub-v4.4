@@ -1,5 +1,19 @@
 # Renoweet Focus Hub v4.4.4
 
+## Annual Income Tax Pack
+
+The Reports tab now includes a year-end workspace that keeps the annual tax-preparation records beside the quarterly bookkeeping:
+
+- fixed assets with annual depreciation and closing book value;
+- finance leases with cash payment, interest expense, principal repayment and closing debt separated;
+- owner deposits and private withdrawals outside business costs;
+- 31 December bank, cash, VAT, other assets/liabilities and opening-equity inputs;
+- a bank reconciliation and balance-sheet difference check;
+- vehicle-use kilometres and a no-private-use evidence confirmation;
+- a Dutch-return mapping for revenue, materials, outsourced work, vehicle costs, other costs, assets, liquid funds, receivables, lease debt and private movements.
+
+These records are included in the verified Drive JSON, browser/XLSX backups, year archives, checksums and audit counts. The pack is a preparation and control aid, not an official tax assessment.
+
 ## Accounting improvements
 
 - Select invoice-basis (`factuurstelsel`) or cash-basis (`kasstelsel`) VAT reporting; invoice-basis remains the safe default.

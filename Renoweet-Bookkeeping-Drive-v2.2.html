@@ -703,10 +703,14 @@ function normalize(){
   data.payments=sheetRows("Customer Payments").filter(r=>r.Date||r.date||r.Amount||r.amount);
   data.creditNotes=sheetRows("Credit Notes").filter(r=>r.Date||r.date||r.Gross||r.gross);
   data.deleted=sheetRows("Deleted").filter(r=>r["Deleted at"]||r.Type||r["Record ID"]);
+  data.fixedAssets=sheetRows("Fixed Assets").filter(r=>r.id||r.name).map(r=>{try{r.annualDepreciation=JSON.parse(r.annualDepreciation||'{}')}catch(e){r.annualDepreciation={}}return r});
+  data.financeLeases=sheetRows("Finance Leases").filter(r=>r.id||r.lender);
+  data.leasePayments=sheetRows("Lease Payments").filter(r=>r.id||r.leaseId);
+  data.ownerTransactions=sheetRows("Owner Transactions").filter(r=>r.id||r.date);
   const ws=workbook.Sheets["Auto & Fuel"]; data.fuel=[];data.auto=[];
   if(ws){const af=readAutoFuelRows(ws);data.fuel=af.fuel;data.auto=af.auto}
   const ctl=sheetRows("Bookkeeping Control");
-  data.control={}; ctl.forEach(r=>{const k=String(r.Key||"").trim();if(k)data.control[k]=r.Value??""});
+  data.control={}; ctl.forEach(r=>{const k=String(r.Key||"").trim();if(!k)return;let v=r.Value??"";if(typeof v==='string'&&/^[\[{]/.test(v.trim()))try{v=JSON.parse(v)}catch(e){}data.control[k]=v});
 }
 function kpi(label,value,sub=""){return `<div class="card kpi"><div class="label">${esc(label)}</div><div class="value">${value}</div><div class="sub">${esc(sub)}</div></div>`}
 function summaryTable(rows){return `<div class="table-wrap" style="max-height:none"><table><thead><tr><th>Type</th><th>Gross</th><th>Net</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td class="money">${euro.format(r[1])}</td><td class="money">${euro.format(r[2])}</td></tr>`).join("")}</tbody></table></div>`}
@@ -1683,6 +1687,10 @@ function replaceDataSheets(){
   workbook.Sheets["Expenses"]=XLSX.utils.json_to_sheet(data.expenses,{header:expHeaders});
   workbook.Sheets["Customer Payments"]=XLSX.utils.json_to_sheet(data.payments||[]);
   workbook.Sheets["Credit Notes"]=XLSX.utils.json_to_sheet(data.creditNotes||[]);
+  workbook.Sheets["Fixed Assets"]=XLSX.utils.json_to_sheet((data.fixedAssets||[]).map(r=>({...r,annualDepreciation:JSON.stringify(r.annualDepreciation||{})})));
+  workbook.Sheets["Finance Leases"]=XLSX.utils.json_to_sheet(data.financeLeases||[]);
+  workbook.Sheets["Lease Payments"]=XLSX.utils.json_to_sheet(data.leasePayments||[]);
+  workbook.Sheets["Owner Transactions"]=XLSX.utils.json_to_sheet(data.ownerTransactions||[]);
 
   const deletedHeaders=["Deleted at","Type","Record ID","Date","Customer / Supplier","Description","Gross","VAT","Net","Status","Notes","Original JSON"];
   workbook.Sheets["Deleted"]=XLSX.utils.json_to_sheet(data.deleted,{header:deletedHeaders});
@@ -1700,7 +1708,7 @@ function replaceDataSheets(){
   data.auto.forEach((r,i)=>XLSX.utils.sheet_add_aoa(af,[[r.Date,r.Supplier,r.Description,r.Gross,r.VAT,r["VAT rate"]||inferVatRate(r),r.Net,r["Receipt/File"],r["Proof Check"]||""]],{origin:{r:i+7,c:10}}));
   workbook.Sheets["Auto & Fuel"]=af;
 
-  workbook.Sheets["Bookkeeping Control"]=XLSX.utils.json_to_sheet(Object.entries(data.control||{}).map(([Key,Value])=>({Key,Value})),{header:["Key","Value"]});
+  workbook.Sheets["Bookkeeping Control"]=XLSX.utils.json_to_sheet(Object.entries(data.control||{}).map(([Key,Value])=>({Key,Value:Value&&typeof Value==='object'?JSON.stringify(Value):Value})),{header:["Key","Value"]});
 
   // Keep a simple live Dashboard sheet in the workbook.
   const grossRev=sum(data.invoices,"Gross incl. VAT"),netRev=sum(data.invoices,"Net revenue");
@@ -1714,7 +1722,7 @@ function replaceDataSheets(){
   ]);
 
   // Ensure sheet order includes expected sheets.
-  const wanted=["Settings","Bookkeeping Control","Invoices","Expenses","Customer Payments","Credit Notes","Deleted","Dashboard","Invoice Template","Offer Template","Auto & Fuel"];
+  const wanted=["Settings","Bookkeeping Control","Invoices","Expenses","Customer Payments","Credit Notes","Fixed Assets","Finance Leases","Lease Payments","Owner Transactions","Deleted","Dashboard","Invoice Template","Offer Template","Auto & Fuel"];
   workbook.SheetNames=[...wanted.filter(n=>workbook.Sheets[n]),...workbook.SheetNames.filter(n=>!wanted.includes(n) && workbook.Sheets[n])];
 }
 async function saveWorkbook(manual=true){

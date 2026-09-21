@@ -197,4 +197,28 @@ assert.equal(annualPlan.planningTaxableBase,350,'annual planning base must inclu
 assert.equal(annualPlan.estimatedTaxReserve,105,'annual reserve must use the saved planning percentage');
 assert.equal(annualPlan.remainingReserve,80,'provisional tax already paid must reduce the remaining reserve');
 
+const annualPackBook={
+  invoices:[],expenses:[],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],
+  fixedAssets:[{id:'AST_CAR',name:'Work van',category:'Vehicle',acquisitionDate:'2025-07-01',cost:12790,residualValue:0,annualDepreciation:{2025:720}}],
+  financeLeases:[{id:'LEA_CAR',assetId:'AST_CAR',lender:'Lease company',startDate:'2025-07-01',originalPrincipal:12790,balloon:2000}],
+  leasePayments:[{id:'LPY_CAR',leaseId:'LEA_CAR',date:'2025-12-31',total:1092.56,interest:417.51,principal:675.05}],
+  ownerTransactions:[{id:'OWN_DRAW',date:'2025-12-31',type:'withdrawal',amount:3942,description:'Private drawings'}],
+  control:{AnnualClosing:{2025:{openingBank:355,closingBank:4126,openingEquity:355}},VehicleUseByYear:{2025:{noPrivateUse:true,privateKm:0,businessKm:12000}}}
+};
+const assetReport=A.fixedAssetReport(annualPackBook,2025);
+assert.equal(assetReport.depreciation,720,'asset register must carry annual depreciation into the tax pack');
+assert.equal(assetReport.closing,12070,'asset register must calculate closing book value');
+const leaseReport=A.financeLeaseReport(annualPackBook,2025);
+assert.equal(leaseReport.interest,417.51,'lease interest must be separated as a business cost');
+assert.equal(leaseReport.principal,675.05,'lease principal must be separated from interest');
+assert.equal(leaseReport.closing,12114.95,'principal repayments must reduce the closing lease liability');
+const ownerReport=A.ownerTransactionReport(annualPackBook,2025);
+assert.equal(ownerReport.withdrawals,3942,'private drawings must be tracked outside business costs');
+const annualPack=A.annualIncomeTaxPack(annualPackBook,2025);
+assert.equal(annualPack.mapping.fixedAssets,12070,'Dutch-return mapping must expose year-end fixed assets');
+assert.equal(annualPack.mapping.longTermDebt,12114.95,'Dutch-return mapping must expose finance-lease debt');
+assert.equal(annualPack.mapping.privateWithdrawals,3942,'Dutch-return mapping must expose owner withdrawals');
+assert.equal(annualPack.mapping.vehicleCosts,1137.51,'vehicle mapping must include depreciation and finance-lease interest');
+assert.equal(annualPack.vehicle.noPrivateUse,true,'vehicle-use evidence must remain attached to the selected tax year');
+
 console.log('Accounting engine v4.4.4 tests passed.');
