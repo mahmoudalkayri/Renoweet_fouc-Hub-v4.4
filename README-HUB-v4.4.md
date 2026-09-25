@@ -1,5 +1,14 @@
 # Renoweet Focus Hub v4.4.4
 
+## Mixed BTW rates in OS quotations
+
+- Every Estimate work line now has its own 21%, 9%, BTW verlegd (21% or 9% reference rate), or 0%/vrijgesteld choice.
+- Quotation and invoice previews show the BTW treatment beside every line and split the BTW summary by treatment.
+- The project-wide BTW selector is now a default for new or legacy lines and for travel; it no longer replaces explicit line choices.
+- Line-level BTW data is stored in the OS XLSX, retained in backups, and transferred to Bookkeeping through Line items JSON.
+- Mixed documents keep their 21%, 9%, reverse-charge and zero-rated portions separate in Bookkeeping and reports.
+- A customer BTW ID is required before a quotation or invoice containing a BTW-verlegd line can be issued, printed, or sent.
+
 ## Annual Income Tax Pack
 
 The Reports tab now includes a year-end workspace that keeps the annual tax-preparation records beside the quarterly bookkeeping:

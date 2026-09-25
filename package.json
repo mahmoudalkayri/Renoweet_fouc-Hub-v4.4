@@ -3,6 +3,6 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build-site.mjs",
-    "test": "node scripts/build-site.mjs && node tests/static-assets.test.js && node tests/project-notebook-integration.test.js && node tests/recovery-resilience.test.js && node tests/checksum-migration.test.js && node tests/legacy-xlsx-import.test.js && node tests/accounting-engine-v4.4.test.js && node tests/bod-ledger-regression.test.js && node tests/focus-database.test.js && node tests/focus-worker.test.mjs"
+    "test": "node scripts/build-site.mjs && node tests/static-assets.test.js && node tests/project-notebook-integration.test.js && node tests/recovery-resilience.test.js && node tests/checksum-migration.test.js && node tests/legacy-xlsx-import.test.js && node tests/os-mixed-vat.test.js && node tests/accounting-engine-v4.4.test.js && node tests/bod-ledger-regression.test.js && node tests/focus-database.test.js && node tests/focus-worker.test.mjs"
   }
 }
