@@ -316,7 +316,7 @@
 
   async function readDriveOsCache() {
     try {
-      const year = Number(localStorage.getItem('renoweet_drive_year_v1')) || new Date().getFullYear();
+      const year = new Date().getFullYear();
       const database = await driveCacheDatabase();
       const transaction = database.transaction(DRIVE_CACHE_STORE, 'readonly');
       const request = transaction.objectStore(DRIVE_CACHE_STORE).get(`year:${year}`);

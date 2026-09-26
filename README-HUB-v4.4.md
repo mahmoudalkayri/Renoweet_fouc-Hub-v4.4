@@ -113,3 +113,9 @@ The dashboard now separates **Paid against Qx invoices** from **Cash received in
 - Payment repair, payment edit/removal, and saving a Paid imported invoice can reopen only the affected quarter(s), including a correction that crosses Q1 and Q2. Each reopen is written to the existing audit trail and old quarter archives remain unchanged.
 - After a correction, closing the quarter creates a replacement archive while retaining prior archive metadata in history.
 - Closed-period protection now checks both the old and new record dates, so moving a record out of a closed quarter cannot bypass the lock.
+
+## Year-first Drive organization and BOD reading update
+
+Open **OS → Database → Organize year** to preview and confirm moving the verified live JSON and existing expense proof folders into `Renoweet Data/YYYY`. The action writes and verifies a Recovery copy of the exact live JSON first, preserves all Drive file IDs, checks the live checksum after moving, and leaves old folders in place. Until this action runs, OS and Bookkeeping continue to read the authoritative file in the legacy `Active` folder. New receipts upload directly to `Renoweet Data/YYYY/Proofs/Q#`.
+
+BOD now separates issued net sales by invoice date, net value of fully settled invoices, and gross customer cash by payment date. Its monthly graphs include zero-activity calendar months. `company-details.txt` controls the company identity and payment details displayed by new quotes, invoices and reports after deployment.

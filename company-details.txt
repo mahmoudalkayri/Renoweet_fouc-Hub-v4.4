@@ -1,0 +1,10 @@
+# Edit the values after =, then deploy the updated Hub. Keep one key per line.
+companyName=Renoweet
+kvk=97746312
+btw=NL005285311B07
+bankAccount=NL45INGB0111929547
+accountName=Mahmoud Idris
+address=Hiridostraat 2c65, 1101 CW Amsterdam
+email=renoweet@hotmail.com
+phone=06 43865003
+website=www.renoweet.nl

@@ -290,6 +290,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .ros-pdf-structured-page .ros-quote-table tr{break-inside:avoid!important;page-break-inside:avoid!important;}
 .ros-pdf-structured-page .ros-quote-summary{break-inside:avoid!important;page-break-inside:avoid!important;}
 </style>
+<script src="./company-details.js"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -314,7 +315,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
    <button data-view="pipeline">Pipeline</button><button data-view="customers">Customers</button>
    <button data-view="schedule">Schedule</button><button data-view="deleted">Deleted</button><button data-view="backup">Database</button>
   </nav>
-  <div class="sidebar-bottom small">Renoweet • KVK 97746312<br>Dedicated OneDrive XLSX database</div>
+  <div class="sidebar-bottom small"><span data-company-name>Renoweet</span> • KVK <span data-company-field="kvk">97746312</span><br>Dedicated OneDrive XLSX database</div>
  </aside>
 
  <main class="content">
@@ -1085,7 +1086,7 @@ function replaceDatabaseSheets(){
  workbook.Sheets['Deleted']=sheetFromRows(deletedHeaders,deletedRows);
 
  let names=['Settings','Projects','Estimate','Materials','Documents','Payments','Purchase Orders','Activity','FollowUps','Checklist','Bookkeeping','Deleted'];
- workbook.Sheets['Settings']=XLSX.utils.aoa_to_sheet([['Renoweet OS Database','Value'],['Business','Renoweet'],['KVK','97746312'],['Website','www.renoweet.nl'],['Database file',activeDbName||''],['Database identity',databaseBaseName()],['Database model','Separate quarterly XLSX']]);
+ workbook.Sheets['Settings']=XLSX.utils.aoa_to_sheet([['Renoweet OS Database','Value'],['Business',window.RenoweetCompany.get('companyName')],['KVK',window.RenoweetCompany.get('kvk')],['Website',window.RenoweetCompany.get('website')],['Database file',activeDbName||''],['Database identity',databaseBaseName()],['Database model','Separate quarterly XLSX']]);
  workbook.SheetNames=[...names.filter(n=>workbook.Sheets[n]),...workbook.SheetNames.filter(n=>!names.includes(n)&&workbook.Sheets[n])];
 }
 function scheduleSave(){
@@ -1296,7 +1297,7 @@ function quoteHTML(p){
  return `<div class="card no-print" style="margin-bottom:12px"><div class="formgrid"><div class="field"><label>Offertenummer</label><input id="q_number" value="${esc(p.quote.number)}"></div><div class="field"><label>Offertedatum</label><input id="q_date" type="date" value="${p.quote.date}"></div><div class="field"><label>Geldig (dagen)</label><input id="q_valid" type="number" min="1" value="${+p.quote.validDays||14}"></div><div class="field"><label>Standaard-BTW voor nieuwe regels / reiskosten</label><select id="q_vat_treatment" onchange="applyQuoteVatTreatment()">${vatTreatmentOptions(t.defaultTreatment,t.defaultRate)}</select></div><div class="field"><label>Parkeren voorgeschoten voor klant (€)</label><input id="q_parking" type="number" min="0" step="0.01" value="${+p.quote.parking||0}"></div><div class="field"><label>Reiskosten (€)</label><input id="q_travel" type="number" min="0" step="0.01" value="${+p.quote.travel||0}"></div><div class="field full"><label>Uitgangspunten</label><textarea id="q_assumptions">${esc(p.quote.assumptions||'')}</textarea></div><div class="field full"><label>Uitsluitingen</label><textarea id="q_exclusions">${esc(p.quote.exclusions||'')}</textarea></div><div class="field"><label>Aanbetaling na akkoord (%)</label><input id="q_advance_pct" type="number" min="0" max="100" step="1" value="${+p.quote.advancePct||50}" onchange="refreshPaymentTermsTemplate()"></div><div class="field"><label>Tussenbetalingen vóór eindbetaling</label><input id="q_installments" type="number" min="0" max="10" step="1" value="${+p.quote.installments||0}" onchange="refreshPaymentTermsTemplate()"></div><div class="field full"><label>Betalingsvoorwaarden</label><textarea id="q_payment_terms">${esc(p.quote.paymentTerms||'')}</textarea><div class="small">Aanbetaling is verschuldigd zodra de offerte is goedgekeurd. Pas de tekst hieronder aan wanneer bedragen/mijlpalen projectspecifiek zijn.</div></div></div><div class="small" style="margin-top:8px">Kies de BTW per werkregel in het tabblad Estimate. De standaard hierboven geldt voor nieuwe/oudere regels zonder eigen keuze en voor reiskosten. Parkeerkosten worden apart zonder BTW opgenomen.</div></div>
  <div class="ros-quote-preview">
   <section class="ros-quote-page" data-quote-page="1">
-   <div class="ros-quote-content"><div style="display:flex;justify-content:space-between;gap:18mm;align-items:flex-start"><div class="ros-doc-brand"><div class="ros-doc-brandline"><img src="${document.querySelector('.pin-logo')?.src||''}" alt="Renoweet"><h2>Renoweet</h2></div><p>Renovatie • Timmerwerk • Technische oplossingen<br>Hiridostraat 2c65, 1101 CW Amsterdam<br>KVK 97746312 • BTW NL005285311B07<br>06 43865003 • renoweet@hotmail.com<br><b>www.renoweet.nl</b></p></div><div style="text-align:right;min-width:60mm"><h1 style="margin:0 0 3mm;font-size:23pt">OFFERTE</h1><div style="font-size:10pt;line-height:1.5"><b>Offertenr.</b> ${esc(p.quote.number)}<br><b>Datum</b> ${fmtDate(p.quote.date)}<br><b>Geldig t/m</b> ${fmtDate(validDate)}</div></div></div>
+   <div class="ros-quote-content"><div style="display:flex;justify-content:space-between;gap:18mm;align-items:flex-start"><div class="ros-doc-brand"><div class="ros-doc-brandline"><img src="${document.querySelector('.pin-logo')?.src||''}" alt="Renoweet"><h2>${window.RenoweetCompany.html('companyName')}</h2></div><p>Renovatie • Timmerwerk • Technische oplossingen<br>${window.RenoweetCompany.html('address')}<br>KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')}<br>${window.RenoweetCompany.html('phone')} • ${window.RenoweetCompany.html('email')}<br><b>${window.RenoweetCompany.html('website')}</b></p></div><div style="text-align:right;min-width:60mm"><h1 style="margin:0 0 3mm;font-size:23pt">OFFERTE</h1><div style="font-size:10pt;line-height:1.5"><b>Offertenr.</b> ${esc(p.quote.number)}<br><b>Datum</b> ${fmtDate(p.quote.date)}<br><b>Geldig t/m</b> ${fmtDate(validDate)}</div></div></div>
    <hr style="margin:6mm 0 5mm;border:0;border-top:1.5px solid #173a43"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14mm;font-size:10pt;line-height:1.4"><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Aan</div><b>${esc(p.customer.name||'')}</b><div>${esc(p.customer.address||'')}</div><div>${esc(p.customer.email||'')}</div><div>${esc(p.customer.phone||'')}</div></div><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Project</div><b>${esc(p.title||'Renovatieproject')}</b><div>Project ID: ${esc(p.id)}</div></div></div>
    <h3 style="margin:7mm 0 3mm;font-size:13pt">Prijsaanbieding</h3><table class="ros-quote-table"><colgroup><col style="width:43%"><col style="width:12%"><col style="width:15%"><col style="width:14%"><col style="width:16%"></colgroup><thead><tr><th class="qd">Omschrijving</th><th class="qq">Aantal</th><th class="qr">Tarief</th><th class="qv">BTW</th><th class="qa">Bedrag</th></tr></thead><tbody>${rows}</tbody></table>
    <div class="ros-quote-summary"><div class="ros-quote-summary-row"><span>Werkzaamheden</span><strong>${money(t.workSubtotal)}</strong></div>${t.travel?`<div class="ros-quote-summary-row"><span>Reiskosten</span><strong>${money(t.travel)}</strong></div>`:''}<div class="ros-quote-summary-row"><span>Subtotaal excl. btw</span><strong>${money(t.taxableSubtotal)}</strong></div>${vatBreakdownRows(t,'ros-quote-summary-row')}${t.parking?`<div class="ros-quote-summary-row"><span>Parkeerkosten</span><strong>${money(t.parking)}</strong></div>`:''}<div class="ros-quote-summary-row grand"><span>Totaal</span><strong>${money(t.total)}</strong></div></div>${reverseChargeNote(t,p)}
@@ -1309,8 +1310,8 @@ function quoteHTML(p){
    <h3 style="margin:5mm 0 2mm">Uitsluitingen</h3><div style="white-space:pre-wrap;font-size:10pt;line-height:1.5">${esc(p.quote.exclusions||'')}</div>
    <h3 style="margin:5mm 0 2mm">Betaling</h3><div style="white-space:pre-wrap;font-size:10pt;line-height:1.5">${esc(p.quote.paymentTerms||'')}</div>
    <h3 style="margin:5mm 0 2mm">Geldigheid & akkoord</h3><div style="font-size:10pt;line-height:1.5">Deze offerte is ${+p.quote.validDays||14} dagen geldig vanaf de offertedatum. Akkoord kan schriftelijk per e-mail of WhatsApp worden bevestigd. Na akkoord plannen we de uitvoering in overleg.</div>
-   <h3 style="margin:5mm 0 2mm">Algemene voorwaarden</h3><div style="font-size:10pt;line-height:1.5">Op deze offerte en alle daaruit voortvloeiende werkzaamheden zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>www.renoweet.nl</b>.</div>
-   <div style="margin-top:6mm;border-top:1px solid #bbb;padding-top:3mm;font-size:8.5pt;line-height:1.4">Renoweet • Hiridostraat 2c65, 1101 CW Amsterdam • KVK 97746312 • BTW NL005285311B07 • 06 43865003 • renoweet@hotmail.com • www.renoweet.nl</div>
+   <h3 style="margin:5mm 0 2mm">Algemene voorwaarden</h3><div style="font-size:10pt;line-height:1.5">Op deze offerte en alle daaruit voortvloeiende werkzaamheden zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>${window.RenoweetCompany.html('website')}</b>.</div>
+   <div style="margin-top:6mm;border-top:1px solid #bbb;padding-top:3mm;font-size:8.5pt;line-height:1.4">${window.RenoweetCompany.html('companyName')} • ${window.RenoweetCompany.html('address')} • KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')} • ${window.RenoweetCompany.html('phone')} • ${window.RenoweetCompany.html('email')} • www.renoweet.nl</div>
    </div><div class="ros-quote-footer"><span>Renoweet • Offerte ${esc(p.quote.number)}</span><span>Pagina 2 / 2</span></div>
   </section>
  </div><div class="actions no-print" style="margin-top:12px"><button class="btn primary" onclick="smartSendQuote()">Send quotation</button><button class="btn" onclick="markQuoteSent()">Mark sent</button><button class="btn" onclick="printQuotationClean()">Print / PDF</button></div>`
@@ -1611,12 +1612,12 @@ Hierbij ontvangt u onze offerte ${p?.quote?.number||''} voor ${p?.title||'uw pro
 
 Bij akkoord kunt u dit per WhatsApp of e-mail bevestigen. Daarna plannen we de uitvoering in overleg.
 
-www.renoweet.nl
+${window.RenoweetCompany.get('website')}
 
 Met vriendelijke groet,
-Mahmoud Idris
+${window.RenoweetCompany.html('accountName')}
 Renoweet
-06 43865003`;}
+${window.RenoweetCompany.html('phone')}`;}
 async function nativeShareQuote(file,p){if(!navigator.share)return false;if(navigator.canShare&&!navigator.canShare({files:[file]}))return false;try{await navigator.share({title:`Offerte ${p.quote.number} - Renoweet`,text:quoteShareMessage(p),files:[file]});return true}catch(e){if(e&&e.name==='AbortError')return true;throw e}}
 function markQuoteSentAfterShare(p){p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();renderTabs();}
 function smartSendQuote(){const p=getP();if(!p)return;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;if(!p.quote.number)p.quote.number=nextQuote();if(!p.quote.date)p.quote.date=today();const email=(p.customer.email||'').trim(),phone=(p.customer.phone||'').trim();if(email&&phone){const m=document.getElementById('sendChoiceModal'),info=document.getElementById('sendChoiceInfo'),actions=document.getElementById('sendChoiceActions');info.innerHTML=`Client has both:<br><b>${esc(email)}</b><br><b>${esc(phone)}</b>`;actions.innerHTML=`<button class="btn primary" onclick="closeSendChoice();sendQuoteByEmail()">Email PDF</button><button class="btn primary" onclick="closeSendChoice();sendQuoteByWhatsApp()">WhatsApp PDF</button>`;m.classList.add('open');return}if(email){sendQuoteByEmail();return}if(phone){sendQuoteByWhatsApp();return}alert('This client has no email address or phone number saved. Add one in the Intake tab first.');}
@@ -1636,7 +1637,7 @@ function invoiceHTML(p){
   <section class="ros-invoice-page">
    <div class="ros-invoice-content">
     <div class="ros-doc-header">
-      <div class="ros-doc-brand"><div class="ros-doc-brandline">${logoSrc?`<img src="${logoSrc}" alt="Renoweet">`:''}<h2>Renoweet</h2></div><p>Renovatie • Timmerwerk • Technische oplossingen<br>Hiridostraat 2c65, 1101 CW Amsterdam<br>KVK 97746312 • BTW NL005285311B07<br>06 43865003 • renoweet@hotmail.com<br><b>www.renoweet.nl</b></p></div>
+      <div class="ros-doc-brand"><div class="ros-doc-brandline">${logoSrc?`<img src="${logoSrc}" alt="Renoweet">`:''}<h2>${window.RenoweetCompany.html('companyName')}</h2></div><p>Renovatie • Timmerwerk • Technische oplossingen<br>${window.RenoweetCompany.html('address')}<br>KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')}<br>${window.RenoweetCompany.html('phone')} • ${window.RenoweetCompany.html('email')}<br><b>${window.RenoweetCompany.html('website')}</b></p></div>
       <div class="ros-doc-title"><h1>FACTUUR</h1><div><strong>Factuurnr.</strong> ${esc(p.invoice.number||'DRAFT')}<br><strong>Datum</strong> ${fmtDate(p.invoice.date)}<br><strong>Vervaldatum</strong> ${fmtDate(dueDate)}</div></div>
     </div>
     <div class="ros-doc-rule"></div>
@@ -1652,7 +1653,7 @@ function invoiceHTML(p){
       ${t.parking?`<div class="ros-doc-summary-row"><span class="label">Parkeerkosten</span><strong>${money(t.parking)}</strong></div>`:''}
       <div class="ros-doc-summary-row grand"><span class="label">Totaal</span><strong>${money(grand)}</strong></div>
     </div>
-    ${reverseChargeNote(t,p).replace('ros-quote-note','ros-invoice-terms')}<div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${+p.invoice.dueDays||3} dagen</b> na factuurdatum op <b>NL45INGB0111929547</b> onder vermelding van factuurnummer ${esc(p.invoice.number||'DRAFT')}.</p><p><b>Rekeninghouder: Mahmoud Idris</b></p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>www.renoweet.nl</b>.</p></div>
+    ${reverseChargeNote(t,p).replace('ros-quote-note','ros-invoice-terms')}<div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${+p.invoice.dueDays||3} dagen</b> na factuurdatum op <b>${window.RenoweetCompany.html('bankAccount')}</b> onder vermelding van factuurnummer ${esc(p.invoice.number||'DRAFT')}.</p><p><b>Rekeninghouder: ${window.RenoweetCompany.html('accountName')}</b></p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>${window.RenoweetCompany.html('website')}</b>.</p></div>
    </div>
    <div class="ros-invoice-footer"><span>Renoweet • Slim en Duurzaam. Voor elke klus.</span><span>Factuur ${esc(p.invoice.number||'DRAFT')}</span></div>
   </section>
@@ -1679,10 +1680,10 @@ Hierbij ontvangt u factuur ${nr} als bijlage. Mocht u vragen hebben, dan hoor ik
 
 Met vriendelijke groet,
 
-Mahmoud Idris
+${window.RenoweetCompany.html('accountName')}
 Renoweet
-06 43865003
-www.renoweet.nl`;
+${window.RenoweetCompany.html('phone')}
+${window.RenoweetCompany.get('website')}`;
 }
 
 function normalizeWhatsAppNumber(raw){

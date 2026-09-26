@@ -57,15 +57,26 @@ function canonicalCurrentRows(c){
 }
 async function connectDrive(){try{if(!RenoweetDrive.clientId())RenoweetDrive.configure();if(!RenoweetDrive.clientId())return;$('status').textContent='Connecting Google Drive • validating current database…';await RenoweetDrive.authorize(true);await refreshAll();state.connected=true}catch(e){console.error(e);$('status').textContent='Drive not connected';alert(e.message)}}
 async function refreshAll(){try{
-  const manifest=(await RenoweetDrive.loadManifest(true)).data;state.year=Number(manifest.activeYear)||state.year;
-  const live=await RenoweetDrive.loadYear(state.year,true);let N=canonicalCurrentRows(live.data),wanted=[];
-  for(let y=state.year-1;y>=state.year-3;y--){const f=manifest.years?.[String(y)]?.final;if(f?.xlsxId)wanted.push({id:f.xlsxId,name:f.xlsxName||`Renoweet-${y}-FINAL.xlsx`,year:y})}
-  if(!wanted.length){const archives=(await RenoweetDrive.listArchives()).filter(f=>/-FINAL\.xlsx$/i.test(f.name));wanted=archives.filter(f=>{const m=f.name.match(/(20\d{2})/);return m&&Number(m[1])<state.year&&Number(m[1])>=state.year-3}).slice(0,3)}
-  for(const f of wanted){try{const bytes=await RenoweetDrive.getBytes(f.id),wb=XLSX.read(bytes,{type:'array',cellDates:false});appendWorkbook(N,f.name,wb,bytes.byteLength)}catch(e){console.warn('Archive skipped',f.name,e)}}
-  D=dedupe(N);$('status').textContent=`Live ${state.year} verified + ${wanted.length} final archive(s) • ${D.projects.length} projects • ${D.invoices.length} invoices`;renderAll();state.connected=true
-}catch(e){console.error(e);alert(e.message)}}
+  const info=await RenoweetDrive.listAvailableYears(),years=info.years.filter(y=>y<=info.activeYear).sort((a,b)=>a-b);
+  state.year=info.activeYear;
+  const manifest=(await RenoweetDrive.loadManifest(false))?.data;
+  let N=emptyD(),skipped=[];
+  for(const y of years){
+    try{
+      const live=await RenoweetDrive.loadExistingYear(y);
+      if(live){const source=canonicalCurrentRows(live.data);N.sources.push(...source.sources);for(const k of DATA_KEYS)N[k].push(...source[k]);continue}
+      const final=manifest?.years?.[String(y)]?.final;
+      if(final?.xlsxId){const bytes=await RenoweetDrive.getBytes(final.xlsxId);appendWorkbook(N,final.xlsxName||`Renoweet-${y}-FINAL.xlsx`,XLSX.read(bytes,{type:'array'}),bytes.byteLength)}
+      else skipped.push(y);
+    }catch(e){console.warn('Year skipped',y,e);skipped.push(y)}
+  }
+  if(skipped.includes(state.year)||!N.sources.some(x=>x.name===`Renoweet-${state.year}.json`))throw new Error(`The ${state.year} live database could not be verified. No new live database was created. Check the year folder and manifest.`);
+  D=dedupe(N);
+  $('status').textContent=`${D.sources.length} verified year source(s) • ${D.projects.length} projects • ${D.invoices.length} invoices${skipped.length?' • Missing years: '+skipped.join(', '):''}`;
+  renderAll();state.connected=true;
+}catch(e){console.error(e);$('status').textContent='Year data unavailable';alert(e.message)}}
 async function loadLocalArchives(){return loadFiles(true)}
 function settings(){const id=RenoweetDrive.configure();if(id)alert('Google Client ID saved on this device. Click Connect Google Drive to authorize.')}
 window.renoweetDriveBOD={connect:connectDrive,refresh:refreshAll,localArchives:loadLocalArchives,settings,state};
-setTimeout(()=>{const l=document.getElementById('loadBtn'),c=document.getElementById('clearBtn');if(l){l.textContent='Connect Google Drive';l.onclick=connectDrive}if(c){c.textContent='Clear report';c.onclick=()=>{D=emptyD();renderAll();$('status').textContent='No data loaded'}}const top=document.querySelector('header .top');if(top&&!document.getElementById('driveArchiveBtn')){const a=document.createElement('button');a.id='driveArchiveBtn';a.textContent='Add local XLSX';a.onclick=loadLocalArchives;top.appendChild(a);const s=document.createElement('button');s.textContent='Drive settings';s.onclick=settings;top.appendChild(s)}$('status').textContent=`Drive v2 ready • manifest-controlled live year + 3 final archives`},350);
+setTimeout(()=>{const l=document.getElementById('loadBtn'),c=document.getElementById('clearBtn');if(l){l.textContent='Connect Google Drive';l.onclick=connectDrive}if(c){c.textContent='Clear report';c.onclick=()=>{D=emptyD();renderAll();$('status').textContent='No data loaded'}}const top=document.querySelector('header .top');if(top&&!document.getElementById('driveArchiveBtn')){const a=document.createElement('button');a.id='driveArchiveBtn';a.textContent='Add local XLSX';a.onclick=loadLocalArchives;top.appendChild(a);const s=document.createElement('button');s.textContent='Drive settings';s.onclick=settings;top.appendChild(s)}$('status').textContent=`Drive ready • verified yearly JSON and historical archives`},350);
 })();

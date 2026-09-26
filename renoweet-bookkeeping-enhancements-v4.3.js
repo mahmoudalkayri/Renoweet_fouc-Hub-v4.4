@@ -41,8 +41,8 @@ async function driveFetch(url,opts={}){
 function escQ(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 async function findFolder(name,parent='root'){
   const q=`name='${escQ(name)}' and mimeType='application/vnd.google-apps.folder' and '${parent}' in parents and trashed=false`;
-  const u='https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name)&pageSize=20&q='+encodeURIComponent(q);
-  const j=await (await driveFetch(u)).json();return j.files?.[0]||null;
+  const u='https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name,parents),nextPageToken&pageSize=1000&q='+encodeURIComponent(q);
+  const j=await (await driveFetch(u)).json();if(j.nextPageToken||(j.files||[]).length>1)throw new Error(`Multiple ${name} proof folders were found. Check Drive before uploading.`);return j.files?.[0]||null;
 }
 async function createFolder(name,parent='root'){
   const body={name,mimeType:'application/vnd.google-apps.folder',parents:[parent]};
@@ -57,10 +57,10 @@ function yearOfDate(ds){const d=new Date(String(ds||'').slice(0,10)+'T12:00:00')
 async function ensureProofFolderForDate(ds){
   await ensureProofDriveToken(true);
   const root=await ensureFolder('Renoweet Data','root');
-  const proofs=await ensureFolder('Proofs',root);
   const y=yearOfDate(ds),q=quarterOfDate(ds);
-  const yf=await ensureFolder(String(y),proofs);
-  return await ensureFolder('Q'+q,yf);
+  const yf=await ensureFolder(String(y),root);
+  const proofs=await ensureFolder('Proofs',yf);
+  return await ensureFolder('Q'+q,proofs);
 }
 function safeBaseName(s){return String(s||'proof').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/-+/g,'-').slice(0,90)}
 async function optimizeImageProof(file){
@@ -92,7 +92,7 @@ async function uploadProofToDrive(file,type,ds){
 }
 
 window.connectProofFolder=async function(){
-  try{const ds=qs('expDate')?.value||new Date().toISOString().slice(0,10);await ensureProofFolderForDate(ds);const b=qs('connectProofFolderBtn');if(b)b.textContent='Proofs: Google Drive ✓';alert('Proof storage connected. New receipt photos are compressed before upload to Renoweet Data / Proofs / YEAR / Q#. PDFs stay as their original file.') ;return true}catch(e){alert('Could not connect proof storage: '+e.message);return null}
+  try{const ds=qs('expDate')?.value||new Date().toISOString().slice(0,10);await ensureProofFolderForDate(ds);const b=qs('connectProofFolderBtn');if(b)b.textContent='Proofs: Google Drive ✓';alert('Proof storage connected. New receipt photos are compressed before upload to Renoweet Data / YEAR / Proofs / Q#. PDFs stay as their original file.') ;return true}catch(e){alert('Could not connect proof storage: '+e.message);return null}
 };
 window.storeProofFile=async function(file,type){
   const ds=qs('expDate')?.value||new Date().toISOString().slice(0,10);

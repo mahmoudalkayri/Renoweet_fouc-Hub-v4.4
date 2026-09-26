@@ -1,6 +1,6 @@
-const CACHE_NAME="renoweet-focus-hub-v4.4.4-31";
+const CACHE_NAME="renoweet-focus-hub-v4.4.4-33";
 const APP_SHELL=[
-  "./","./index.html","./styles.css","./app.js","./manifest.webmanifest",
+  "./","./index.html","./styles.css","./app.js","./company-details.txt","./company-details.js","./manifest.webmanifest",
   "./icons/icon.svg","./icons/apple-touch-icon.png",
   "./icons/renoweet-logo.png","./Renoweet-Project-Notebook.html","./styles-project-notebook.css","./renoweet-project-notebook.js","./renoweet-os-project-bridge-v1.js",
   "./Renoweet-OS-Drive-v2.2.html","./Renoweet-Bookkeeping-Drive-v2.2.html","./Renoweet-BOD-Drive-v2.2.html",

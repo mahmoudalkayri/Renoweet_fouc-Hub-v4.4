@@ -42,8 +42,8 @@ for(const required of ['installRecoveryDatabase','Install recovery JSON','instal
 assert.ok(!core.includes("for(const f of await listFiles(`name='${escQ(name)}' and trashed=false`))ids.push(f.id)"),'Drive core must not choose a global same-name file by revision.');
 
 for(const [name,text] of [['OS invoice',os],['Bookkeeping invoice',bookkeeping],['v4.4 invoice',bookkeepingV44]]){
-  assert.ok(text.includes('NL45INGB0111929547'),`${name} is missing the IBAN.`);
-  assert.ok(text.includes('Rekeninghouder: Mahmoud Idris'),`${name} is missing the account-holder name.`);
+  assert.ok(text.includes("RenoweetCompany.html('bankAccount')"),`${name} is missing the configured IBAN.`);
+  assert.ok(text.includes("RenoweetCompany.html('accountName')"),`${name} is missing the configured account holder.`);
 }
 
 function checkInlineScripts(name,text){

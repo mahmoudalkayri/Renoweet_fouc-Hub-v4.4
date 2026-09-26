@@ -3,7 +3,7 @@ import path from "node:path";
 
 const root=path.resolve(import.meta.dirname,"..");
 const runtimeFiles=[
-  "index.html","styles.css","app.js","manifest.webmanifest","service-worker.js",
+  "index.html","styles.css","app.js","company-details.txt","company-details.js","manifest.webmanifest","service-worker.js",
   "icons/icon.svg","icons/apple-touch-icon.png","icons/renoweet-logo.png",
   "Renoweet-Project-Notebook.html","styles-project-notebook.css","renoweet-project-notebook.js","renoweet-os-project-bridge-v1.js",
   "Renoweet-OS-Drive-v2.2.html","Renoweet-Bookkeeping-Drive-v2.2.html","Renoweet-BOD-Drive-v2.2.html",
