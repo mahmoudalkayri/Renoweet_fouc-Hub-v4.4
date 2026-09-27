@@ -296,6 +296,7 @@ body.locked header,body.locked main{filter:blur(8px);pointer-events:none;user-se
 </style>
   <link rel="stylesheet" href="./styles-accounting-v4.4.css" />
 <script src="./company-details.js"></script>
+<script src="./renoweet-print-layout.js"></script>
 </head>
 <body class="locked">
 <div class="lock-screen" id="lockScreen">
@@ -839,8 +840,8 @@ function printHtmlReport(title,subtitle,bodyHtml,options={}){
   const logo=getLogoSrc(),landscape=options.landscape!==false,generated=new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date());
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
     @page{size:A4 ${landscape?"landscape":"portrait"};margin:14mm 11mm 17mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial,Helvetica,sans-serif;color:#173a43;margin:0;font-size:9pt;line-height:1.35}
-    .head{display:flex;align-items:flex-end;justify-content:space-between;gap:12mm;border-bottom:2.5px solid #173a43;padding-bottom:4mm;margin-bottom:3mm}.brandx{display:flex;align-items:flex-end;gap:3mm}.brandx img{width:13mm;height:13mm;object-fit:contain}.brandx b{font-size:19pt;line-height:.9}.report-title{text-align:right}.report-title h1{font-size:18pt;line-height:1.05;margin:0;color:#173a43}.period{display:inline-block;margin-top:2mm;padding:1.2mm 2.5mm;border-radius:99px;background:#e9f1f2;color:#173a43;font-size:8pt;font-weight:700}.sub{font-size:8pt;color:#5c6f73;margin-top:1.2mm}.report-meta{display:flex;justify-content:space-between;gap:8mm;margin:0 0 5mm;color:#6a7a7e;font-size:7.5pt}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2.5mm;margin:0 0 5mm}.mini{min-height:18mm;border:1px solid #cbd8da;border-top:2.5px solid #6fb24b;border-radius:2mm;padding:3mm;background:#f8fbfb}.mini span{display:block;font-size:7.2pt;line-height:1.2;text-transform:uppercase;letter-spacing:.04em;color:#65777a;margin-bottom:1.8mm}.mini b{display:block;font-size:13pt;line-height:1.05;color:#173a43}.mini.warn{border-top-color:#d6a75d}.mini.alert{border-top-color:#c85a5a}
-    h2,.section-title{font-size:11pt;margin:5mm 0 2mm;color:#173a43}.section-title{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #cbd8da;padding-bottom:1.5mm}.section-title small{font-size:7.5pt;color:#6a7a7e;font-weight:400}.table-shell{width:100%;overflow:visible}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.6pt;margin:0 0 5mm}thead{display:table-header-group}tfoot{display:table-footer-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border-bottom:1px solid #dbe3e5;padding:2.1mm 1.6mm;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#173a43!important;color:#fff;font-size:7pt;text-transform:uppercase;letter-spacing:.035em;font-weight:700}tbody tr:nth-child(even){background:#f4f8f8}tfoot td,.sum td,tr.sum td{font-weight:700;background:#e9f1f2;border-top:1.5px solid #173a43}.money{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.center{text-align:center}.muted{color:#6a7a7e}.status-pill{display:inline-block;padding:.7mm 1.6mm;border-radius:99px;background:#e9f1f2;color:#173a43;font-size:6.8pt;font-weight:700;white-space:nowrap}.status-pill.paid{background:#e5f3dc;color:#315f1f}.status-pill.overdue{background:#f8dddd;color:#8c2d2d}.status-pill.partially_paid{background:#faedcf;color:#79541a}.status-pill.cancelled,.status-pill.draft{background:#e7ebec;color:#637175}.note{font-size:7.7pt;color:#5f7074;line-height:1.45;margin:2mm 0 5mm;padding:2.5mm 3mm;border-left:2.5px solid #d6a75d;background:#fbf7ef}.footer{position:fixed;left:0;right:0;bottom:-11mm;border-top:1px solid #cbd8da;padding-top:2mm;display:flex;justify-content:space-between;font-size:7pt;color:#6a7a7e}.page-number:after{content:"Page " counter(page)}
+    .head{display:flex;align-items:flex-end;justify-content:space-between;gap:12mm;border-bottom:2.5px solid #173a43;padding-bottom:4mm;margin-bottom:3mm}.brandx{display:flex;align-items:flex-end;gap:3mm}.brandx img{width:13mm;height:13mm;object-fit:contain}.brandx b{font-size:19pt;line-height:.9}.report-title{text-align:right}.report-title h1{font-size:18pt;line-height:1.05;margin:0;color:#173a43}.period{display:inline-block;margin-top:2mm;padding:1.2mm 2.5mm;border-radius:99px;background:#e9f1f2;color:#173a43;font-size:8pt;font-weight:700}.sub{font-size:8pt;color:#5c6f73;margin-top:1.2mm}.report-meta{display:flex;justify-content:space-between;gap:8mm;margin:0 0 5mm;color:#6a7a7e;font-size:7.5pt}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2.5mm;margin:0 0 5mm}.mini{break-inside:avoid;page-break-inside:avoid;min-height:18mm;border:1px solid #cbd8da;border-top:2.5px solid #6fb24b;border-radius:2mm;padding:3mm;background:#f8fbfb}.mini span{display:block;font-size:7.2pt;line-height:1.2;text-transform:uppercase;letter-spacing:.04em;color:#65777a;margin-bottom:1.8mm}.mini b{display:block;font-size:13pt;line-height:1.05;color:#173a43}.mini.warn{border-top-color:#d6a75d}.mini.alert{border-top-color:#c85a5a}
+    h2,.section-title{break-after:avoid;page-break-after:avoid;font-size:11pt;margin:5mm 0 2mm;color:#173a43}.section-title{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #cbd8da;padding-bottom:1.5mm}.section-title small{font-size:7.5pt;color:#6a7a7e;font-weight:400}.table-shell{width:100%;overflow:visible}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.6pt;margin:0 0 5mm}thead{display:table-header-group}tfoot{display:table-row-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border-bottom:1px solid #dbe3e5;padding:2.1mm 1.6mm;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#173a43!important;color:#fff;font-size:7pt;text-transform:uppercase;letter-spacing:.035em;font-weight:700}tbody tr:nth-child(even){background:#f4f8f8}tfoot td,.sum td,tr.sum td{font-weight:700;background:#e9f1f2;border-top:1.5px solid #173a43}.money{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.center{text-align:center}.muted{color:#6a7a7e}.status-pill{display:inline-block;padding:.7mm 1.6mm;border-radius:99px;background:#e9f1f2;color:#173a43;font-size:6.8pt;font-weight:700;white-space:nowrap}.status-pill.paid{background:#e5f3dc;color:#315f1f}.status-pill.overdue{background:#f8dddd;color:#8c2d2d}.status-pill.partially_paid{background:#faedcf;color:#79541a}.status-pill.cancelled,.status-pill.draft{background:#e7ebec;color:#637175}.note{break-inside:avoid;page-break-inside:avoid;font-size:7.7pt;color:#5f7074;line-height:1.45;margin:2mm 0 5mm;padding:2.5mm 3mm;border-left:2.5px solid #d6a75d;background:#fbf7ef}.footer{position:fixed;left:0;right:0;bottom:-11mm;border-top:1px solid #cbd8da;padding-top:2mm;display:flex;justify-content:space-between;font-size:7pt;color:#6a7a7e}.page-number:after{content:"Page " counter(page)}
     @media(max-width:700px){.summary{grid-template-columns:repeat(3,1fr)}}@media print{button{display:none}}
   </style></head><body>
   <div class="head"><div class="brandx"><img src="${logo}"><div><b>${window.RenoweetCompany.html('companyName')}</b><div class="sub">Bookkeeping • KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')}</div></div></div><div class="report-title"><h1>${esc(title)}</h1><div class="period">${esc(subtitle||"")}</div></div></div>
@@ -1412,32 +1413,13 @@ function downloadInvoiceFile(file){
 }
 
 async function makeBookkeepingInvoicePdfFile(){
-  const source=document.querySelector("#invoicePreview .ros-invoice-preview");
-  if(!source)throw new Error("Invoice preview not found. Open Preview first.");
-  if(typeof html2canvas!=="function"||!window.jspdf?.jsPDF)throw new Error("PDF libraries are not available. Check your internet connection and reload Bookkeeping.");
-  const stage=document.createElement("div");
-  stage.setAttribute("aria-hidden","true");
-  stage.className="ros-bk-pdf-stage";
-  stage.style.cssText="position:absolute;left:0;top:-100000px;width:210mm;max-width:210mm;margin:0!important;padding:0!important;border:0!important;background:#fff;color:#142d35!important;font-family:Arial,Helvetica,sans-serif!important;z-index:-99999;visibility:visible;pointer-events:none;";
-  const clone=source.cloneNode(true);
-  clone.style.cssText="display:block;width:210mm;max-width:210mm;min-width:210mm;margin:0!important;padding:0!important;transform:none!important;box-shadow:none!important;background:#fff!important;";
-  const page=clone.querySelector(".ros-invoice-page");
-  if(!page)throw new Error("Printable invoice page not found.");
-  page.style.cssText += ";display:block;position:relative;left:0;top:0;width:210mm!important;max-width:210mm!important;min-width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;padding:14mm 16mm 13mm 16mm!important;border:0!important;box-sizing:border-box!important;transform:none!important;overflow:hidden!important;background:#fff!important;";
-  const content=page.querySelector(".ros-invoice-content");
-  if(content)content.style.cssText += ";display:block;width:178mm!important;max-width:178mm!important;min-width:178mm!important;margin:0!important;padding:0!important;box-sizing:border-box!important;transform:none!important;overflow:hidden!important;";
-  stage.appendChild(clone);document.body.appendChild(stage);
-  try{
-    const imgs=[...clone.querySelectorAll("img")];
-    await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=img.onerror=r})));
-    if(document.fonts?.ready)await document.fonts.ready;
-    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-    const canvas=await html2canvas(page,{scale:2,backgroundColor:"#ffffff",useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,width:page.clientWidth,height:page.clientHeight,windowWidth:page.clientWidth,windowHeight:page.clientHeight});
-    const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true});
-    pdf.addImage(canvas.toDataURL("image/jpeg",0.96),"JPEG",0,0,210,297,undefined,"FAST");
-    const r=window.currentPreviewInvoice||invoiceFromForm();
-    return new File([pdf.output("blob")],`Factuur-${r["Invoice #"]||"invoice"}.pdf`,{type:"application/pdf"});
-  }finally{stage.remove();}
+  const source=document.querySelector('#invoicePreview .ros-invoice-preview');
+  const r=window.currentPreviewInvoice||invoiceFromForm();
+  return window.RenoweetPrintLayout.createPdf({
+    source,contentSelector:'.ros-invoice-content',bookkeeping:true,
+    label:`Factuur ${r['Invoice #']||''}`,
+    fileName:`Factuur-${r['Invoice #']||'invoice'}.pdf`
+  });
 }
 async function printBookkeepingInvoicePdf(){
   try{const file=await makeBookkeepingInvoicePdfFile();downloadInvoiceFile(file);}
