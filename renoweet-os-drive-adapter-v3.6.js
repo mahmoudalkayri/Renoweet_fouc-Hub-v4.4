@@ -4,6 +4,15 @@ let state={year:RenoweetDrive.currentYear(),activeYear:RenoweetDrive.currentYear
 const status=(title,detail='')=>{try{dbState(!!state.connected,title,detail)}catch(e){const el=document.getElementById('dbStatus');if(el)el.textContent=title+(detail?' • '+detail:'')}};
 const localSnapshot=()=>({projects:RenoweetDrive.clone(db.projects||[]),bookkeeping:RenoweetDrive.clone(db.bookkeeping||[]),deleted:RenoweetDrive.clone(db.deleted||[])});
 function applyRemote(x,rerender=true,dirty=false){db={projects:RenoweetDrive.clone(x.projects||[]),bookkeeping:RenoweetDrive.clone(x.bookkeeping||[]),deleted:RenoweetDrive.clone(x.deleted||[])};try{resetProjectShadows()}catch(e){};if(rerender)try{render()}catch(e){};try{cacheBrowserState(!!dirty)}catch(e){}}
+// Read the open editor only when its fields actually changed. Re-stamping an
+// unchanged draft after verification would manufacture another pending save.
+function captureVisibleChanges(){
+ if(typeof currentProjectId==='undefined'||!currentProjectId||typeof formDirty==='undefined'||!formDirty)return;
+ if(typeof getP!=='function'||typeof updateProjectFromVisibleForm!=='function')return;
+ const p=getP();if(!p)return;const before=JSON.stringify(p);
+ updateProjectFromVisibleForm(p);
+ if(JSON.stringify(p)!==before)saveProjectDraftRecoveryNow();
+}
 function clearRetry(){clearTimeout(state.retryTimer);state.retryTimer=null;state.retryAttempts=0;state.syncPending=false}
 function scheduleRetry(reason='Drive verification was interrupted'){
  state.syncPending=true;clearTimeout(state.retryTimer);
@@ -102,6 +111,7 @@ async function saveDrive(manual=false,expectedProjectId=''){
  const run=(async()=>{
   state.saving=true;
   try{
+   captureVisibleChanges();
    const localOk=await cacheBrowserState(true);if(localOk===false)throw new Error('The local safety copy could not be written, so Drive sync was not started.');
    status('Saving to Drive…','Local safety copy verified first; Drive checksum verification is in progress');
    let payload=localSnapshot();state.syncPending=false;if(expectedProjectId&&!payload.projects.some(p=>p.id===expectedProjectId))throw new Error(`Project ${expectedProjectId} is missing from the local save payload.`);let saved;
@@ -109,14 +119,14 @@ async function saveDrive(manual=false,expectedProjectId=''){
    catch(e){
     if(e.name!=='RenoweetConflictError')throw e;
     const remote=e.remote.data.os;if(typeof mergeDatabases!=='function')throw e;
-    try{if(typeof currentProjectId!=='undefined'&&currentProjectId&&typeof formDirty!=='undefined'&&formDirty)saveProjectDraftRecoveryNow()}catch(e){}
+    captureVisibleChanges();
     const merged=mergeDatabases(state.baseline||{projects:[],bookkeeping:[],deleted:[]},localSnapshot(),remote);
     applyRemote(merged.merged,true,true);
     payload=localSnapshot();saved=await RenoweetDrive.saveSection('os',payload,{year:state.year,sectionRevision:e.remoteSectionRevision,forceRecovery:true,recoveryReason:'os-conflict-merge'});
     if(merged.stats.conflicts&&manual)alert(`Renoweet merged ${merged.stats.conflicts} overlapping OS change(s) from another device. Review the affected project before continuing.`)
    }
    if(expectedProjectId&&!saved.data.os.projects.some(p=>p.id===expectedProjectId))throw new Error(`Drive verification completed, but project ${expectedProjectId} was not present in the saved database.`);
-   try{if(typeof currentProjectId!=='undefined'&&currentProjectId&&typeof formDirty!=='undefined'&&formDirty)saveProjectDraftRecoveryNow()}catch(e){}
+   captureVisibleChanges();
    const latest=localSnapshot(),hasNewerChanges=JSON.stringify(latest)!==JSON.stringify(payload);
    const next=hasNewerChanges?(typeof mergeDatabases==='function'?mergeDatabases(payload,latest,saved.data.os).merged:latest):saved.data.os;
    applyRemote(next,false,hasNewerChanges);state.sectionRevision=saved.sectionRevision;window.__renoweetCanonical=RenoweetDrive.clone(saved.data||window.__renoweetCanonical||{});state.baseline=RenoweetDrive.clone(saved.data.os);

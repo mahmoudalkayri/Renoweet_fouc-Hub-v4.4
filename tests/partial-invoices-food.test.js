@@ -21,6 +21,11 @@ const net=project();net.invoice.paid=false;net.invoice.amountBasis='net';assert.
 const missing=project();missing.invoice.paymentDate='';assert.throws(()=>P.issue(missing),/date/);
 const tooLarge=project();tooLarge.invoice.partialAmount=3000;assert.throws(()=>P.issue(tooLarge),/exceeds/);
 const mixed=project();mixed.estimate=[{desc:'21% work',qty:1,rate:1000,vatTreatment:'NL_HIGH'},{desc:'9% work',qty:1,rate:500,vatTreatment:'NL_LOW'},{desc:'Reverse',qty:1,rate:200,vatTreatment:'REVERSE_CHARGE_NL',vatReferenceRate:21}];mixed.quote.parking=20;const md=P.issue(mixed);assert.equal(md.total,500);assert.equal(V.calculate(P.previewProject(mixed),'invoice').total,500);mixed.invoice={kind:'final'};const mf=P.projectDocument(mixed);assert.equal(A.invoiceTotals({'Line items JSON':JSON.stringify(md.lines)}).gross+A.invoiceTotals({'Line items JSON':JSON.stringify(mf.lines)}).gross,V.calculate(mixed,'invoice').total);
+// Tiny advances across every VAT group must preserve the amount without negative lines.
+for(const amount of [.01,.02,.03,.04,.05,.99,500]){
+ const tiny=project();tiny.invoice.partialAmount=amount;tiny.estimate=[{rate:1000/1.21,vatTreatment:'NL_HIGH'},{rate:1000/1.09,vatTreatment:'NL_LOW'},{rate:1000,vatTreatment:'REVERSE_CHARGE_NL',vatReferenceRate:21},{rate:1000,vatTreatment:'REVERSE_CHARGE_NL',vatReferenceRate:9},{rate:1000,vatTreatment:'NL_ZERO'}].map((x,i)=>({...x,id:String(i),qty:1,desc:'work'}));
+ const doc=P.projectDocument(tiny);assert.equal(doc.total,amount);assert.ok(doc.lines.every(l=>l.unitNet>=0&&l.vatAmount>=0));
+}
 for(const date of ['2026-02-01','2026-05-01','2026-09-30']){
  const food={Date:date,Category:'Food & drinks',Gross:109,VAT:9,'Income tax deductible %':100,'VAT deductible %':0,'Deductible VAT':0,'Deductible cost':109,'Deductible cost before insurance':109,'Deductible cost after insurance':109},before=JSON.stringify(food),f=A.expenseFacts(food);
  assert.equal(f.incomePct,80);assert.equal(f.deductibleCost,87.2);assert.equal(f.invoiceVat,9);assert.equal(f.deductibleVat,0);assert.equal(f.businessPaid,109);assert.equal(JSON.stringify(food),before);
@@ -41,15 +46,27 @@ const osPage=fs.readFileSync(require.resolve('../Renoweet-OS-Drive-v2.2.html'),'
 for(const match of osPage.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))if(match[1].trim())new vm.Script(match[1]);
 for(const match of page.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))if(match[1].trim())new vm.Script(match[1]);
 const uiProject=project();uiProject.invoice={number:'',date:'2026-10-01',dueDays:3,status:'Draft'};
-const fields={},ui={RenoweetPartialInvoices:P,OSVAT:V,document:{querySelector:()=>null},RenoweetCompany:{html:()=>''},db:{projects:[uiProject],bookkeeping:[]},formDirty:false,$:id=>fields[id]||null,getP:()=>uiProject,today:()=> '2026-10-01',money:v=>v.toFixed(2),esc:v=>String(v??''),fmtDate:v=>v,vatTreatmentOptions:()=>'',vatTreatmentLabel:()=> 'BTW',vatBreakdownRows:t=>String(t.vat),reverseChargeNote:()=>'',scheduleSave:()=>{},renderTabs:()=>{},renoweetAllKnownInvoices:()=>[],renoweetInvoiceSeqFromNo:()=>null,nextInvoice:()=> '2026-0110001',lineid:()=> 'test',alert:message=>{throw new Error(message)},updateProjectFromVisibleForm:()=>{}};
-ui.window=ui;ui.saveProjectFromForm=()=>ui.updateProjectFromVisibleForm(uiProject);ui.projectTotals=(p,s)=>V.calculate(p,s);ui.invoiceLineItemsForBookkeeping=p=>V.invoiceLines(p);ui.sendToBookkeeping=()=>{const d=ui.projectTotals(uiProject,'invoice');ui.db.bookkeeping.push({'Invoice number':uiProject.invoice.number,'Total incl VAT':d.total,VAT:d.vat,'Line items JSON':JSON.stringify(ui.invoiceLineItemsForBookkeeping(uiProject))});return true};
+const fields={},ui={RenoweetPartialInvoices:P,OSVAT:V,document:{querySelector:()=>null,querySelectorAll:()=>[]},RenoweetCompany:{html:()=>''},db:{projects:[uiProject],bookkeeping:[]},formDirty:false,$:id=>fields[id]||null,getP:()=>uiProject,today:()=> '2026-10-01',money:v=>v.toFixed(2),esc:v=>String(v??''),fmtDate:v=>v,vatTreatmentOptions:()=>'',vatTreatmentLabel:()=> 'BTW',vatBreakdownRows:t=>String(t.vat),reverseChargeNote:()=>'',scheduleSave:()=>{},renderTabs:()=>{},renoweetAllKnownInvoices:()=>[],renoweetInvoiceSeqFromNo:()=>null,nextInvoice:()=> '2026-0110001',lineid:()=> 'test',alert:message=>{throw new Error(message)},updateProjectFromVisibleForm:()=>{}};
+ui.validateReverseChargeInvoice=()=>true;ui.window=ui;ui.saveProjectFromForm=()=>ui.updateProjectFromVisibleForm(uiProject);ui.projectTotals=(p,s)=>V.calculate(p,s);ui.invoiceLineItemsForBookkeeping=p=>V.invoiceLines(p);ui.sendToBookkeeping=()=>{const d=ui.projectTotals(uiProject,'invoice');ui.db.bookkeeping.push({'Invoice number':uiProject.invoice.number,'Total incl VAT':d.total,VAT:d.vat,'Line items JSON':JSON.stringify(ui.invoiceLineItemsForBookkeeping(uiProject))});return true};
 vm.createContext(ui);vm.runInContext(osPage.slice(osPage.indexOf('function invoiceHTML('),osPage.indexOf('\nasync function printInvoiceClean')),ui);
+ui.readEstimate=()=>{};ui.readMaterials=()=>{};ui.normalizeSalesVatTreatment=raw=>raw||'NL_HIGH';ui.vatReferenceRate=()=>21;
+vm.runInContext(osPage.slice(osPage.indexOf('function updateProjectFromVisibleForm('),osPage.indexOf('function saveProjectFromForm(')),ui);
+function renderFields(){
+ for(const k of Object.keys(fields))delete fields[k];
+ const i=uiProject.invoice;
+ Object.assign(fields,{inv_number:{value:i.number||''},inv_date:{value:i.date||''},inv_due:{value:i.dueDays||3},inv_customer_vat:{value:''},inv_vat_treatment:{value:'NL_HIGH'}});
+ if(i.kind==='partial')Object.assign(fields,{partial_amount:{value:String(i.partialAmount||'')},partial_basis:{value:i.amountBasis||'gross'},partial_description:{value:i.partialDescription||''},partial_paid:{checked:!!i.paid},partial_paid_date:{value:i.paymentDate||''},partial_method:{value:i.paymentMethod||'Bank'}});
+}
+ui.renderTabs=renderFields;renderFields();
 vm.runInContext(fs.readFileSync(require.resolve('../renoweet-partial-invoices-ui.js'),'utf8'),ui);
 ui.newPartialInvoice();assert.equal(uiProject.invoice.number,'2026-0110001.01');assert(ui.invoiceHTML(uiProject).includes('partial_amount'),'A blank partial draft must open with editable fields');
 uiProject.payments=[{id:'received',status:'Received',amount:500,date:'2026-09-30'}];assert(ui.invoiceHTML(uiProject).includes('partial_amount'),'Invoice must reopen after a project payment');
 uiProject.invoice.partialAmount=9999;assert(ui.invoiceHTML(uiProject).includes('exceeds'),'An invalid draft stays editable');uiProject.invoice.partialAmount=0;
 fields.partial_amount={value:'500'};fields.partial_basis={value:'gross'};fields.partial_description={value:'Office construction'};fields.partial_paid={checked:true};fields.partial_paid_date={value:'2026-09-30'};fields.partial_method={value:'Bank'};
 ui.refreshPartialInvoice();assert(ui.invoiceHTML(uiProject).includes('DEELFACTUUR'));assert(ui.invoiceHTML(uiProject).includes('500.00'));assert(ui.invoiceHTML(uiProject).includes('2904.00'));
+ui.validateReverseChargeInvoice=()=>false;assert.equal(ui.sendToBookkeeping(),false);assert.equal(uiProject.invoice.documentSnapshot,undefined,'A failed validation must leave the draft editable');assert.equal(ui.db.bookkeeping.length,0);ui.validateReverseChargeInvoice=()=>true;
 ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[0]['Total incl VAT'],500);assert.equal(ui.db.bookkeeping[0]['Payment date'],'2026-09-30');
-for(const k of Object.keys(fields))delete fields[k];ui.prepareFinalInvoice();assert.equal(uiProject.invoice.number,'2026-0110001');assert(ui.invoiceHTML(uiProject).includes('2404.00'));ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[1]['Total incl VAT'],2404);
+ui.newPartialInvoice();assert.equal(uiProject.invoice.number,'2026-0110001.02');assert.equal(uiProject.invoice.partialAmount,0);assert.equal(uiProject.invoice.paid,false);
+ui.db.bookkeeping.push({'Invoice number':'2026-0110001.02','Project ID':'other'});fields.partial_amount.value='100';assert.throws(()=>ui.sendToBookkeeping(),/already used/);assert.equal(uiProject.invoice.documentSnapshot,undefined);ui.db.bookkeeping.pop();
+ui.prepareFinalInvoice();assert.equal(uiProject.invoice.number,'2026-0110001');assert(ui.invoiceHTML(uiProject).includes('2404.00'));ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[1]['Total incl VAT'],2404);
 console.log('Actual invoice screen, partial queue and final invoice flow passed.');

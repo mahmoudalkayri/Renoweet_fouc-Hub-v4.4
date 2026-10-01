@@ -13,7 +13,12 @@ function projectDocument(p){
   const groups=[...total.vatBreakdown.map(g=>({...g,gross:round(g.net+g.vat)})),...(total.parking?[{treatment:'NL_ZERO',rate:0,net:total.parking,vat:0,gross:total.parking}]:[])].filter(g=>g.net>0);
   const available=round(total.total-docs(p).reduce((s,d)=>s+d.document.total,0));
   const denominator=groups.reduce((s,g)=>s+g[basis],0);if(!(amount>0)||!denominator)throw new Error('Enter a positive partial invoice amount.');
-  let used=0;lines=groups.map((g,i)=>{const allocation=i===groups.length-1?round(amount-used):round(amount*g[basis]/denominator);used=round(used+allocation);const charge=!['REVERSE_CHARGE_NL','NL_ZERO'].includes(g.treatment),net=basis==='gross'?round(allocation/(charge?1+g.rate/100:1)):allocation,vat=basis==='gross'?round(allocation-net):(charge?round(net*g.rate/100):0);return {id:`partial_${i}`,description:`Deelfactuur / aanbetaling: ${description}`,quantity:1,unitNet:net,vatRate:charge?g.rate:0,vatTreatment:g.treatment,vatReferenceRate:g.treatment==='REVERSE_CHARGE_NL'?g.rate:null,vatAmount:vat}});
+  // Allocate whole cents by largest remainder so rounding never creates a
+  // negative last line, even for very small amounts across many VAT groups.
+  const cents=Math.round(amount*100),shares=groups.map((g,i)=>{const exact=cents*g[basis]/denominator;return {i,cents:Math.floor(exact),fraction:exact-Math.floor(exact)}});
+  const remainder=cents-shares.reduce((s,x)=>s+x.cents,0),ranked=[...shares].sort((a,b)=>b.fraction-a.fraction||a.i-b.i);
+  for(let i=0;i<remainder;i++)ranked[i%ranked.length].cents++;
+  lines=groups.map((g,i)=>{const allocation=shares[i].cents/100;const charge=!['REVERSE_CHARGE_NL','NL_ZERO'].includes(g.treatment),net=basis==='gross'?round(allocation/(charge?1+g.rate/100:1)):allocation,vat=basis==='gross'?round(allocation-net):(charge?round(net*g.rate/100):0);return {id:`partial_${i}`,description:`Deelfactuur / aanbetaling: ${description}`,quantity:1,unitNet:net,vatRate:charge?g.rate:0,vatTreatment:g.treatment,vatReferenceRate:g.treatment==='REVERSE_CHARGE_NL'?g.rate:null,vatAmount:vat}});
   if(round(lines.reduce((s,l)=>s+l.unitNet+l.vatAmount,0))>available+.01)throw new Error('The partial amount exceeds the remaining project total.');
  }else if(docs(p).length){
   for(const d of docs(p))for(const [i,l] of d.document.lines.entries())lines.push({...l,id:`deduct_${d.number}_${i}`,description:`Reeds gefactureerd ${d.number}`,quantity:1,unitNet:-round(l.quantity*l.unitNet),vatAmount:-round(l.vatAmount??l.quantity*l.unitNet*l.vatRate/100)});

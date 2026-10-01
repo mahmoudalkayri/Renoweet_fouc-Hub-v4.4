@@ -21,6 +21,25 @@ function fixture(saveSection,cacheOk=true){
 async function until(predicate){for(let i=0;i<30&&!predicate();i++)await Promise.resolve();assert.ok(predicate(),'async operation reached the expected stage')}
 const result=(payload,rev)=>({data:{os:clone(payload),meta:{sections:{osRevision:rev}}},sectionRevision:rev});
 (async()=>{
+ // An unchanged open editor must not stamp a new edit after each verified save.
+ let draftWrites=0,saveCount=0;
+ const open=fixture(async(_section,payload)=>result(payload,++saveCount));
+ Object.assign(open.c,{currentProjectId:'job',currentTab:'intake',formDirty:true,draftProject:null,projectDraftTimer:null,localCacheDirty:true,
+  getP:()=>open.c.db.projects[0],updateProjectFromVisibleForm(){},projectDraftStorageKey:()=> 'draft',
+  localStorage:{setItem(){draftWrites++}},nowStamp:()=>`2026-10-01T12:00:${String(draftWrites+1).padStart(2,'0')}Z`});
+ vm.runInContext(osHtml.slice(osHtml.indexOf('function saveProjectDraftRecoveryNow('),osHtml.indexOf('function queueProjectDraftRecovery(')),open.c);
+ assert.equal(await open.api.save(false),true,'A dirty editor with no newer field changes should finish syncing');
+ assert.equal(open.api.state.syncPending,false);assert.equal(draftWrites,0);
+ // Actual editor input arriving during verification is captured once, then sync settles.
+ let finish,editorSaves=0,visibleTitle='Work',draftCount=0;
+ const editor=fixture(async(_section,payload)=>{editorSaves++;if(editorSaves===1)await new Promise(resolve=>{finish=resolve});return result(payload,editorSaves)});
+ Object.assign(editor.c,{currentProjectId:'job',currentTab:'intake',formDirty:true,draftProject:null,projectDraftTimer:null,localCacheDirty:true,
+  getP:()=>editor.c.db.projects[0],updateProjectFromVisibleForm:p=>{p.title=visibleTitle},projectDraftStorageKey:()=> 'draft',
+  localStorage:{setItem(){draftCount++}},nowStamp:()=>`2026-10-01T12:00:${String(draftCount+1).padStart(2,'0')}Z`});
+ vm.runInContext(osHtml.slice(osHtml.indexOf('function saveProjectDraftRecoveryNow('),osHtml.indexOf('function queueProjectDraftRecovery(')),editor.c);
+ const editorSave=editor.api.save(true);await until(()=>finish);visibleTitle='Edited during saving';finish();
+ assert.equal(await editorSave,true);assert.equal(editor.c.db.projects[0].title,visibleTitle);
+ assert.equal(editorSaves,2);assert.equal(draftCount,1);assert.equal(editor.api.state.syncPending,false);
  // A payment entered while Drive is verifying must survive and be saved next.
  let release,calls=[];
  const f=fixture(async(_section,payload)=>{calls.push(clone(payload));if(calls.length===1)return new Promise(resolve=>{release=()=>{const saved=result(payload,1);saved.data.os.projects[0].customerId='customer-1';resolve(saved)}});return result(payload,2)});

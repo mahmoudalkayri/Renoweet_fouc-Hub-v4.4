@@ -1,5 +1,12 @@
 # Renoweet Focus Hub v4.4.4
 
+## Additional review fixes — 1 October 2026
+
+- New partial and final invoice drafts use their new fields and invoice numbers immediately.
+- An unchanged open editor no longer manufactures repeated saves. Genuine edits made during saving are captured and verified.
+- Failed reverse-charge validation leaves the invoice editable; duplicate numbers already in Bookkeeping are blocked.
+- Cent allocation across mixed VAT groups cannot create a negative partial line through rounding.
+
 ## Invoice and save fixes — 1 October 2026
 
 - Invoice opens even when a partial-invoice draft has no amount yet or has an amount that needs correction. Enter a valid amount before issuing it.
