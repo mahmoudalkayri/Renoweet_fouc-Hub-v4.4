@@ -104,6 +104,53 @@ function reopenDraft(p,{confirmedUnsent=false,bookkeepingRows=[]}={}){
  delete p.invoice.documentSnapshot;p.invoice.status='Draft';p.invoice.draftReopenedAt=stamp;
  return p.invoice;
 }
+function bookkeepingCorrectionReason(p){
+ const i=p.invoice||{},documents=p.invoiceDocuments||[],d=documents.find(x=>x.number===i.number),position=documents.indexOf(d);
+ if(i.kind!=='partial'||!i.documentSnapshot||!d)return 'Open an existing partial invoice first.';
+ if(d.status==='Cancelled'||/cancel|credit/.test(String(i.status||'').toLowerCase()))return 'A cancelled or credited invoice cannot be corrected as an active advance.';
+ if(i.sharedAt||d.invoice?.sharedAt)return 'This invoice was marked sent or shared with the customer. Use a documented invoice correction.';
+ if(!i.bookkeepingQueuedAt&&!d.queueRow&&!d.invoice?.bookkeepingQueuedAt)return 'This invoice has not been queued to Bookkeeping.';
+ if(documents.slice(position+1).some(x=>x.status!=='Cancelled'))return 'Later invoices depend on this advance. Correct those documents before importing an earlier correction.';
+ return '';
+}
+function bookkeepingCorrection(p,row){
+ const reason=bookkeepingCorrectionReason(p);if(reason)throw new Error(reason);
+ if(String(row?.['Invoice #']||row?.['Invoice number']||'')!==p.invoice.number)throw new Error('The Bookkeeping invoice number does not match.');
+ if(row['Project ID']&&row['Project ID']!==p.id)throw new Error('This Bookkeeping invoice belongs to another project.');
+ if(/cancel|credit/.test(String(row['Lifecycle status']||row.Status||'').toLowerCase()))throw new Error('A cancelled or credited invoice cannot replace an active advance.');
+ let lines=row['Line items'];if(!Array.isArray(lines)){try{lines=JSON.parse(row['Line items JSON']||'[]')}catch(e){throw new Error('Bookkeeping line items are invalid.')}}
+ if(!Array.isArray(lines)||!lines.length)throw new Error('Save the corrected line items in Bookkeeping first.');
+ lines=clone(lines);for(const l of lines){
+  const rates={NL_LOW:9,NL_HIGH:21,NL_ZERO:0,REVERSE_CHARGE_NL:0},rate=rates[l.vatTreatment];
+  if(rate===undefined||Number(l.vatRate)!==rate||!Number.isFinite(Number(l.unitNet))||Number(l.unitNet)<0||!Number.isFinite(Number(l.quantity))||Number(l.quantity)<=0)throw new Error('Check the corrected Bookkeeping quantities, amounts and BTW treatments.');
+  const expected=round(Number(l.quantity)*Number(l.unitNet)*rate/100);if(l.vatAmount!=null&&(!Number.isFinite(Number(l.vatAmount))||Math.abs(Number(l.vatAmount)-expected)>.011))throw new Error('Bookkeeping BTW does not match the corrected line rates.');
+ }
+ const corrected=fromLines(lines),old=p.invoice.documentSnapshot;
+ if(cents(corrected.total)!==cents(old.total))throw new Error('Keep the advance total unchanged in Bookkeeping. Correct the net amounts as well as the BTW rate; changing only the rate changes the amount received.');
+ for(const [field,expected] of [['Gross incl. VAT',corrected.total],['VAT',corrected.vat],['Invoice subtotal',corrected.subtotal]])if(row[field]!=null&&cents(row[field])!==cents(expected))throw new Error('Bookkeeping line items and invoice totals do not match. Save the corrected invoice again.');
+ const candidate=clone(p);candidate.invoiceDocuments=candidate.invoiceDocuments.filter(d=>d.number!==p.invoice.number);delete candidate.invoice.documentSnapshot;
+ const before=allocationRows(candidate);candidate.invoiceDocuments.push({number:p.invoice.number,kind:'partial',status:'Issued',document:corrected});
+ let after;try{after=allocationRows(candidate)}catch(e){throw new Error('Correct the BTW rates per work line in Estimate first, then import the Bookkeeping correction. '+e.message)}
+ const rows=before.map((r,index)=>({...r,allocatedNet:round(after[index].billedNet-r.billedNet),allocatedVat:round(after[index].billedVat-r.billedVat),allocatedGross:round(after[index].billedGross-r.billedGross)}));rows.forEach(r=>r.allocatedAmount=r.allocatedGross);
+ const total=V.calculate(p,'invoice');return {...corrected,kind:'partial',projectTotal:total.total,projectNet:round(total.subtotal+total.parking),projectVat:total.vat,previousGross:round(before.reduce((s,r)=>s+r.billedGross,0)),allocation:{mode:'custom',basis:'gross',rows},invoiceNote:old.invoiceNote||''};
+}
+function importBookkeepingCorrection(p,row,{confirmedCustomerUnsent=false}={}){
+ const document=bookkeepingCorrection(p,row);if(!confirmedCustomerUnsent)throw new Error('Confirm that this invoice was only sent to Bookkeeping, never to the customer.');
+ const stamp=new Date().toISOString(),d=p.invoiceDocuments.find(x=>x.number===p.invoice.number);
+ p.invoiceDraftRevisions=p.invoiceDraftRevisions||[];p.invoiceDraftRevisions.push({at:stamp,reason:'Imported Bookkeeping-only correction; customer invoice never sent',number:p.invoice.number,invoice:clone(p.invoice),document:clone(d.document),queueRow:clone(d.queueRow||{}),bookkeepingSource:clone(row)});
+ p.invoice.documentSnapshot=clone(document);p.invoice.amountBasis='gross';p.invoice.partialAmount=document.total;p.invoice.allocationMode='custom';p.invoice.lineAllocations=Object.fromEntries(document.allocation.rows.map(r=>[r.key,r.allocatedGross]));p.invoice.bookkeepingCorrectionAt=stamp;
+ d.document=clone(document);d.invoice=clone(p.invoice);
+ d.queueRow={...(d.queueRow||{}),'Invoice number':p.invoice.number,'Subtotal ex VAT':document.subtotal,VAT:document.vat,'Total incl VAT':document.total,'VAT treatment':document.vatTreatment,'VAT rate':document.mixed?'':document.vatRate,'Line items JSON':JSON.stringify(document.lines),'Project total incl VAT':document.projectTotal};
+ return document;
+}
+function bookkeepingDifferences(p,rows=[]){
+ const signature=lines=>{const d=fromLines(lines);return JSON.stringify(d.vatBreakdown.map(g=>[g.treatment,g.rate,cents(g.net),cents(g.vat)]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))};
+ return docs(p).filter(d=>rows.some(r=>{
+  if(String(r['Invoice #']||r['Invoice number']||'')!==d.number)return false;
+  let lines=r['Line items'];if(!Array.isArray(lines)){try{lines=JSON.parse(r['Line items JSON']||'[]')}catch(e){return true}}
+  return Array.isArray(lines)&&lines.length&&signature(lines)!==signature(d.document.lines);
+ })).map(d=>d.number);
+}
 function queueMetadata(p){return {'Invoice kind':p.invoice.kind||'full','Parent invoice number':p.invoice.baseNumber||p.invoice.number,'Project total incl VAT':projectDocument(p).projectTotal,'Payment received':p.invoice.paid?'Yes':'No','Payment date':p.invoice.paid?p.invoice.paymentDate||'':'','Paid amount':p.invoice.paid?projectDocument(p).total:0,'Payment method':p.invoice.paymentMethod||'Bank'}}
-return {number,nextNumber,allocationRows,partialPlan,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,queueMetadata};
+return {number,nextNumber,allocationRows,partialPlan,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,bookkeepingCorrectionReason,bookkeepingCorrection,importBookkeepingCorrection,bookkeepingDifferences,queueMetadata};
 });
