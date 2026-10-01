@@ -45,7 +45,9 @@ const fields={},ui={RenoweetPartialInvoices:P,OSVAT:V,document:{querySelector:()
 ui.window=ui;ui.saveProjectFromForm=()=>ui.updateProjectFromVisibleForm(uiProject);ui.projectTotals=(p,s)=>V.calculate(p,s);ui.invoiceLineItemsForBookkeeping=p=>V.invoiceLines(p);ui.sendToBookkeeping=()=>{const d=ui.projectTotals(uiProject,'invoice');ui.db.bookkeeping.push({'Invoice number':uiProject.invoice.number,'Total incl VAT':d.total,VAT:d.vat,'Line items JSON':JSON.stringify(ui.invoiceLineItemsForBookkeeping(uiProject))});return true};
 vm.createContext(ui);vm.runInContext(osPage.slice(osPage.indexOf('function invoiceHTML('),osPage.indexOf('\nasync function printInvoiceClean')),ui);
 vm.runInContext(fs.readFileSync(require.resolve('../renoweet-partial-invoices-ui.js'),'utf8'),ui);
-ui.newPartialInvoice();assert.equal(uiProject.invoice.number,'2026-0110001.01');
+ui.newPartialInvoice();assert.equal(uiProject.invoice.number,'2026-0110001.01');assert(ui.invoiceHTML(uiProject).includes('partial_amount'),'A blank partial draft must open with editable fields');
+uiProject.payments=[{id:'received',status:'Received',amount:500,date:'2026-09-30'}];assert(ui.invoiceHTML(uiProject).includes('partial_amount'),'Invoice must reopen after a project payment');
+uiProject.invoice.partialAmount=9999;assert(ui.invoiceHTML(uiProject).includes('exceeds'),'An invalid draft stays editable');uiProject.invoice.partialAmount=0;
 fields.partial_amount={value:'500'};fields.partial_basis={value:'gross'};fields.partial_description={value:'Office construction'};fields.partial_paid={checked:true};fields.partial_paid_date={value:'2026-09-30'};fields.partial_method={value:'Bank'};
 ui.refreshPartialInvoice();assert(ui.invoiceHTML(uiProject).includes('DEELFACTUUR'));assert(ui.invoiceHTML(uiProject).includes('500.00'));assert(ui.invoiceHTML(uiProject).includes('2904.00'));
 ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[0]['Total incl VAT'],500);assert.equal(ui.db.bookkeeping[0]['Payment date'],'2026-09-30');

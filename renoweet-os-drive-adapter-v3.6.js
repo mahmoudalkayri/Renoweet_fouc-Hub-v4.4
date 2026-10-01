@@ -93,36 +93,41 @@ async function saveDrive(manual=false,expectedProjectId=''){
  // Wait for the in-flight save, then continue with a fresh manual save so the newest UI state
  // (including a just-queued bookkeeping invoice) is definitely included and verified.
  if(state.saving){
-   try{if(state.savePromise)await state.savePromise}catch(e){}
-   if(!manual)return true
+   let completed=false;try{if(state.savePromise)completed=await state.savePromise}catch(e){}
+   if(!manual)return completed;return saveDrive(true,expectedProjectId)
  }
  if(!state.connected){if(manual)await connectDrive();else return false;if(!state.connected)return false}
  clearTimeout(state.timer);
+ let saveNewerChanges=false;
  const run=(async()=>{
   state.saving=true;
   try{
    const localOk=await cacheBrowserState(true);if(localOk===false)throw new Error('The local safety copy could not be written, so Drive sync was not started.');
    status('Saving to Drive…','Local safety copy verified first; Drive checksum verification is in progress');
-   const payload=localSnapshot();if(expectedProjectId&&!payload.projects.some(p=>p.id===expectedProjectId))throw new Error(`Project ${expectedProjectId} is missing from the local save payload.`);let saved;
+   let payload=localSnapshot();state.syncPending=false;if(expectedProjectId&&!payload.projects.some(p=>p.id===expectedProjectId))throw new Error(`Project ${expectedProjectId} is missing from the local save payload.`);let saved;
    try{saved=await RenoweetDrive.saveSection('os',payload,{...state,forceRecovery:manual,recoveryReason:manual?'manual-os-save':'os-autosave'})}
    catch(e){
     if(e.name!=='RenoweetConflictError')throw e;
     const remote=e.remote.data.os;if(typeof mergeDatabases!=='function')throw e;
-    const merged=mergeDatabases(state.baseline||{projects:[],bookkeeping:[],deleted:[]},payload,remote);
-    applyRemote(merged.merged);
-    saved=await RenoweetDrive.saveSection('os',localSnapshot(),{year:state.year,sectionRevision:e.remoteSectionRevision,forceRecovery:true,recoveryReason:'os-conflict-merge'});
+    try{if(typeof currentProjectId!=='undefined'&&currentProjectId&&typeof formDirty!=='undefined'&&formDirty)saveProjectDraftRecoveryNow()}catch(e){}
+    const merged=mergeDatabases(state.baseline||{projects:[],bookkeeping:[],deleted:[]},localSnapshot(),remote);
+    applyRemote(merged.merged,true,true);
+    payload=localSnapshot();saved=await RenoweetDrive.saveSection('os',payload,{year:state.year,sectionRevision:e.remoteSectionRevision,forceRecovery:true,recoveryReason:'os-conflict-merge'});
     if(merged.stats.conflicts&&manual)alert(`Renoweet merged ${merged.stats.conflicts} overlapping OS change(s) from another device. Review the affected project before continuing.`)
    }
    if(expectedProjectId&&!saved.data.os.projects.some(p=>p.id===expectedProjectId))throw new Error(`Drive verification completed, but project ${expectedProjectId} was not present in the saved database.`);
-   applyRemote(saved.data.os,false);state.sectionRevision=saved.sectionRevision;window.__renoweetCanonical=RenoweetDrive.clone(saved.data||window.__renoweetCanonical||{});state.baseline=RenoweetDrive.clone(saved.data.os);
-   try{lastSyncedDb=RenoweetDrive.clone(state.baseline)}catch(e){};try{await cacheBrowserState(false)}catch(e){}
-   clearRetry();
-   status('Saved to Google Drive ✓',`OS revision ${state.sectionRevision} • checksum verified • ${new Date().toLocaleTimeString()}`);
-   if(manual)try{toast('Saved & verified')}catch(e){};return true
-  }catch(e){console.error(e);status('Saved locally • Drive sync pending',e.message);if(!['RenoweetDuplicateDatabaseError','RenoweetDuplicateManifestError','RenoweetIntegrityError','RenoweetClosedPeriodError'].includes(e.name))scheduleRetry(e.message);if(manual)alert('The project remains saved on this device, but Drive did not confirm the sync.\n\n'+e.message);return false}
-  finally{state.saving=false;state.savePromise=null}
+   try{if(typeof currentProjectId!=='undefined'&&currentProjectId&&typeof formDirty!=='undefined'&&formDirty)saveProjectDraftRecoveryNow()}catch(e){}
+   const latest=localSnapshot(),hasNewerChanges=JSON.stringify(latest)!==JSON.stringify(payload);
+   const next=hasNewerChanges?(typeof mergeDatabases==='function'?mergeDatabases(payload,latest,saved.data.os).merged:latest):saved.data.os;
+   applyRemote(next,false,hasNewerChanges);state.sectionRevision=saved.sectionRevision;window.__renoweetCanonical=RenoweetDrive.clone(saved.data||window.__renoweetCanonical||{});state.baseline=RenoweetDrive.clone(saved.data.os);
+   try{lastSyncedDb=RenoweetDrive.clone(state.baseline)}catch(e){};try{await cacheBrowserState(hasNewerChanges)}catch(e){}
+   const pending=hasNewerChanges||JSON.stringify(localSnapshot())!==JSON.stringify(saved.data.os);clearRetry();state.syncPending=pending;saveNewerChanges=pending;
+   status(pending?'Saved locally • syncing newer changes':'Saved to Google Drive ✓',`OS revision ${state.sectionRevision} • checksum verified • ${new Date().toLocaleTimeString()}`);
+   if(manual)try{toast(pending?'Earlier changes verified • newer edits queued':'Saved & verified')}catch(e){};return !pending
+  }catch(e){state.syncPending=true;console.error(e);status('Saved locally • Drive sync pending',e.message);if(!['RenoweetDuplicateDatabaseError','RenoweetDuplicateManifestError','RenoweetIntegrityError','RenoweetClosedPeriodError'].includes(e.name))scheduleRetry(e.message);if(manual)alert('The project remains saved on this device, but Drive did not confirm the sync.\n\n'+e.message);return false}
+  finally{state.saving=false;state.savePromise=null;if(saveNewerChanges&&state.connected&&!state.retryTimer){clearTimeout(state.timer);state.timer=setTimeout(()=>saveDrive(false),300)}}
  })();
- state.savePromise=run;return await run
+ state.savePromise=run;const ok=await run;if(manual&&saveNewerChanges)return saveDrive(true,expectedProjectId);return ok
 }
 function scheduleDriveSave(){if(state.readOnly){historicalBanner();return}try{cacheBrowserState(true)}catch(e){};state.syncPending=true;status(state.connected?'Saved locally • syncing':'Saved locally • Drive pending',state.connected?'Local copy is safe; Drive verification will start shortly.':'Local copy is safe; reconnect Drive to sync.');clearTimeout(state.timer);state.timer=setTimeout(()=>saveDrive(false),900)}
 async function refreshDrive(){if(!state.connected)return connectDrive();try{const remote=state.readOnly?await RenoweetDrive.loadExistingYear(state.year):await RenoweetDrive.loadYear(state.year,true);window.__renoweetCanonical=RenoweetDrive.clone(remote?.data||{});if(!remote)throw new Error(`Renoweet-${state.year}.json was not found.`);if(state.readOnly||remote.data.meta.sections.osRevision!==state.sectionRevision){if(state.readOnly||confirm('A newer OS revision exists on Google Drive. Load it now?')){applyRemote(remote.data.os);state.sectionRevision=remote.data.meta.sections.osRevision;state.baseline=RenoweetDrive.clone(remote.data.os);status(state.readOnly?`Historical ${state.year} • READ ONLY`:'Refreshed from Drive ✓',`OS revision ${state.sectionRevision} • checksum verified`)}}else status('Already current ✓',`OS revision ${state.sectionRevision}`);historicalBanner()}catch(e){alert(e.message)}}

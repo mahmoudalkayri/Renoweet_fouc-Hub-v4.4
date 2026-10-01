@@ -1,5 +1,13 @@
 # Renoweet Focus Hub v4.4.4
 
+## Invoice and save fixes — 1 October 2026
+
+- Invoice opens even when a partial-invoice draft has no amount yet or has an amount that needs correction. Enter a valid amount before issuing it.
+- Edits and payments entered while a Drive save is running remain protected locally and are queued for the next verified save.
+- Saves reuse folder/database checks within each operation and skip uploads when the data is unchanged. Fresh identity/revision checks, uploaded checksum verification, closed-period protection and recovery snapshots remain enabled.
+- To issue an advance invoice: open the OS project, select Invoice, choose a new partial invoice, enter the amount and issue it. The first partial uses the base invoice number followed by .01. Send that issued invoice to Bookkeeping.
+
+
 ## Mixed BTW rates in OS quotations
 
 - Every Estimate work line now has its own 21%, 9%, BTW verlegd (21% or 9% reference rate), or 0%/vrijgesteld choice.

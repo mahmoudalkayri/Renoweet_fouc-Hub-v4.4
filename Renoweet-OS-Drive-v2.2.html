@@ -714,6 +714,8 @@ function projectTime(p){return timeValue(p?.updated)||timeValue(p?.created)||0}
 function plainObject(v){return v&&typeof v==='object'&&!Array.isArray(v)}
 function mergeObject3(base,local,remote,preferLocal,stats,path='',localProject=null,remoteProject=null){
  if(sameData(local,remote))return cloneSafe(local);
+ // A field newly assigned on only one side is an addition, not a conflict.
+ if(base===undefined){if(local===undefined)return cloneSafe(remote);if(remote===undefined)return cloneSafe(local)}
  if(base!==undefined){
   if(sameData(local,base))return cloneSafe(remote);
   if(sameData(remote,base))return cloneSafe(local);
