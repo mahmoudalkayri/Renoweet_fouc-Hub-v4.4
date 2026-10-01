@@ -1,5 +1,14 @@
 # Renoweet Focus Hub v4.4.4
 
+## BTW allocation for partial invoices — 1 October 2026
+
+- In OS, open Invoice, choose Nieuwe deelfactuur, and enter the amount actually received using Inclusief BTW.
+- The estimate lines show their BTW rate, total, previously invoiced amount, remaining balance and allocation to this instalment.
+- Laagste BTW eerst is the default: it clears the lowest-rate remaining lines before allocating to the next rate. You can choose Hoogste BTW eerst, Naar verhouding, or Zelf verdelen per regel. Custom line amounts must add up to the instalment and cannot exceed a line balance.
+- Each instalment retains its exact source lines, net amount and BTW. Further instalments use only the remaining balances; the final invoice deducts the recorded amounts. Already issued invoices retain their original snapshots.
+- Example: €1,120 at 9% plus €2,430 at 21% totals €4,161.10. A €2,080.55 advance clears €1,220.80 at 9% and applies €859.75 to the 21% line. Its BTW is €100.80 + €149.21 = €250.01.
+
+
 ## Additional review fixes — 1 October 2026
 
 - New partial and final invoice drafts use their new fields and invoice numbers immediately.

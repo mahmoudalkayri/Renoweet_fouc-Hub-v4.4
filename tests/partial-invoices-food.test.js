@@ -56,6 +56,11 @@ function renderFields(){
  const i=uiProject.invoice;
  Object.assign(fields,{inv_number:{value:i.number||''},inv_date:{value:i.date||''},inv_due:{value:i.dueDays||3},inv_customer_vat:{value:''},inv_vat_treatment:{value:'NL_HIGH'}});
  if(i.kind==='partial')Object.assign(fields,{partial_amount:{value:String(i.partialAmount||'')},partial_basis:{value:i.amountBasis||'gross'},partial_description:{value:i.partialDescription||''},partial_paid:{checked:!!i.paid},partial_paid_date:{value:i.paymentDate||''},partial_method:{value:i.paymentMethod||'Bank'}});
+ if(i.kind==='partial'){
+  fields.partial_allocation_mode={value:i.allocationMode||'low-first'};
+  let rows=[];try{rows=P.partialPlan(uiProject).rows}catch(e){rows=P.allocationRows(uiProject)}
+  rows.forEach((r,index)=>fields['partial_line_'+index]={value:String(i.allocationMode==='custom'?(i.lineAllocations?.[r.key]||0):(r.allocatedAmount||0))});
+ }
 }
 ui.renderTabs=renderFields;renderFields();
 vm.runInContext(fs.readFileSync(require.resolve('../renoweet-partial-invoices-ui.js'),'utf8'),ui);
@@ -70,3 +75,18 @@ ui.newPartialInvoice();assert.equal(uiProject.invoice.number,'2026-0110001.02');
 ui.db.bookkeeping.push({'Invoice number':'2026-0110001.02','Project ID':'other'});fields.partial_amount.value='100';assert.throws(()=>ui.sendToBookkeeping(),/already used/);assert.equal(uiProject.invoice.documentSnapshot,undefined);ui.db.bookkeeping.pop();
 ui.prepareFinalInvoice();assert.equal(uiProject.invoice.number,'2026-0110001');assert(ui.invoiceHTML(uiProject).includes('2404.00'));ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[1]['Total incl VAT'],2404);
 console.log('Actual invoice screen, partial queue and final invoice flow passed.');
+
+// Exercise the actual UI with mixed rates, mode switching, custom fields and queueing.
+Object.assign(uiProject,{estimate:[{id:'low',desc:'Low-rate work',qty:1,rate:1120,vatTreatment:'NL_LOW'},{id:'high',desc:'High-rate work',qty:1,rate:2430,vatTreatment:'NL_HIGH'}],invoice:{number:'',date:'2026-10-01',status:'Draft'},invoiceDocuments:[]});ui.db.bookkeeping=[];renderFields();
+ui.newPartialInvoice();assert.equal(uiProject.invoice.allocationMode,'low-first');fields.partial_amount.value='2080.55';ui.refreshPartialInvoice();
+let view=ui.invoiceHTML(uiProject);assert(view.includes('BTW-verdeling van deze termijn'));assert(view.includes('Low-rate work'));assert(view.includes('High-rate work'));assert(view.includes('250.01'));assert(!view.includes('id="inv_vat_treatment"'),'The partial invoice must use its source-line rates instead of a misleading default selector');
+assert.equal(fields.partial_line_0.value,'1220.8');assert.equal(fields.partial_line_1.value,'859.75');
+fields.partial_allocation_mode.value='high-first';ui.refreshPartialInvoice();assert.equal(uiProject.invoice.allocationMode,'high-first');assert.equal(fields.partial_line_0.value,'0');assert.equal(fields.partial_line_1.value,'2080.55');
+fields.partial_allocation_mode.value='low-first';ui.refreshPartialInvoice();fields.partial_allocation_mode.value='custom';ui.refreshPartialInvoice();assert.equal(uiProject.invoice.lineAllocations['estimate:low'],1220.8);
+fields.partial_line_0.value='500';fields.partial_line_1.value='1580.55';ui.refreshPartialInvoice();assert.equal(uiProject.invoice.lineAllocations['estimate:low'],500);assert.equal(P.projectDocument(uiProject).total,2080.55);
+fields.partial_line_0.value='bad';ui.refreshPartialInvoice();assert(ui.invoiceHTML(uiProject).includes('non-negative'));assert.equal(uiProject.invoice.documentSnapshot,undefined);
+fields.partial_line_0.value='500';ui.refreshPartialInvoice();fields.partial_allocation_mode.value='low-first';ui.refreshPartialInvoice();ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[0].VAT,250.01);
+const frozen=JSON.stringify(uiProject.invoice.documentSnapshot);fields.partial_allocation_mode.value='high-first';ui.refreshPartialInvoice();assert.equal(JSON.stringify(uiProject.invoice.documentSnapshot),frozen);
+ui.newPartialInvoice();fields.partial_amount.value='2000';ui.refreshPartialInvoice();assert.equal(fields.partial_line_0.value,'0');assert.equal(fields.partial_line_1.value,'2000');ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[1].VAT,347.11);
+ui.prepareFinalInvoice();ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[2]['Total incl VAT'],80.55);assert.equal(ui.db.bookkeeping[2].VAT,13.98);
+console.log('Mixed-BTW allocation controls, custom editing, locked snapshots and Bookkeeping queue passed.');
