@@ -1873,7 +1873,11 @@ function osInvoiceToBookkeeping(r){
     "Net revenue":netBeforeVat,
     "Status":r["Status"]==="Paid"?"Paid":"Open",
     "Due date":osDateToSerial(r["Due date"]),
-    "Paid date":"",
+    "Paid date":r["Payment received"]==="Yes"?osDateToSerial(r["Payment date"]):"",
+    "VAT date":osDateToSerial(r["Invoice kind"]==="partial"&&r["Payment received"]==="Yes"&&r["Payment date"]<r["Invoice date"]?r["Payment date"]:r["Invoice date"]),
+    "Invoice kind":r["Invoice kind"]||"full",
+    "Parent invoice number":r["Parent invoice number"]||"",
+    "Project total incl VAT":n(r["Project total incl VAT"]),
     "Days overdue":"",
     "Notes":r["Project"]?("Renoweet OS project: "+r["Project"]):"Imported from Renoweet OS",
     "Project":r["Project"]||"",
@@ -2050,6 +2054,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
 <script src="./renoweet-drive-core-v3.0.js"></script>
 <script src="./renoweet-accounting-engine-v4.4.js"></script>
 <script src="./renoweet-os-vat-engine-v1.js"></script>
+<script src="./renoweet-partial-invoice-engine.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="./renoweet-bookkeeping-drive-adapter-v3.7.js"></script>
 <script src="./renoweet-bookkeeping-enhancements-v4.3.js"></script>
