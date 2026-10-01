@@ -76,15 +76,34 @@ function projectDocument(p){
  const total=V.calculate(p,'invoice'),kind=p.invoice?.kind||'full';let lines=V.invoiceLines(p,()=>`line_${Math.random().toString(36).slice(2)}`),allocation=null;
  if(kind==='partial'){
   allocation=partialPlan(p);
-  lines=allocation.rows.filter(r=>r.allocatedAmount>0).map((r,i)=>({id:`partial_${i}`,sourceKey:r.key,description:`Deelfactuur / aanbetaling: ${p.invoice.partialDescription?p.invoice.partialDescription+' — ':''}${r.description}`,quantity:1,unitNet:r.allocatedNet,vatRate:r.chargedRate,vatTreatment:r.treatment,vatReferenceRate:r.treatment==='REVERSE_CHARGE_NL'?r.rate:null,vatAmount:r.allocatedVat}));
+  lines=allocation.rows.filter(r=>r.allocatedAmount>0).map((r,i)=>({id:`partial_${i}`,sourceKey:r.key,description:`Deelfactuur / aanbetaling: ${r.description}`,quantity:1,unitNet:r.allocatedNet,vatRate:r.chargedRate,vatTreatment:r.treatment,vatReferenceRate:r.treatment==='REVERSE_CHARGE_NL'?r.rate:null,vatAmount:r.allocatedVat}));
  }else if(docs(p).length){
   for(const d of docs(p))for(const [i,l] of d.document.lines.entries())lines.push({...l,id:`deduct_${d.number}_${i}`,description:`Reeds gefactureerd ${d.number}`,quantity:1,unitNet:-round(l.quantity*l.unitNet),vatAmount:-round(l.vatAmount??l.quantity*l.unitNet*l.vatRate/100)});
  }
- const result=fromLines(lines);if(result.total<-.009)throw new Error('Earlier partial invoices exceed the revised total. Correct them with a credit note before issuing the final invoice.');return {...result,kind,projectTotal:total.total,projectNet:round(total.subtotal+total.parking),projectVat:total.vat,previousGross:round(docs(p).reduce((s,d)=>s+d.document.total,0)),...(allocation?{allocation}: {})};
+ const result=fromLines(lines);if(result.total<-.009)throw new Error('Earlier partial invoices exceed the revised total. Correct them with a credit note before issuing the final invoice.');return {...result,kind,projectTotal:total.total,projectNet:round(total.subtotal+total.parking),projectVat:total.vat,previousGross:round(docs(p).reduce((s,d)=>s+d.document.total,0)),...(allocation?{allocation,invoiceNote:(p.invoice.partialDescription||'')===(p.estimate||[]).map(l=>l.desc).filter(Boolean).join(' | ')?'':p.invoice.partialDescription||''}: {})};
 }
 function fromLines(lines){const groups=new Map();let net=0,vat=0;for(const l of lines){const n=round(l.quantity*l.unitNet),v=round(l.vatAmount??n*l.vatRate/100),key=`${l.vatTreatment}:${l.vatReferenceRate??l.vatRate}`,g=groups.get(key)||{treatment:l.vatTreatment,rate:l.vatReferenceRate??l.vatRate,net:0,vat:0};net=round(net+n);vat=round(vat+v);g.net=round(g.net+n);g.vat=round(g.vat+v);groups.set(key,g)}const vatBreakdown=[...groups.values()],mixed=vatBreakdown.length>1;return {lines:clone(lines),subtotal:net,taxableSubtotal:net,workSubtotal:net,travel:0,parking:0,vat,total:round(net+vat),vatBreakdown,mixed,vatTreatment:mixed?'MIXED':vatBreakdown[0]?.treatment||'NL_HIGH',vatRate:mixed?0:vatBreakdown[0]?.rate??21,defaultTreatment:vatBreakdown[0]?.treatment||'NL_HIGH',defaultRate:vatBreakdown[0]?.rate??21}}
 function previewProject(p){const d=projectDocument(p);return {...p,invoice:{...p.invoice},estimate:d.lines.map(l=>({id:l.id,desc:l.description,qty:l.quantity,unit:'',rate:l.unitNet,vatTreatment:l.vatTreatment,vatRate:l.vatRate,vatReferenceRate:l.vatReferenceRate,vatAmount:l.vatAmount})),quote:{...p.quote,travel:0,parking:0},__partialPreview:true}}
 function issue(p){const d=projectDocument(p),i=p.invoice;if(!i.number)throw new Error('An invoice number is required.');if(i.paid&&(!/^\d{4}-\d{2}-\d{2}$/.test(i.paymentDate||'')))throw new Error('Enter the date the advance was received.');if(i.paid&&i.kind!=='partial')throw new Error('Record final invoice payments in Bookkeeping.');i.documentSnapshot=clone(d);p.invoiceDocuments=p.invoiceDocuments||[];if(!p.invoiceDocuments.some(x=>x.number===i.number))p.invoiceDocuments.push({number:i.number,kind:i.kind||'full',status:'Issued',invoice:clone(i),document:clone(d)});return d}
+function draftReopenReason(p,bookkeepingRows=[]){
+ const i=p.invoice||{},documents=p.invoiceDocuments||[],d=documents.find(x=>x.number===i.number);
+ if(!i.documentSnapshot)return 'This invoice is already an editable draft.';
+ if((i.status||'Draft')!=='Draft'||i.sharedAt||i.bookkeepingQueuedAt||i.bookkeepingStatus||d?.queueRow||d?.invoice?.sharedAt||d?.invoice?.bookkeepingQueuedAt||(d?.invoice?.status||'Draft')!=='Draft')return 'This invoice has been marked sent, shared or queued for Bookkeeping. Keep it and use an invoice correction.';
+ if(bookkeepingRows.some(r=>String(r['Invoice number']||r['Invoice #']||'')===i.number&&String(r.Status||'').toLowerCase()!=='cancelled in os'))return 'This invoice already exists in Bookkeeping. Keep it and use an invoice correction.';
+ const position=documents.findIndex(x=>x.number===i.number);
+ if(position>=0&&documents.slice(position+1).some(x=>x.status!=='Cancelled'))return 'Later invoice documents depend on this draft. Review those documents before reopening it.';
+ return '';
+}
+function reopenDraft(p,{confirmedUnsent=false,bookkeepingRows=[]}={}){
+ const reason=draftReopenReason(p,bookkeepingRows);if(reason)throw new Error(reason);
+ if(!confirmedUnsent)throw new Error('Confirm that this draft was never sent to the customer or booked.');
+ const stamp=new Date().toISOString(),d=(p.invoiceDocuments||[]).find(x=>x.number===p.invoice.number);
+ p.invoiceDraftRevisions=p.invoiceDraftRevisions||[];
+ p.invoiceDraftRevisions.push({at:stamp,reason:'Reopened unissued draft',number:p.invoice.number,invoice:clone(p.invoice),document:clone(d?.document||p.invoice.documentSnapshot)});
+ p.invoiceDocuments=(p.invoiceDocuments||[]).filter(x=>x.number!==p.invoice.number);
+ delete p.invoice.documentSnapshot;p.invoice.status='Draft';p.invoice.draftReopenedAt=stamp;
+ return p.invoice;
+}
 function queueMetadata(p){return {'Invoice kind':p.invoice.kind||'full','Parent invoice number':p.invoice.baseNumber||p.invoice.number,'Project total incl VAT':projectDocument(p).projectTotal,'Payment received':p.invoice.paid?'Yes':'No','Payment date':p.invoice.paid?p.invoice.paymentDate||'':'','Paid amount':p.invoice.paid?projectDocument(p).total:0,'Payment method':p.invoice.paymentMethod||'Bank'}}
-return {number,nextNumber,allocationRows,partialPlan,projectDocument,previewProject,issue,queueMetadata};
+return {number,nextNumber,allocationRows,partialPlan,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,queueMetadata};
 });

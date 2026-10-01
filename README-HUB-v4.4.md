@@ -1,5 +1,14 @@
 # Renoweet Focus Hub v4.4.4
 
+## Correcting an unissued partial draft — 1 October 2026
+
+- Print/PDF validates a partial draft without marking it issued or locking it.
+- For a draft locked by an earlier Print/PDF action, use Concept heropenen. Confirm that it was never sent or booked. The old snapshot is archived and its number, amount and payment details are preserved. Sent/shared/queued invoices and invoices already in Bookkeeping cannot use this draft action.
+- Use BTW wijzigen in Estimate to open the original work lines. Set the painting line to 9% and the flooring line to 21%, then return to Invoice. The partial allocation will use those source rates.
+- Legacy lines containing a stored 9% rate retain it even when their treatment field is missing.
+- Partial invoice rows describe each work line separately; an optional extra description appears once in the document note.
+
+
 ## BTW allocation for partial invoices — 1 October 2026
 
 - In OS, open Invoice, choose Nieuwe deelfactuur, and enter the amount actually received using Inclusief BTW.

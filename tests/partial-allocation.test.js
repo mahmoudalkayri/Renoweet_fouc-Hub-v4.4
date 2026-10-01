@@ -56,4 +56,13 @@ for(let n=0;n<1000;n++){
  }
  x.invoice={kind:'final',number:`random-${n}`};const f=P.projectDocument(x);assert.equal(V.round2(gross+f.total),total.total);assert.equal(V.round2(vat+f.vat),total.vat);
 }
+// A previously printed but unissued snapshot can be reopened without losing payment data.
+const locked=sample();locked.invoice.status='Draft';locked.estimate[0].vatTreatment='NL_HIGH';locked.estimate[0].vatRate=21;locked.payments=[{id:'bank',amount:2080.55,date:'2026-09-25',status:'Received'}];
+const wrong=P.issue(locked),oldPayment=JSON.stringify(locked.payments),oldNumber=locked.invoice.number;assert.equal(wrong.vat,361.09);
+assert.throws(()=>P.reopenDraft(locked),/Confirm/);assert.equal(P.draftReopenReason(locked),'');
+P.reopenDraft(locked,{confirmedUnsent:true});assert.equal(locked.invoice.number,oldNumber);assert.equal(locked.invoice.partialAmount,2080.55);assert.equal(locked.invoice.paymentDate,'2026-09-25');assert.equal(JSON.stringify(locked.payments),oldPayment);assert.equal(locked.invoiceDocuments.length,0);assert.equal(locked.invoiceDraftRevisions[0].document.vat,361.09);
+locked.estimate[0].vatTreatment='NL_LOW';locked.estimate[0].vatRate=9;const corrected=P.issue(locked);assert.equal(corrected.vat,250.01);assert.equal(corrected.projectTotal,4161.10);assert.equal(locked.invoiceDocuments.length,1);assert.equal(JSON.stringify(locked.payments),oldPayment);
+for(const field of ['sharedAt','bookkeepingQueuedAt']){const sent=sample();sent.invoice.status='Draft';P.issue(sent);sent.invoice[field]='2026-10-01';const before=JSON.stringify(sent);assert.throws(()=>P.reopenDraft(sent,{confirmedUnsent:true}),/sent|shared|queued/);assert.equal(JSON.stringify(sent),before)}
+const queued=sample();queued.invoice.status='Draft';P.issue(queued);assert.throws(()=>P.reopenDraft(queued,{confirmedUnsent:true,bookkeepingRows:[{'Invoice #':queued.invoice.number}]}),/Bookkeeping/);
+const later=sample();later.invoice.status='Draft';P.issue(later);later.invoiceDocuments.push({number:'later.02',status:'Issued'});assert.throws(()=>P.reopenDraft(later,{confirmedUnsent:true}),/Later/);
 console.log('Line allocation, legacy advances, exact BTW clearing and 1,000 final reconciliations passed.');

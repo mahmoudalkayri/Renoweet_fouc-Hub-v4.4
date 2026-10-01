@@ -56,4 +56,8 @@ assert.equal(V.invoiceLines(legacy)[0].vatTreatment,'NL_LOW');
 assert.equal(V.selection('NL_HIGH','NL_LOW',9).treatment,'NL_HIGH');
 assert.equal(V.selection('NL_HIGH','NL_LOW',9).rate,21);
 assert.equal(V.selection('NL_ZERO','NL_LOW',9).treatment,'NL_ZERO');
+// Older rows can store an explicit rate without the newer treatment field.
+const rateOnly={quote:{vat:21},invoice:{vatTreatment:'NL_HIGH',vatRate:21},estimate:[{id:'old-low',desc:'Painting',qty:1,rate:1120,vatRate:9},{id:'old-high',desc:'Floor',qty:1,rate:2430,vatRate:21}]};
+assert.equal(V.calculate(rateOnly,'invoice').total,4161.10);assert.equal(V.invoiceLines(rateOnly)[0].vatTreatment,'NL_LOW');
+assert.equal(V.lineConfig({vatRate:0},rateOnly).treatment,'NL_ZERO');assert.equal(V.lineConfig({vatRate:null},rateOnly).treatment,'NL_HIGH');
 console.log('OS mixed VAT tests passed.');
