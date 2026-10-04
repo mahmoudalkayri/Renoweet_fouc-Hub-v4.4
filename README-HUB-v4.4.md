@@ -160,3 +160,9 @@ For a partial invoice sent only to Bookkeeping, save its corrected line items th
 Do this before another instalment. For a quote of 1120 net at 9% plus 2430 net at 21%, the first gross advance of 2080.55 has line nets 1120 and 710.54, with VAT 100.80 and 149.21 (250.01 total). The next gross instalment of 2000 has VAT 347.11. A final gross balance of 80.55 has VAT 13.98. The whole project reconciles to gross 4161.10 and VAT 611.10.
 
 Create the next instalment with **Nieuwe deelfactuur (.01, .02…)**, enter its amount including VAT and record its received date/method if already paid. Send it to Bookkeeping and import it there once; the payment importer is idempotent. If a payment settles an invoice already in Bookkeeping, use that invoice's **Payment** action instead of creating an additional invoice. Do not enter an already-imported advance payment again.
+
+## Definitive final invoices
+
+**Eindfactuur / resterend bedrag** now produces an **EINDFACTUUR** with a definitive closing statement in OS and Bookkeeping previews and PDFs. Its separate summary shows the indicative estimate captured with the first instalment (when available), final actual project total, each earlier invoiced instalment, and the amount on the final invoice. Invoiced instalments are not labelled paid; unsettled instalments remain separate payment obligations. Only the final invoice's remaining amount and VAT enter Bookkeeping.
+
+Before issuing, update quantities and amounts in **Estimate** to the actual work/materials. Use **Definitieve werkzaamheden / materialen** to edit the final invoice's line descriptions without rewriting the earlier partial invoices or the estimate descriptions. The closing statement is frozen when issued. Existing final snapshots display their stored totals and deductions; a missing historic estimate is omitted rather than guessed. Partial invoices label the project total as estimated, with the definitive total to follow on the final invoice.

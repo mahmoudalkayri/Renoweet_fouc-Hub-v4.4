@@ -80,3 +80,19 @@ const shared=clone(correction);shared.invoice.sharedAt='today';assert.throws(()=
 correction.invoice={kind:'partial',number:'corrected.02',partialAmount:2000,amountBasis:'gross'};const correctedNext=P.issue(correction);assert.equal(correctedNext.vat,347.11);assert.equal(correctedNext.lines.length,1);assert.equal(correctedNext.lines[0].vatRate,21);
 correction.invoice={kind:'final',number:'corrected'};const correctedFinal=P.projectDocument(correction);assert.equal(correctedFinal.total,80.55);assert.equal(correctedFinal.vat,13.98);assert.equal(V.round2(goodDoc.vat+correctedNext.vat+correctedFinal.vat),611.10);assert.equal(JSON.stringify(correction.payments),cash);
 console.log('Bookkeeping-only corrections, preserved payments, mismatch guards and subsequent instalments passed.');
+// Closing statements distinguish the first estimate, actual work and invoiced advances.
+const closingJob={id:'closing',quote:{vat:21},estimate:[{id:'labour',desc:'Estimated duration 6–7 days',qty:1,rate:3485.09,vatTreatment:'NL_HIGH'}],invoice:{kind:'partial',number:'close.01',partialAmount:1985.09,amountBasis:'gross',paid:false}};
+const advance=P.issue(closingJob),advanceCopy=JSON.stringify(advance);assert.equal(advance.projectTotal,4216.96);
+closingJob.estimate=[{id:'labour',desc:'Estimated duration 6–7 days',qty:1,rate:2000,vatTreatment:'NL_HIGH'},{id:'materials',desc:'Materials',qty:1,rate:896.77,vatTreatment:'NL_HIGH'}];
+closingJob.invoice={kind:'final',number:'close',finalDescriptions:{'estimate:labour':'Labour — 5 completed working days'}};
+const closingDoc=P.issue(closingJob),statement=P.closingStatement(closingJob,closingDoc);
+assert.equal(statement.estimatedTotal,4216.96);assert.equal(statement.finalTotal,3505.09);assert.equal(statement.previouslyInvoiced,1985.09);assert.equal(statement.finalInvoiceTotal,1520);assert.equal(statement.instalments[0].number,'close.01');assert.equal(closingDoc.vat,263.80);
+assert.equal(closingDoc.lines[0].description,'Labour — 5 completed working days');assert.equal(closingJob.estimate[0].desc,'Estimated duration 6–7 days');assert.equal(JSON.stringify(closingJob.invoiceDocuments[0].document),advanceCopy);
+assert.equal(JSON.parse(P.queueMetadata(closingJob)['Closing statement JSON']).finalTotal,3505.09);
+closingJob.estimate[0].rate=9999;closingJob.invoiceDocuments[0].status='Cancelled';assert.deepEqual(P.closingStatement(closingJob,P.projectDocument(closingJob)),statement);
+const legacy=clone(closingDoc);delete legacy.closingStatement;assert.equal(P.closingStatement(closingJob,legacy).finalTotal,3505.09);assert.equal(P.closingStatement(closingJob,legacy).instalments[0].gross,1985.09);
+const C=require('../renoweet-invoice-closing.js');assert(C.valid(statement,1520));assert(!C.valid({...statement,finalTotal:3506},1520));assert(!C.valid({...statement,instalments:[{number:'bad',gross:1}]},1520));
+const escaped=C.render({...statement,instalments:[{number:'<script>',gross:1985.09}]},1520);assert(!escaped.includes('<script>'));assert(escaped.includes('&lt;script&gt;'));assert(escaped.includes('Eventuele onbetaalde termijnen'));assert(!escaped.includes('Reeds betaald'));
+const settled=sample();P.issue(settled);settled.invoice={kind:'partial',number:'second',partialAmount:2000};P.issue(settled);settled.invoice={kind:'final',number:'final'};const mixedClosing=P.projectDocument(settled);assert(C.valid(mixedClosing.closingStatement,80.55));assert.equal(mixedClosing.closingStatement.instalments.length,2);
+const zero=sample();zero.invoice.partialAmount=4161.10;P.issue(zero);zero.invoice={kind:'final'};const zeroDoc=P.projectDocument(zero);assert(C.valid(zeroDoc.closingStatement,0));assert(C.render(zeroDoc.closingStatement,0).includes('Bedrag deze eindfactuur'));
+console.log('Actual final totals, description overrides, frozen closing statements, legacy documents and zero balances passed.');

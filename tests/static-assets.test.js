@@ -69,5 +69,5 @@ for(const required of ['annualIncomeTaxPack','fixedAssetReport','financeLeaseRep
 const printLayout=fs.readFileSync(path.join(root,'renoweet-print-layout.js'),'utf8');
 for(const page of [osPage,bookkeeping])if(!page.includes('renoweet-print-layout.js')||!page.includes('RenoweetPrintLayout.createPdf'))throw new Error('A quote or invoice print path does not use the shared paginator.');
 for(const required of ['function addTable(table)', 'Page ${i+1} overflows', 'width:page.clientWidth,height:page.clientHeight','(vervolg)'])if(!printLayout.includes(required))throw new Error(`Print paginator is missing ${required}`);
-if(!fs.readFileSync(path.join(root,'service-worker.js'),'utf8').includes('renoweet-focus-hub-v4.4.4-40'))throw new Error('Service-worker cache version was not bumped for the print layout.');
+if(!fs.readFileSync(path.join(root,'service-worker.js'),'utf8').includes('renoweet-focus-hub-v4.4.4-41'))throw new Error('Service-worker cache version was not bumped for the print layout.');
 console.log('Static asset checks passed.');

@@ -363,6 +363,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <div class="toast" id="toast">Saved</div>
 
 <script src="./renoweet-os-vat-engine-v1.js"></script>
+<script src="./renoweet-invoice-closing.js"></script>
 <script src="./renoweet-partial-invoice-engine.js"></script>
 <script>
 
@@ -1046,7 +1047,7 @@ function replaceDatabaseSheets(){
  workbook.Sheets['Purchase Orders']=sheetFromRows(["Project ID","Order ID","Supplier","Description","Order Date","Expected Date","Status","Amount","Reference"],orderRows);
  workbook.Sheets['Activity']=sheetFromRows(["Project ID","Activity ID","Timestamp","Type","Text"],activityRows);
  workbook.Sheets['FollowUps']=sheetFromRows(["Project ID","Follow-up ID","Date","Type","Text","Done"],followRows);
- const bookkeepingHeaders=["Invoice kind","Parent invoice number","Project total incl VAT","Payment received","Payment date","Paid amount","Payment method","Invoice number","Invoice date","Due date","Customer","Phone","Email","Address","Customer VAT ID","Project","Description","Subtotal ex VAT","VAT treatment","VAT rate","VAT","Total incl VAT","Line items JSON","Status","Sent at","Project ID","Source database"];
+ const bookkeepingHeaders=["Closing statement JSON","Invoice kind","Parent invoice number","Project total incl VAT","Payment received","Payment date","Paid amount","Payment method","Invoice number","Invoice date","Due date","Customer","Phone","Email","Address","Customer VAT ID","Project","Description","Subtotal ex VAT","VAT treatment","VAT rate","VAT","Total incl VAT","Line items JSON","Status","Sent at","Project ID","Source database"];
  const bookkeepingRows=(db.bookkeeping||[]).map(r=>({...r,
    "Invoice number":r["Invoice number"]||"",
    "Invoice date":r["Invoice date"]||"",

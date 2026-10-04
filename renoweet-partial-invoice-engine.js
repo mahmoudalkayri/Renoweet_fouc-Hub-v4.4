@@ -71,16 +71,24 @@ function partialPlan(p){
  if(gross>available+.001)throw new Error('The partial amount exceeds the remaining project total.');
  return {mode,basis,rows:allocated};
 }
+function finalWorkRows(p){return (p.estimate||[]).map((l,i)=>({key:`estimate:${l.id||'row-'+i}`,description:l.desc||'Werkzaamheden',net:round(Number(l.qty||0)*Number(l.rate||0))})).filter(r=>r.net!==0)}
+function closingStatement(p,document){
+ if(document.closingStatement)return clone(document.closingStatement);
+ // Read legacy deductions from the frozen final document, never from a revised estimate.
+ const grouped=new Map();for(const l of document.lines||[]){if(!String(l.id||'').startsWith('deduct_'))continue;const no=String(l.description||'').replace(/^Reeds gefactureerd /,''),gross=-round(Number(l.quantity)*Number(l.unitNet)+Number(l.vatAmount??Number(l.quantity)*Number(l.unitNet)*Number(l.vatRate)/100));grouped.set(no,round((grouped.get(no)||0)+gross))}
+ const instalments=[...grouped].map(([number,gross])=>({number,gross})),first=(p.invoiceDocuments||[]).find(d=>instalments.some(i=>i.number===d.number));
+ return {estimatedTotal:first?.document?.projectTotal??null,finalTotal:document.projectTotal??round(document.total+(document.previousGross||0)),previouslyInvoiced:document.previousGross??round(instalments.reduce((s,i)=>s+i.gross,0)),finalInvoiceTotal:document.total,instalments};
+}
 function projectDocument(p){
  if(p.invoice?.documentSnapshot)return clone(p.invoice.documentSnapshot);
- const total=V.calculate(p,'invoice'),kind=p.invoice?.kind||'full';let lines=V.invoiceLines(p,()=>`line_${Math.random().toString(36).slice(2)}`),allocation=null;
+ const total=V.calculate(p,'invoice'),kind=p.invoice?.kind||'full',isFinal=kind==='final'||(kind!=='partial'&&docs(p).length>0),work=isFinal?{...p,estimate:(p.estimate||[]).map((l,i)=>({...l,desc:p.invoice?.finalDescriptions?.[`estimate:${l.id||'row-'+i}`]||l.desc}))}:p;let lines=V.invoiceLines(work,()=>`line_${Math.random().toString(36).slice(2)}`),allocation=null;
  if(kind==='partial'){
   allocation=partialPlan(p);
   lines=allocation.rows.filter(r=>r.allocatedAmount>0).map((r,i)=>({id:`partial_${i}`,sourceKey:r.key,description:`Deelfactuur / aanbetaling: ${r.description}`,quantity:1,unitNet:r.allocatedNet,vatRate:r.chargedRate,vatTreatment:r.treatment,vatReferenceRate:r.treatment==='REVERSE_CHARGE_NL'?r.rate:null,vatAmount:r.allocatedVat}));
  }else if(docs(p).length){
   for(const d of docs(p))for(const [i,l] of d.document.lines.entries())lines.push({...l,id:`deduct_${d.number}_${i}`,description:`Reeds gefactureerd ${d.number}`,quantity:1,unitNet:-round(l.quantity*l.unitNet),vatAmount:-round(l.vatAmount??l.quantity*l.unitNet*l.vatRate/100)});
  }
- const result=fromLines(lines);if(result.total<-.009)throw new Error('Earlier partial invoices exceed the revised total. Correct them with a credit note before issuing the final invoice.');return {...result,kind,projectTotal:total.total,projectNet:round(total.subtotal+total.parking),projectVat:total.vat,previousGross:round(docs(p).reduce((s,d)=>s+d.document.total,0)),...(allocation?{allocation,invoiceNote:(p.invoice.partialDescription||'')===(p.estimate||[]).map(l=>l.desc).filter(Boolean).join(' | ')?'':p.invoice.partialDescription||''}: {})};
+ const result=fromLines(lines);if(result.total<-.009)throw new Error('Earlier partial invoices exceed the revised total. Correct them with a credit note before issuing the final invoice.');const previousGross=round(docs(p).reduce((s,d)=>s+d.document.total,0));return {...result,kind,projectTotal:total.total,projectNet:round(total.subtotal+total.parking),projectVat:total.vat,previousGross,...(isFinal?{closingStatement:{estimatedTotal:docs(p)[0]?.document?.projectTotal??null,finalTotal:total.total,previouslyInvoiced:previousGross,finalInvoiceTotal:result.total,instalments:docs(p).map(d=>({number:d.number,gross:d.document.total}))}}:{}),...(allocation?{allocation,invoiceNote:(p.invoice.partialDescription||'')===(p.estimate||[]).map(l=>l.desc).filter(Boolean).join(' | ')?'':p.invoice.partialDescription||''}: {})};
 }
 function fromLines(lines){const groups=new Map();let net=0,vat=0;for(const l of lines){const n=round(l.quantity*l.unitNet),v=round(l.vatAmount??n*l.vatRate/100),key=`${l.vatTreatment}:${l.vatReferenceRate??l.vatRate}`,g=groups.get(key)||{treatment:l.vatTreatment,rate:l.vatReferenceRate??l.vatRate,net:0,vat:0};net=round(net+n);vat=round(vat+v);g.net=round(g.net+n);g.vat=round(g.vat+v);groups.set(key,g)}const vatBreakdown=[...groups.values()],mixed=vatBreakdown.length>1;return {lines:clone(lines),subtotal:net,taxableSubtotal:net,workSubtotal:net,travel:0,parking:0,vat,total:round(net+vat),vatBreakdown,mixed,vatTreatment:mixed?'MIXED':vatBreakdown[0]?.treatment||'NL_HIGH',vatRate:mixed?0:vatBreakdown[0]?.rate??21,defaultTreatment:vatBreakdown[0]?.treatment||'NL_HIGH',defaultRate:vatBreakdown[0]?.rate??21}}
 function previewProject(p){const d=projectDocument(p);return {...p,invoice:{...p.invoice},estimate:d.lines.map(l=>({id:l.id,desc:l.description,qty:l.quantity,unit:'',rate:l.unitNet,vatTreatment:l.vatTreatment,vatRate:l.vatRate,vatReferenceRate:l.vatReferenceRate,vatAmount:l.vatAmount})),quote:{...p.quote,travel:0,parking:0},__partialPreview:true}}
@@ -151,6 +159,6 @@ function bookkeepingDifferences(p,rows=[]){
   return Array.isArray(lines)&&lines.length&&signature(lines)!==signature(d.document.lines);
  })).map(d=>d.number);
 }
-function queueMetadata(p){return {'Invoice kind':p.invoice.kind||'full','Parent invoice number':p.invoice.baseNumber||p.invoice.number,'Project total incl VAT':projectDocument(p).projectTotal,'Payment received':p.invoice.paid?'Yes':'No','Payment date':p.invoice.paid?p.invoice.paymentDate||'':'','Paid amount':p.invoice.paid?projectDocument(p).total:0,'Payment method':p.invoice.paymentMethod||'Bank'}}
-return {number,nextNumber,allocationRows,partialPlan,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,bookkeepingCorrectionReason,bookkeepingCorrection,importBookkeepingCorrection,bookkeepingDifferences,queueMetadata};
+function queueMetadata(p){const document=projectDocument(p),final=document.kind==='final'||(document.kind!=='partial'&&document.previousGross>0);return {'Invoice kind':p.invoice.kind||'full','Parent invoice number':p.invoice.baseNumber||p.invoice.number,'Project total incl VAT':document.projectTotal,...(final?{'Closing statement JSON':JSON.stringify(closingStatement(p,document))}:{}),'Payment received':p.invoice.paid?'Yes':'No','Payment date':p.invoice.paid?p.invoice.paymentDate||'':'','Paid amount':p.invoice.paid?document.total:0,'Payment method':p.invoice.paymentMethod||'Bank'}}
+return {number,nextNumber,allocationRows,partialPlan,finalWorkRows,closingStatement,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,bookkeepingCorrectionReason,bookkeepingCorrection,importBookkeepingCorrection,bookkeepingDifferences,queueMetadata};
 });
