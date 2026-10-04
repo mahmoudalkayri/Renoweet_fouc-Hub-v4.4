@@ -106,14 +106,40 @@ console.log('Draft PDF editing, reopen audit trail, source BTW correction and se
 Object.assign(uiProject,{estimate:[{id:'labour',desc:'Estimated duration 6–7 days',qty:1,rate:3485.09,vatTreatment:'NL_HIGH'}],invoice:{kind:'partial',number:'closing.01',date:'2026-10-01',status:'Draft',partialAmount:1985.09,amountBasis:'gross'},invoiceDocuments:[]});ui.db.bookkeeping=[];renderFields();
 assert(ui.invoiceHTML(uiProject).includes('Geschat opdrachttotaal'));ui.sendToBookkeeping();const priorFrozen=JSON.stringify(uiProject.invoiceDocuments[0].document);
 uiProject.estimate=[{id:'labour',desc:'Estimated duration 6–7 days',qty:1,rate:2000,vatTreatment:'NL_HIGH'},{id:'materials',desc:'Materials (actual cost)',qty:1,rate:896.77,vatTreatment:'NL_HIGH'}];ui.prepareFinalInvoice();
-fields.final_description_0.value='Labour: 5 completed working days';ui.refreshPartialInvoice();let closingView=ui.invoiceHTML(uiProject);assert(closingView.includes('<h1>EINDFACTUUR</h1>'));assert(closingView.includes('4216.96'));assert(closingView.includes('3505.09'));assert(closingView.includes('1985.09'));assert(closingView.includes('1520.00'));assert(closingView.includes('Labour: 5 completed working days'));assert(!closingView.includes('<td class="d">Estimated duration'));assert(closingView.includes('Eventuele onbetaalde termijnen'));
+fields.final_description_0.value='Labour: 5 completed working days';ui.refreshPartialInvoice();let closingView=ui.invoiceHTML(uiProject);assert(closingView.includes('<h1>EINDFACTUUR</h1>'));assert(!closingView.includes('4216.96'));assert(closingView.includes('3505.09'));assert(closingView.includes('1985.09'));assert(closingView.includes('1520.00'));assert(closingView.includes('Labour: 5 completed working days'));assert(!closingView.includes('<td class="d">Estimated duration'));assert(closingView.includes('Eventuele onbetaalde termijnen'));
+assertClosingLayout(closingView,'Materials (actual cost)','Reeds gefactureerd closing.01','(BTW: 21% 608.32)',4);
 ui.sendToBookkeeping();assert.equal(JSON.stringify(uiProject.invoiceDocuments[0].document),priorFrozen);const finalRow=ui.db.bookkeeping[1];assert.equal(finalRow['Total incl VAT'],1520);assert.equal(JSON.parse(finalRow['Closing statement JSON']).finalTotal,3505.09);
 const converted=context.osInvoiceToBookkeeping(finalRow);assert.equal(converted['Closing statement JSON'],finalRow['Closing statement JSON']);
 const bkPreview={innerHTML:''},bk={A,html:v=>String(v??''),money:v=>v.toFixed(2),byId:()=>bkPreview,invoiceLogoSrc:()=>'',lineTreatment:l=>l.vatTreatment,vatTreatmentLabel:()=> 'BTW',openModal:()=>{},window:{RenoweetInvoiceClosing:C,RenoweetCompany:{html:()=>''}}};vm.createContext(bk);
-const bkSource=fs.readFileSync(require.resolve('../renoweet-bookkeeping-v4.4.js'),'utf8');vm.runInContext(bkSource.slice(bkSource.indexOf('function showInvoicePreviewV44('),bkSource.indexOf('\nfunction injectExpenseFields(')),bk);bk.showInvoicePreviewV44(converted);assert(bkPreview.innerHTML.includes('<h1>EINDFACTUUR</h1>'));assert(bkPreview.innerHTML.includes('3505.09'));assert(bkPreview.innerHTML.includes('4216.96'));assert(bkPreview.innerHTML.includes('1520.00'));
+const bkSource=fs.readFileSync(require.resolve('../renoweet-bookkeeping-v4.4.js'),'utf8');vm.runInContext(bkSource.slice(bkSource.indexOf('function showInvoicePreviewV44('),bkSource.indexOf('\nfunction injectExpenseFields(')),bk);bk.showInvoicePreviewV44(converted);assert(bkPreview.innerHTML.includes('<h1>EINDFACTUUR</h1>'));assert(bkPreview.innerHTML.includes('3505.09'));assert(!bkPreview.innerHTML.includes('4216.96'));assert(bkPreview.innerHTML.includes('1520.00'));
+assertClosingLayout(bkPreview.innerHTML,'Materials (actual cost)','Reeds gefactureerd closing.01','(BTW: 21% 608.32)',3);
 const legacyConverted={...converted};delete legacyConverted['Closing statement JSON'];bk.showInvoicePreviewV44(legacyConverted);assert(bkPreview.innerHTML.includes('3505.09'));assert(bkPreview.innerHTML.includes('1520.00'));
+assertClosingLayout(bkPreview.innerHTML,'Materials (actual cost)','Reeds gefactureerd closing.01','(BTW: 21% 608.32)',3);
 const partialConverted=context.osInvoiceToBookkeeping(ui.db.bookkeeping[0]);bk.showInvoicePreviewV44(partialConverted);assert(bkPreview.innerHTML.includes('<h1>DEELFACTUUR</h1>'));assert(bkPreview.innerHTML.includes('Geschat opdrachttotaal'));
 console.log('Final invoice editor, closing PDF markup, unchanged advances and Bookkeeping preview passed.');
+// One in-table full-project total, before deductions, in both actual renderers.
+function assertClosingLayout(view,lastWork,firstDeduction,vat,colspan){
+ assert(!view.includes('ros-final-settlement'),'The duplicate closing table must be removed');
+ assert(!view.includes('Raming bij eerste termijn'),'No redundant original estimate table');
+ assert.equal((view.match(/ros-final-project-total/g)||[]).length,1);
+ const total=view.indexOf('ros-final-project-total');
+ assert(view.indexOf(lastWork)<total&&total<view.indexOf(firstDeduction),'Total must follow the work and precede deductions');
+ assert(view.includes(`colspan="${colspan}"`));assert(view.includes(vat));
+ assert(view.includes('Bedrag deze eindfactuur'));
+}
+Object.assign(uiProject,{estimate:[{id:'zero',desc:'Zero-rate work',qty:1,rate:50,vatTreatment:'NL_ZERO'},{id:'low',desc:'Low-rate work',qty:1,rate:1120,vatTreatment:'NL_LOW'},{id:'high',desc:'High-rate work',qty:1,rate:2430,vatTreatment:'NL_HIGH'}],invoice:{kind:'partial',number:'brackets.01',date:'2026-10-01',partialAmount:2080.55,amountBasis:'gross'},invoiceDocuments:[]});
+P.issue(uiProject);uiProject.invoice={kind:'final',number:'brackets',date:'2026-10-04',dueDays:3};const bracketDoc=P.issue(uiProject),before=JSON.stringify(uiProject);
+const bracketView=ui.invoiceHTML(uiProject);
+assertClosingLayout(bracketView,'High-rate work','Reeds gefactureerd brackets.01','(BTW: 0% 0.00, 9% 100.80, 21% 510.30)',4);
+const bracketRow={'Invoice #':'brackets','Invoice kind':'final','Line items JSON':JSON.stringify(bracketDoc.lines),'Closing statement JSON':JSON.stringify(bracketDoc.closingStatement)};
+bk.showInvoicePreviewV44(bracketRow);assertClosingLayout(bkPreview.innerHTML,'High-rate work','Reeds gefactureerd brackets.01','(BTW: 0% 0.00, 9% 100.80, 21% 510.30)',3);
+// Legacy and stale metadata still render without a crash; unchanged exact lines determine VAT.
+delete bracketRow['Closing statement JSON'];bk.showInvoicePreviewV44(bracketRow);assertClosingLayout(bkPreview.innerHTML,'High-rate work','Reeds gefactureerd brackets.01','(BTW: 0% 0.00, 9% 100.80, 21% 510.30)',3);
+assert.equal(bracketDoc.vat,369.76);assert.equal(A.invoiceTotals(bracketRow).vat,369.76);
+uiProject.estimate[1].rate=9999;assertClosingLayout(ui.invoiceHTML(uiProject),'High-rate work','Reeds gefactureerd brackets.01','(BTW: 0% 0.00, 9% 100.80, 21% 510.30)',4);uiProject.estimate[1].rate=1120;
+assert.equal(JSON.stringify(uiProject),before,'Previews must not change frozen financial records');
+console.log('Compact final total placement and exact 0/9/21 VAT brackets passed in OS and Bookkeeping.');
+
 (async()=>{
  Object.assign(uiProject,{id:'job1',estimate:[{id:'low',desc:'Painting',qty:1,rate:1120,vatTreatment:'NL_HIGH',vatRate:21},{id:'high',desc:'Floor',qty:1,rate:2430,vatTreatment:'NL_HIGH',vatRate:21}],invoice:{kind:'partial',number:'book-only.01',status:'Draft',date:'2026-10-01',amountBasis:'gross',partialAmount:2080.55,paid:false,bookkeepingQueuedAt:'2026-10-01'},invoiceDocuments:[],payments:[{id:'cash',amount:2080.55}]});
  P.issue(uiProject);uiProject.invoice.status='Sent';uiProject.invoiceDocuments[0].queueRow={'Invoice number':'book-only.01','Sent at':'original'};uiProject.estimate[0].vatTreatment='NL_LOW';uiProject.estimate[0].vatRate=9;
@@ -126,3 +152,4 @@ console.log('Final invoice editor, closing PDF markup, unchanged advances and Bo
  ui.newPartialInvoice();fields.partial_amount.value='2000';ui.refreshPartialInvoice();assert(ui.invoiceHTML(uiProject).includes('347.11'));assert.equal(fields.partial_line_0.value,'0');ui.sendToBookkeeping();assert.equal(ui.db.bookkeeping[1].VAT,347.11);
  console.log('Actual Bookkeeping correction button, async edit guard, mismatch blocks and next payment passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});
+

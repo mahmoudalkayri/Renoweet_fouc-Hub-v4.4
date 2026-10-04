@@ -92,7 +92,17 @@ assert.equal(JSON.parse(P.queueMetadata(closingJob)['Closing statement JSON']).f
 closingJob.estimate[0].rate=9999;closingJob.invoiceDocuments[0].status='Cancelled';assert.deepEqual(P.closingStatement(closingJob,P.projectDocument(closingJob)),statement);
 const legacy=clone(closingDoc);delete legacy.closingStatement;assert.equal(P.closingStatement(closingJob,legacy).finalTotal,3505.09);assert.equal(P.closingStatement(closingJob,legacy).instalments[0].gross,1985.09);
 const C=require('../renoweet-invoice-closing.js');assert(C.valid(statement,1520));assert(!C.valid({...statement,finalTotal:3506},1520));assert(!C.valid({...statement,instalments:[{number:'bad',gross:1}]},1520));
-const escaped=C.render({...statement,instalments:[{number:'<script>',gross:1985.09}]},1520);assert(!escaped.includes('<script>'));assert(escaped.includes('&lt;script&gt;'));assert(escaped.includes('Eventuele onbetaalde termijnen'));assert(!escaped.includes('Reeds betaald'));
+const escaped=C.render({...statement,instalments:[{number:'<script>',gross:1985.09}]},1520);assert(!escaped.includes('<script>'));assert(escaped.includes('Eventuele onbetaalde termijnen'));assert(!escaped.includes('Reeds betaald'));
 const settled=sample();P.issue(settled);settled.invoice={kind:'partial',number:'second',partialAmount:2000};P.issue(settled);settled.invoice={kind:'final',number:'final'};const mixedClosing=P.projectDocument(settled);assert(C.valid(mixedClosing.closingStatement,80.55));assert.equal(mixedClosing.closingStatement.instalments.length,2);
-const zero=sample();zero.invoice.partialAmount=4161.10;P.issue(zero);zero.invoice={kind:'final'};const zeroDoc=P.projectDocument(zero);assert(C.valid(zeroDoc.closingStatement,0));assert(C.render(zeroDoc.closingStatement,0).includes('Bedrag deze eindfactuur'));
+const zero=sample();zero.invoice.partialAmount=4161.10;P.issue(zero);zero.invoice={kind:'final'};const zeroDoc=P.projectDocument(zero);assert(C.valid(zeroDoc.closingStatement,0));assert(C.totalRow(zeroDoc.closingStatement,0,zeroDoc.lines,5).includes('Definitief opdrachttotaal'));
 console.log('Actual final totals, description overrides, frozen closing statements, legacy documents and zero balances passed.');
+
+const mixedRow=C.totalRow(mixedClosing.closingStatement,80.55,mixedClosing.lines,5,n=>n.toFixed(2));
+assert(mixedRow.includes('(BTW: 9% 100.80, 21% 510.30)'));assert(mixedRow.includes('4161.10'));assert(!mixedRow.includes('13.98'));
+assert.equal(C.totalRow({...statement,finalTotal:3506},1520,closingDoc.lines,5),'');
+assert.equal(C.totalRow(statement,1520,[{id:'work',quantity:1,unitNet:1,vatRate:21}],5),'','Mismatched work lines must not invent a VAT breakdown');
+assert(!C.totalRow(statement,1520,closingDoc.lines,5,()=>'<script>').includes('<script>'));
+const reverseLines=[{id:'work',quantity:1,unitNet:100,vatRate:0,vatTreatment:'REVERSE_CHARGE_NL',vatReferenceRate:21,vatAmount:0}],reverseStatement={finalTotal:100,previouslyInvoiced:0,finalInvoiceTotal:100,instalments:[]};
+const reverseRow=C.totalRow(reverseStatement,100,reverseLines,4,n=>n.toFixed(2));assert(reverseRow.includes('(BTW: verlegd 0.00)'));assert(!reverseRow.includes('0%'));
+const noDeductions=C.insertTotalRow('<tr><td>Work</td></tr>',reverseStatement,100,reverseLines,4,n=>n.toFixed(2));assert(noDeductions.endsWith(reverseRow));
+console.log('Frozen full-project VAT brackets, invalid metadata and reverse-charge labels passed.');

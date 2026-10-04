@@ -3,16 +3,34 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.RenoweetInvoiceClosing=api})(typeof window!=='undefined'?window:globalThis,function(){
  'use strict';
  const cents=n=>Math.round(Number(n)*100),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const money=n=>new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'}).format(n);
  function valid(s,total){return !!s&&[s.finalTotal,s.previouslyInvoiced,s.finalInvoiceTotal,total].every(n=>n!=null&&Number.isFinite(Number(n))&&Number(n)>=0)&&cents(s.finalInvoiceTotal)===cents(total)&&cents(s.finalTotal)-cents(s.previouslyInvoiced)===cents(total)&&Array.isArray(s.instalments)&&s.instalments.every(i=>i.number&&Number.isFinite(Number(i.gross))&&Number(i.gross)>=0)&&(!s.instalments.length||s.instalments.reduce((sum,i)=>sum+cents(i.gross),0)===cents(s.previouslyInvoiced))}
- function render(s,total,format=n=>new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'}).format(n)){
+ function render(s,total){
   if(!valid(s,total))return '';
-  const row=(label,value,strong=false)=>`<tr><td class="d">${strong?'<strong>':''}${esc(label)}${strong?'</strong>':''}</td><td class="a">${strong?'<strong>':''}${esc(value)}${strong?'</strong>':''}</td></tr>`;
-  const estimate=s.estimatedTotal!=null&&Number.isFinite(Number(s.estimatedTotal))?row('Raming bij eerste termijn (indicatief)',format(s.estimatedTotal)):'';
-  const instalments=s.instalments.map(i=>row(`Verrekende deelfactuur ${i.number}`,'− '+format(i.gross))).join('');
-  const previous=s.instalments.length!==1&&s.previouslyInvoiced>0?row('Totaal eerder gefactureerde termijnen','− '+format(s.previouslyInvoiced)):'';
-  return `<div class="ros-invoice-terms"><p><b>Definitieve eindafrekening</b></p><p>Dit is de definitieve eindafrekening voor deze opdracht. Het definitieve opdrachttotaal bedraagt <b>${esc(format(s.finalTotal))} inclusief BTW</b>. Eerder gefactureerde termijnen zijn verrekend.</p></div><table class="ros-doc-table ros-final-settlement" style="margin-top:3mm!important"><colgroup><col style="width:70%!important"><col style="width:30%!important"></colgroup><thead><tr><th class="d">Eindafrekening (incl. BTW)</th><th class="a">Bedrag</th></tr></thead><tbody>${estimate}${row('Definitief opdrachttotaal',format(s.finalTotal),true)}${instalments}${previous}${row('Bedrag deze eindfactuur',format(s.finalInvoiceTotal),true)}</tbody></table><p class="ros-final-payment-note" style="font-size:9pt;color:#334b52;margin:2mm 0 4mm">Verrekend betekent eerder gefactureerd. Eventuele onbetaalde termijnen blijven apart verschuldigd. Betalingen worden afzonderlijk geregistreerd.</p>`;
+  return `<div class="ros-invoice-terms"><p><b>Definitieve eindafrekening</b></p><p>Dit is de definitieve eindafrekening voor deze opdracht. Eerder gefactureerde termijnen zijn hieronder verrekend.</p></div><p class="ros-final-payment-note" style="font-size:9pt;color:#334b52;margin:2mm 0 4mm">Verrekend betekent eerder gefactureerd. Eventuele onbetaalde termijnen blijven apart verschuldigd. Betalingen worden afzonderlijk geregistreerd.</p>`;
  }
- return {valid,render};
+ function totalRow(s,total,lines,columns,format=money){
+  if(!valid(s,total)||!Array.isArray(lines)||![4,5].includes(columns))return '';
+  // Use the invoice's own (possibly frozen) work lines, before exact advance deductions.
+  const groups=new Map();let gross=0;
+  for(const l of lines){
+   if(String(l.id||'').startsWith('deduct_'))continue;
+   const net=cents(Number(l.quantity)*Number(l.unitNet)),vat=cents(l.vatAmount??net/100*Number(l.vatRate)/100);
+   if(!Number.isFinite(net)||!Number.isFinite(vat))return '';
+   gross+=net+vat;
+   const treatment=String(l.vatTreatment||''),rate=Number(l.vatRate),label=treatment==='REVERSE_CHARGE_NL'?'verlegd':treatment==='EXEMPT'?'vrijgesteld':treatment==='EU_B2B'?'EU B2B':treatment==='OUT_OF_SCOPE'?'buiten heffing':`${rate}%`;
+   const group=groups.get(label)||{label,rate,vat:0};group.vat+=vat;groups.set(label,group);
+  }
+  if(gross!==cents(s.finalTotal))return '';
+  const breakdown=[...groups.values()].sort((a,b)=>a.rate-b.rate||a.label.localeCompare(b.label)).map(g=>`${g.label} ${format(g.vat/100)}`).join(', ');
+  return `<tr class="ros-final-project-total"><td class="d" colspan="${columns-1}" style="width:auto!important"><strong>Definitief opdrachttotaal incl. BTW</strong> <small class="ros-final-vat-breakdown">(BTW: ${esc(breakdown)})</small></td><td class="a"><strong>${esc(format(s.finalTotal))}</strong></td></tr>`;
+ }
+ function insertTotalRow(rows,s,total,lines,columns,format=money){
+  const summary=totalRow(s,total,lines,columns,format);if(!summary)return rows;
+  const rendered=rows.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)||[];if(rendered.length!==lines.length)return rows;
+  const deduction=lines.findIndex(l=>String(l.id||'').startsWith('deduct_'));rendered.splice(deduction<0?rendered.length:deduction,0,summary);return rendered.join('');
+ }
+ return {valid,render,totalRow,insertTotalRow};
 });
 
 /* Extend the existing OS invoice screen without changing quotation totals. */
@@ -82,6 +100,7 @@ window.invoiceHTML=function(p){
  const document=p.invoice?.documentSnapshot;const projectTotal=document?.projectTotal??OSVAT.calculate(p,'invoice').total;const defaultDescription=(p.estimate||[]).map(l=>l.desc).filter(Boolean).join(' | '),extraDescription=document?document.invoiceNote||'':(p.invoice.partialDescription||'')===defaultDescription?'':p.invoice.partialDescription||'';const draftReason=locked?P.draftReopenReason(p,bookkeepingRows()):'';
  const note=partial?`<div class="ros-invoice-terms"><p><b>Deelfactuur / aanbetaling</b><br>Geschat opdrachttotaal incl. btw: ${money(projectTotal)}. Het definitieve totaal volgt op de eindfactuur. Alleen het bedrag op deze deelfactuur wordt gefactureerd.${extraDescription?`<br>${esc(extraDescription)}`:''}${p.invoice.paid?`<br><b>Reeds betaald:</b> ${fmtDate(p.invoice.paymentDate)} (${esc(p.invoice.paymentMethod||'Bank')}).`:''}</p></div>`:isFinal&&currentDocument?window.RenoweetInvoiceClosing.render(closingData(p,currentDocument),currentDocument.total,money):'';
  if(isFinal){content=content.replace('<h1>FACTUUR</h1>','<h1>EINDFACTUUR</h1>').replace('<span class="label">Totaal</span>','<span class="label">Bedrag deze eindfactuur</span>');}
+ if(isFinal&&currentDocument)content=content.replace(/(<table class="ros-doc-table">[\s\S]*?<tbody>)([\s\S]*?)(<\/tbody>)/,(_,start,rows,end)=>start+window.RenoweetInvoiceClosing.insertTotalRow(rows,closingData(p,currentDocument),currentDocument.total,currentDocument.lines,5,money)+end);
  const finalFields=isFinal?`<div class="card no-print" style="margin-bottom:12px"><h3>Definitieve werkzaamheden / materialen</h3><p class="small">Werk de bedragen en hoeveelheden in Estimate bij naar de werkelijke uitvoering. Beschrijf hieronder wat daadwerkelijk is uitgevoerd of geleverd; eerdere deelfacturen behouden hun eigen omschrijving.</p>${finalRows(p).map((r,i)=>`<div class="field" style="margin-top:10px"><label>Definitieve omschrijving — regel ${i+1}</label><textarea id="final_description_${i}" rows="3" ${locked?'disabled':''} onchange="refreshPartialInvoice()">${esc(p.invoice.finalDescriptions?.[r.key]||r.description)}</textarea></div>`).join('')}</div>`:'';
 
  content=content.replace('<div class="ros-doc-section-title">Factuuroverzicht</div>',note+'<div class="ros-doc-section-title">Factuuroverzicht</div>');

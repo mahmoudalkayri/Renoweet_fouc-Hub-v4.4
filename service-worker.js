@@ -1,11 +1,11 @@
-const CACHE_NAME="renoweet-focus-hub-v4.4.4-42";
+const CACHE_NAME="renoweet-focus-hub-v4.4.4-43";
 const APP_SHELL=[
   "./","./index.html","./styles.css","./app.js","./company-details.txt","./company-details.js","./renoweet-print-layout.js","./manifest.webmanifest",
   "./icons/icon.svg","./icons/apple-touch-icon.png",
   "./icons/renoweet-logo.png","./Renoweet-Project-Notebook.html","./styles-project-notebook.css","./renoweet-project-notebook.js","./renoweet-os-project-bridge-v1.js",
   "./Renoweet-OS-Drive-v2.2.html","./Renoweet-Bookkeeping-Drive-v2.2.html","./Renoweet-BOD-Drive-v2.2.html",
-  "./renoweet-invoice-closing.js","./renoweet-partial-invoice-engine.js?v=4.4.4.42","./renoweet-partial-invoices-ui.js?v=4.4.4.42","./renoweet-drive-core-v3.0.js","./renoweet-os-vat-engine-v1.js?v=4.4.4.42","./renoweet-os-drive-adapter-v3.6.js",
-  "./renoweet-bookkeeping-drive-adapter-v3.7.js","./renoweet-bookkeeping-enhancements-v4.3.js","./renoweet-accounting-engine-v4.4.js","./renoweet-bookkeeping-v4.4.js?v=4.4.4.42","./styles-accounting-v4.4.css","./renoweet-os-enhancements-v4.3.js","./renoweet-bod-drive-adapter-v2.js","./Renoweet-Legacy-Import-2026-Q3.html","./migration-2026-q3.json","./Renoweet-Legacy-XLSX-Import-v4.4.html","./renoweet-legacy-xlsx-engine-v4.4.js"
+  "./renoweet-invoice-closing.js","./renoweet-partial-invoice-engine.js?v=4.4.4.43","./renoweet-partial-invoices-ui.js?v=4.4.4.43","./renoweet-drive-core-v3.0.js","./renoweet-os-vat-engine-v1.js?v=4.4.4.43","./renoweet-os-drive-adapter-v3.6.js",
+  "./renoweet-bookkeeping-drive-adapter-v3.7.js","./renoweet-bookkeeping-enhancements-v4.3.js","./renoweet-accounting-engine-v4.4.js","./renoweet-bookkeeping-v4.4.js?v=4.4.4.43","./styles-accounting-v4.4.css","./renoweet-os-enhancements-v4.3.js","./renoweet-bod-drive-adapter-v2.js","./Renoweet-Legacy-Import-2026-Q3.html","./migration-2026-q3.json","./Renoweet-Legacy-XLSX-Import-v4.4.html","./renoweet-legacy-xlsx-engine-v4.4.js"
 ];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)));self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))));self.clients.claim()});
