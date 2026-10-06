@@ -1,5 +1,20 @@
 # Renoweet Focus Hub v4.4.4
 
+## Historical parking calculation — 6 October 2026
+
+In Bookkeeping → VAT, **Historical parking correction** reviews all loaded 2026 invoices from 1 January through 6 October, including Q1 and Q2. Load the full 2026 year from Drive so the review can include every invoice. Use the invoice list to compare original and calculated net / VAT figures; the quarter table shows the VAT differences after identifiable proportional credits.
+
+Untaxed parking reimbursements are treated as VAT-inclusive at 21%, preserving the customer's invoice total. Example: €100 work + €21 VAT + €30 parking becomes €124.79 net + €26.21 VAT = €151. A €732 parking reimbursement becomes €604.96 net + €127.04 VAT. The split applies only to parking, leaving work rates and other costs intact.
+
+The engine calculates on copies. Original issued invoice records and previews, OS snapshots, payments, supplier parking expenses, receipt VAT, saving and invoice-opening workflows remain intact. Sales, VAT, profit, annual planning and BOD use the calculated net / VAT figures. This calculation does not create an extra expense for output VAT or invent input VAT on parking receipts.
+
+Already taxed parking is not retaxed. Unknown invoice status, inconsistent original totals, special treatments including reverse charge, and ambiguous old final-invoice deductions / credits appear for individual review. Identified source parking lines on partial and final invoices retain their signed deductions. Old XLSX work lines that omitted separate parking fields are reconciled against the stored invoice total before those recharges are included.
+
+The correction is a historical calculation overlay, not a change to invoices already sent or a filed tax return. Past-quarter differences are shown in their original periods, not automatically added to the current quarter. Cash-basis reports continue using dated payments; the parking review's quarter comparison uses invoice VAT dates. Future invoices after 6 October are outside this historical adjustment.
+
+Validation: all 18 regression suites pass, including the original navigation/reopening and save-protection suites. New coverage checks fixed grand totals, original-record preservation, expenses, mixed rates, partial/final deductions, credits, period boundaries, cash-basis recognition, actual VAT/preview rendering and BOD calculations. Browser engine loading also works without a separately loaded parking asset because the engine is bundled in the accounting script.
+
+
 ## Correcting an unissued partial draft — 1 October 2026
 
 - Print/PDF validates a partial draft without marking it issued or locking it.
