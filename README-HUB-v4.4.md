@@ -1,5 +1,14 @@
 # Renoweet Focus Hub v4.4.4
 
+## Nextgenhome doorlopende-post exceptions — 6 October 2026
+
+The owner confirmed that parking on invoices **2026-0101001** (1 January 2026) and **2026-0402003** (4 February 2026) is a genuine doorlopende post. Only untaxed parking on these exact invoice numbers is excluded from the historical 21% parking calculation. Other invoices, including other Nextgenhome invoices, retain their existing treatment.
+
+The parking review lists the two configured exceptions and any matching amounts found in the loaded year. The VAT rate table shows them separately as **Doorlopende posten — niet in 1a / 1b / 1e**, excluding them from that table's turnover total. Work VAT remains included. Original invoice subtotal/gross, payments, receipts and expense records are preserved; this does not migrate supplier expenses or change sent invoice documents. The original revenue/expense ledger is preserved, while the return's turnover display separates these disbursements.
+
+Reload the updated Hub and load the full 2026 year from Drive before using the recalculated Q1 VAT position. Previously quoted Q1 differences and combined payment estimates must be recalculated after this exception.
+
+
 ## Historical parking calculation — 6 October 2026
 
 In Bookkeeping → VAT, **Historical parking correction** reviews all loaded 2026 invoices from 1 January through 6 October, including Q1 and Q2. Load the full 2026 year from Drive so the review can include every invoice. Use the invoice list to compare original and calculated net / VAT figures; the quarter table shows the VAT differences after identifiable proportional credits.

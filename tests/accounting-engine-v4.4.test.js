@@ -27,8 +27,8 @@ const legacyParkingInvoice={
   'Gross incl. VAT':2588.57,VAT:357,Parking:531.57,'Other costs':0,'VAT rate':21,'Work description':'Carpentry work'
 };
 assert.deepEqual(A.invoiceSalesBreakdown(legacyParkingInvoice),{
-  taxableNet:2139.31,zeroRatedNet:0,reverseChargeNet:0,net:2139.31,vat:449.26,gross:2588.57
-},'legacy parking must be split into net and 21% VAT without changing the invoice total');
+  taxableNet:1700,zeroRatedNet:531.57,reverseChargeNet:0,net:2231.57,vat:357,gross:2588.57
+},'confirmed Nextgenhome parking on 2026-0101001 must retain original amounts without a 21% correction');
 
 const legacyPaidInvoice={...legacyParkingInvoice,'Paid date':'2026-01-04'};
 const legacyPaidBook={invoices:[legacyPaidInvoice],expenses:[],fuel:[],auto:[],payments:[],creditNotes:[],deleted:[],control:{}};

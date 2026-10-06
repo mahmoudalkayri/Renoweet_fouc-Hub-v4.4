@@ -5,7 +5,8 @@
   if(root)root.RenoweetParkingVat=api;
 })(typeof window!=='undefined'?window:globalThis,function(){
   'use strict';
-  const policy=Object.freeze({start:'2026-01-01',end:'2026-10-06',rate:21});
+  const doorlopendePostInvoices=Object.freeze(['2026-0101001','2026-0402003']);
+  const policy=Object.freeze({start:'2026-01-01',end:'2026-10-06',rate:21,doorlopendePostInvoices});
   const num=v=>Number.isFinite(Number(v))?Number(v):0;
   const round=v=>Math.round((num(v)+Number.EPSILON)*100)/100;
   function parkingLine(line){
@@ -15,18 +16,32 @@
   }
   function calculate(invoice,lines,date){
     const original=lines.map(l=>({...l})),candidates=original.filter(parkingLine);
-    const result={lines:original,changes:[],review:[],parkingGross:0,vatAdjustment:0,netAdjustment:0};
+    const result={lines:original,changes:[],excluded:[],review:[],parkingGross:0,vatAdjustment:0,netAdjustment:0};
     if(!candidates.length)return result;
     const status=String(invoice?.['Lifecycle status']||invoice?.Status||'').toLowerCase();
     if(['draft','cancelled'].includes(status))return result;
     if(!date){result.review.push('Parking invoice has no reliable invoice date.');return result}
     if(date<policy.start||date>policy.end)return result;
     const untaxed=candidates.filter(l=>num(l.vatRate)===0&&num(l.vatAmount)===0);
+    const doorlopendePost=doorlopendePostInvoices.includes(String(invoice?.['Invoice #']||'').trim());
+    if(doorlopendePost&&candidates.some(l=>num(l.vatRate)!==0||num(l.vatAmount)!==0))result.review.push('This invoice is a confirmed doorlopende-post exception, but recorded parking already has VAT. Review the issued record before changing it.');
     if(!untaxed.length)return result;
     if(status==='unknown'){result.review.push('Invoice status is Unknown; confirm that it was issued before including it in tax reports.');return result}
     const totals=original.reduce((a,l)=>{const net=round((num(l.quantity)||1)*num(l.unitNet)),vat=round(l.vatAmount==null?net*num(l.vatRate)/100:num(l.vatAmount));a.net=round(a.net+net);a.vat=round(a.vat+vat);return a},{net:0,vat:0});
     if((invoice?.VAT!=null&&Math.abs(num(invoice.VAT)-totals.vat)>.009)||(invoice?.['Gross incl. VAT']!=null&&Math.abs(num(invoice['Gross incl. VAT'])-round(totals.net+totals.vat))>.009)||original.some(l=>l.id==='legacy_work'&&Math.abs(round((num(l.quantity)||1)*num(l.unitNet)*num(l.vatRate)/100)-num(l.vatAmount))>.03&&l.vatAmount!=null)){
       result.review.push('Recorded VAT / invoice lines do not reconcile; parking may already have been corrected.');return result;
+    }
+    if(doorlopendePost){
+      // The owner confirmed these two invoice-specific parking disbursements.
+      // Keep original amounts, payments and work VAT; only classify the untaxed parking.
+      for(const line of result.lines){
+        if(!parkingLine(line)||num(line.vatRate)!==0||num(line.vatAmount)!==0)continue;
+        if(!['NL_ZERO','DOORLOPENDE_POST'].includes(String(line.vatTreatment||'NL_ZERO').toUpperCase())){result.review.push('Parking on a doorlopende-post invoice has a conflicting special VAT treatment.');continue}
+        const gross=round((num(line.quantity)||1)*num(line.unitNet));if(!gross)continue;
+        result.excluded.push({id:line.id,description:line.description,gross,reason:'Owner-confirmed doorlopende post — Nextgenhome'});
+        line.vatTreatment='DOORLOPENDE_POST';line.vatAmount=0;
+      }
+      return result;
     }
     if(original.some(l=>/REVERSE_CHARGE|EU_B2B/.test(String(l.vatTreatment||'').toUpperCase()))||/REVERSE_CHARGE|EU_B2B/.test(String(invoice?.['VAT treatment']||'').toUpperCase())){
       result.review.push('Parking on a reverse-charge / EU invoice needs individual review.');return result;

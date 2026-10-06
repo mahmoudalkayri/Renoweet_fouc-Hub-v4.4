@@ -70,5 +70,33 @@ const engineSource=fs.readFileSync(require.resolve('../renoweet-accounting-engin
 // Execute BOD's actual metrics to confirm that both modules use the same calculation.
 const bod=fs.readFileSync(require.resolve('../Renoweet-BOD-Drive-v2.2.html'),'utf8'),start=bod.indexOf('function expenseNet'),middle=bod.indexOf('const BOD_PERIOD',start),end=bod.indexOf('function metrics(){',middle);
 const D={sources:[],projects:[],invoices:[old],expenses:[expense],fuel:[],auto:[],payments:[],bookkeepingPayments:b.payments,creditNotes:[],orders:[],followups:[]},ctx={A,D,date:A.asDate,isoMonth:v=>A.iso(v).slice(0,7)};vm.createContext(ctx);vm.runInContext(bod.slice(start,middle)+bod.slice(middle,end)+';result=metricsFor({year:2026,mode:"Q1"});',ctx);assert.equal(ctx.result.rev,124.79);assert.equal(ctx.result.outVAT,26.21);assert.equal(ctx.result.result,94.79);assert.equal(ctx.result.cash,151);
+
+// Owner-confirmed Nextgenhome exceptions: only parking on these two exact numbers.
+const exemptOne={...legacy('2026-0101001','2026-01-01',732),Customer:'Nextgenhome'},exemptTwo={...legacy('2026-0402003','2026-02-04',30),Customer:'Nextgenhome'},otherNextgen={...legacy('2026-0402004','2026-02-04',30),Customer:'Nextgenhome'};
+const exceptionSnapshot=JSON.stringify([exemptOne,exemptTwo,otherNextgen]);
+for(const invoice of [exemptOne,exemptTwo]){
+ const correction=A.parkingCorrection(invoice);
+ assert.equal(correction.changes.length,0);assert.equal(correction.excluded.length,1);assert.equal(correction.vatAdjustment,0);
+ assert.deepEqual(values(A.invoiceTotals(invoice)),values(A.invoiceOriginalTotals(invoice)));
+ assert.equal(A.invoiceTotals(invoice).lines.find(P.parkingLine).vatTreatment,'DOORLOPENDE_POST');
+ assert.equal(A.invoiceOriginalTotals(invoice).lines.find(P.parkingLine).vatTreatment,'NL_ZERO');
+ const rates=A.invoiceVatRates(invoice);assert.equal(rates.find(r=>r.key==='21').vat,21);assert.equal(rates.find(r=>r.key==='passThrough').net,invoice.Parking);assert(!rates.some(r=>r.key==='0'));
+ const cashBook=book([invoice],{control:{VATAccountingBasis:'cash'},payments:[{invoiceId:A.invoiceId(invoice),date:'2026-01-03',amount:A.invoiceTotals(invoice).gross}]});
+ const invoiceBook=book([invoice]);assert.equal(A.vatReport(invoiceBook,q1).outputVat,21);reconcile(A.vatReport(invoiceBook,q1));
+ if(invoice.Date==='2026-01-01'){assert.equal(A.vatReport(cashBook,q1).outputVat,21);reconcile(A.vatReport(cashBook,q1))}
+}
+assert.equal(A.parkingCorrection(otherNextgen).changes.length,1,'Do not exempt all invoices from the same customer');
+assert.equal(A.parkingCorrection({...otherNextgen,'Invoice #':'2026-0101001.01'}).changes.length,1,'Do not exempt invoice-number prefixes');
+assert.equal(A.parkingCorrection({...exemptTwo,'Invoice #':' 2026-0402003 '}).excluded.length,1,'Whitespace does not change an invoice number');
+const importedException={...exemptTwo,'Line items JSON':JSON.stringify([line('work',100,21,'Work',{vatAmount:21})])};assert.equal(A.parkingCorrection(importedException).excluded.length,1);
+const preciseLines=invoice('2026-0402003',[line('low',100,9,'Painting'),line('high',100,21,'Floor'),line('park',30)],'2026-02-04');assert.equal(A.invoiceTotals(preciseLines).vat,30);assert.equal(A.parkingCorrection(preciseLines).excluded.length,1);
+const taxedException=invoice('2026-0402003',[line('work',100,21,'Work'),line('park',24.79,21,'Parking',{vatAmount:5.21})],'2026-02-04');assert.equal(A.invoiceTotals(taxedException).vat,26.21);assert(A.parkingCorrection(taxedException).review.some(r=>r.includes('already has VAT')),'Do not silently remove VAT from a stored issued line');
+const exemptCredit={invoiceId:'2026-0402003',date:'2026-03-01',net:65,vat:10.5,gross:75.5,'Breakdown JSON':JSON.stringify({taxableNet:50,zeroRatedNet:15,reverseChargeNet:0,net:65,vat:10.5,gross:75.5,vatRates:[{key:'21',net:50,vat:10.5},{key:'0',net:15,vat:0}]})};
+const ev=A.vatReport(book([exemptTwo],{creditNotes:[exemptCredit]}),q1);assert.equal(ev.outputVat,10.5);assert.equal(ev.vatRates.find(r=>r.key==='passThrough').net,15);assert.equal(ev.vatRates.find(r=>r.key==='0').net,0);reconcile(ev);
+const exceptionsBook=book([exemptOne,exemptTwo,otherNextgen]);const audit=A.parkingCorrectionReview(exceptionsBook,q1);assert.equal(audit.excluded.length,2);assert.equal(audit.rows.length,1);assert.equal(audit.vatAdjustment,5.21);
+ui.data=exceptionsBook;ui.activePeriod=()=>({...q1,label:'Q1 2026'});ui.renderVatAccounting();assert(host.innerHTML.includes('Nextgenhome parking exceptions'));assert(host.innerHTML.includes('2026-0101001'));assert(host.innerHTML.includes('2026-0402003'));assert(host.innerHTML.includes('no parking BTW correction'));assert(host.innerHTML.includes('Doorlopende posten • niet in 1a / 1b / 1e'));
+const justException=A.vatReport(book([exemptTwo]),q1),markup=ui.vatRateSummaryHtml(justException);assert(markup.includes('<b>100.00</b>'),'Turnover total in VAT table excludes the doorlopende post');assert(markup.includes('<b>21.00</b>'));assert(markup.includes('30.00'),'The excluded disbursement remains visible separately');
+assert.equal(JSON.stringify([exemptOne,exemptTwo,otherNextgen]),exceptionSnapshot,'Exception reports never edit the records');
+console.log('Nextgenhome exceptions: exact invoice scope, original amounts, mixed work VAT, imports, already-taxed records, proportional credits, cash basis and VAT review passed.');
 assert.equal(P.policy.end,'2026-10-06');
 console.log('Parking correction: fixed totals, original records, XLSX recharges, 21/9/0, partial/final deductions, credits, periods, expenses, cash basis, VAT UI, original preview and BOD passed.');

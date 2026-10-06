@@ -6,7 +6,8 @@
   if(root)root.RenoweetParkingVat=api;
 })(typeof window!=='undefined'?window:globalThis,function(){
   'use strict';
-  const policy=Object.freeze({start:'2026-01-01',end:'2026-10-06',rate:21});
+  const doorlopendePostInvoices=Object.freeze(['2026-0101001','2026-0402003']);
+  const policy=Object.freeze({start:'2026-01-01',end:'2026-10-06',rate:21,doorlopendePostInvoices});
   const num=v=>Number.isFinite(Number(v))?Number(v):0;
   const round=v=>Math.round((num(v)+Number.EPSILON)*100)/100;
   function parkingLine(line){
@@ -16,18 +17,32 @@
   }
   function calculate(invoice,lines,date){
     const original=lines.map(l=>({...l})),candidates=original.filter(parkingLine);
-    const result={lines:original,changes:[],review:[],parkingGross:0,vatAdjustment:0,netAdjustment:0};
+    const result={lines:original,changes:[],excluded:[],review:[],parkingGross:0,vatAdjustment:0,netAdjustment:0};
     if(!candidates.length)return result;
     const status=String(invoice?.['Lifecycle status']||invoice?.Status||'').toLowerCase();
     if(['draft','cancelled'].includes(status))return result;
     if(!date){result.review.push('Parking invoice has no reliable invoice date.');return result}
     if(date<policy.start||date>policy.end)return result;
     const untaxed=candidates.filter(l=>num(l.vatRate)===0&&num(l.vatAmount)===0);
+    const doorlopendePost=doorlopendePostInvoices.includes(String(invoice?.['Invoice #']||'').trim());
+    if(doorlopendePost&&candidates.some(l=>num(l.vatRate)!==0||num(l.vatAmount)!==0))result.review.push('This invoice is a confirmed doorlopende-post exception, but recorded parking already has VAT. Review the issued record before changing it.');
     if(!untaxed.length)return result;
     if(status==='unknown'){result.review.push('Invoice status is Unknown; confirm that it was issued before including it in tax reports.');return result}
     const totals=original.reduce((a,l)=>{const net=round((num(l.quantity)||1)*num(l.unitNet)),vat=round(l.vatAmount==null?net*num(l.vatRate)/100:num(l.vatAmount));a.net=round(a.net+net);a.vat=round(a.vat+vat);return a},{net:0,vat:0});
     if((invoice?.VAT!=null&&Math.abs(num(invoice.VAT)-totals.vat)>.009)||(invoice?.['Gross incl. VAT']!=null&&Math.abs(num(invoice['Gross incl. VAT'])-round(totals.net+totals.vat))>.009)||original.some(l=>l.id==='legacy_work'&&Math.abs(round((num(l.quantity)||1)*num(l.unitNet)*num(l.vatRate)/100)-num(l.vatAmount))>.03&&l.vatAmount!=null)){
       result.review.push('Recorded VAT / invoice lines do not reconcile; parking may already have been corrected.');return result;
+    }
+    if(doorlopendePost){
+      // The owner confirmed these two invoice-specific parking disbursements.
+      // Keep original amounts, payments and work VAT; only classify the untaxed parking.
+      for(const line of result.lines){
+        if(!parkingLine(line)||num(line.vatRate)!==0||num(line.vatAmount)!==0)continue;
+        if(!['NL_ZERO','DOORLOPENDE_POST'].includes(String(line.vatTreatment||'NL_ZERO').toUpperCase())){result.review.push('Parking on a doorlopende-post invoice has a conflicting special VAT treatment.');continue}
+        const gross=round((num(line.quantity)||1)*num(line.unitNet));if(!gross)continue;
+        result.excluded.push({id:line.id,description:line.description,gross,reason:'Owner-confirmed doorlopende post — Nextgenhome'});
+        line.vatTreatment='DOORLOPENDE_POST';line.vatAmount=0;
+      }
+      return result;
     }
     if(original.some(l=>/REVERSE_CHARGE|EU_B2B/.test(String(l.vatTreatment||'').toUpperCase()))||/REVERSE_CHARGE|EU_B2B/.test(String(invoice?.['VAT treatment']||'').toUpperCase())){
       result.review.push('Parking on a reverse-charge / EU invoice needs individual review.');return result;
@@ -113,7 +128,7 @@
   function parkingCorrection(invoice){return P.calculate(invoice,parseLines(invoice),iso(invoice?.['Invoice date']||invoice?.Date))}
   function invoiceTotals(invoice){
     const original=invoiceOriginalTotals(invoice),correction=parkingCorrection(invoice);
-    if(!correction.changes.length)return original;
+    if(!correction.changes.length)return correction.excluded.length?{...original,lines:correction.lines}:original;
     return {net:round2(original.net+correction.netAdjustment),vat:round2(original.vat+correction.vatAdjustment),gross:original.gross,lines:correction.lines};
   }
   function invoiceOriginalSalesBreakdown(invoice){return salesFromTotals(invoiceOriginalTotals(invoice))}
@@ -160,10 +175,11 @@
     return original;
   }
   function parkingCorrectionReview(book,period){
-    const year=periodIdentity(period).year,rows=[],review=[],quarters=[1,2,3,4].map(quarter=>({quarter,invoices:0,parkingGross:0,vatAdjustment:0,creditVatAdjustment:0,netAdjustment:0}));
+    const year=periodIdentity(period).year,rows=[],excluded=[],review=[],quarters=[1,2,3,4].map(quarter=>({quarter,invoices:0,parkingGross:0,vatAdjustment:0,creditVatAdjustment:0,netAdjustment:0}));
     for(const invoice of book?.invoices||[]){
       const correction=parkingCorrection(invoice),date=iso(invoice?.['Invoice date']||invoice?.Date);
       if(!date||date.slice(0,4)===String(year))for(const reason of correction.review)review.push({invoiceNumber:text(invoice?.['Invoice #']),reason});
+      if(correction.excluded.length&&date.slice(0,4)===String(year))excluded.push({invoiceNumber:text(invoice?.['Invoice #']),date,parkingGross:round2(correction.excluded.reduce((sum,l)=>sum+l.gross,0)),reason:correction.excluded[0].reason});
       if(!correction.changes.length||date.slice(0,4)!==String(year))continue;
       const original=invoiceOriginalTotals(invoice),corrected=invoiceTotals(invoice),vatDate=iso(invoice?.['VAT date']||invoice?.['Invoice date']||invoice?.Date),quarter=Math.floor((num(vatDate.slice(5,7))-1)/3)+1;
       const row={invoiceNumber:text(invoice?.['Invoice #']),invoiceId:invoiceId(invoice),date,vatDate,quarter,parkingGross:correction.parkingGross,vatAdjustment:correction.vatAdjustment,original,corrected};rows.push(row);
@@ -176,7 +192,7 @@
       }
     }
     for(const q of quarters){q.vatAdjustment=round2(q.vatAdjustment-q.creditVatAdjustment);q.netAdjustment=round2(-q.vatAdjustment)}
-    return {year,policy:P.policy,rows:rows.sort((a,b)=>a.date.localeCompare(b.date)||a.invoiceNumber.localeCompare(b.invoiceNumber)),quarters,review,vatAdjustment:round2(quarters.reduce((s,q)=>s+q.vatAdjustment,0)),netAdjustment:round2(quarters.reduce((s,q)=>s+q.netAdjustment,0))};
+    return {year,policy:P.policy,excluded,rows:rows.sort((a,b)=>a.date.localeCompare(b.date)||a.invoiceNumber.localeCompare(b.invoiceNumber)),quarters,review,vatAdjustment:round2(quarters.reduce((s,q)=>s+q.vatAdjustment,0)),netAdjustment:round2(quarters.reduce((s,q)=>s+q.netAdjustment,0))};
   }
   function paymentTotal(invoice,payments=[]){return round2(paymentsFor(invoice,payments).reduce((s,p)=>s+num(p.amount??p.Amount),0))}
   function markedPaid(invoice){return lower(invoice?.['Lifecycle status'])==='paid'||lower(invoice?.Status)==='paid'}
@@ -267,7 +283,7 @@
     const groups=new Map();
     for(const line of invoiceTotals(invoice).lines){
       const t=lineTotals(line),treatment=normalizeTreatment(line.vatTreatment,num(line.vatRate)),rate=num(line.vatRate);
-      const key=treatment==='EU_B2B'?'eu':/REVERSE_CHARGE/.test(treatment)?'reverse':treatment==='EXEMPT'?'exempt':treatment==='OUT_OF_SCOPE'?'outside':rate===0&&t.vat===0?'0':[9,21].includes(rate)?String(rate):'other';
+      const key=treatment==='DOORLOPENDE_POST'?'passThrough':treatment==='EU_B2B'?'eu':/REVERSE_CHARGE/.test(treatment)?'reverse':treatment==='EXEMPT'?'exempt':treatment==='OUT_OF_SCOPE'?'outside':rate===0&&t.vat===0?'0':[9,21].includes(rate)?String(rate):'other';
       const row=groups.get(key)||{key,net:0,vat:0};row.net=round2(row.net+t.net);row.vat=round2(row.vat+t.vat);groups.set(key,row);
     }
     return [...groups.values()];
@@ -288,7 +304,11 @@
   function allocateCreditVatRates(invoice,breakdown){return scaleVatRates(invoiceVatRates(invoice),breakdown.net,breakdown.vat)}
   function creditVatRates(credit,invoice){
     const amount=creditBreakdown(credit,invoice);let stored=null;try{stored=JSON.parse(credit?.['Breakdown JSON']||credit?.breakdownJson||'null')}catch(e){}
-    if(Array.isArray(stored?.vatRates)&&stored.vatRates.every(r=>['21','9','0','reverse','eu','exempt','outside','other','unallocated'].includes(r.key)&&Number.isFinite(r.net)&&Number.isFinite(r.vat))){const sum=sumVatRates(stored.vatRates);if(sum.net===amount.net&&sum.vat===amount.vat)return stored.vatRates.map(r=>({...r}))}
+    if(invoice&&parkingCorrection(invoice).excluded.length&&!(Array.isArray(stored?.vatRates)&&stored.vatRates.some(r=>r.key==='passThrough'))){
+      const proportional=allocateCredit(invoice,amount.gross),matches=['net','vat','taxableNet','reverseChargeNet','zeroRatedNet'].every(k=>round2(proportional[k])===round2(amount[k]));
+      return matches?scaleVatRates(invoiceVatRates(invoice),amount.net,amount.vat):[{key:'unallocated',net:amount.net,vat:amount.vat}];
+    }
+    if(Array.isArray(stored?.vatRates)&&stored.vatRates.every(r=>['21','9','0','reverse','eu','exempt','outside','passThrough','other','unallocated'].includes(r.key)&&Number.isFinite(r.net)&&Number.isFinite(r.vat))){const sum=sumVatRates(stored.vatRates);if(sum.net===amount.net&&sum.vat===amount.vat)return stored.vatRates.map(r=>({...r}))}
     if(!invoice)return [{key:'unallocated',net:amount.net,vat:amount.vat}];
     const rows=invoiceVatRates(invoice);if(rows.length===1)return scaleVatRates(rows,amount.net,amount.vat);
     // Older Hub credits were proportional. Recover only a matching recorded allocation.
