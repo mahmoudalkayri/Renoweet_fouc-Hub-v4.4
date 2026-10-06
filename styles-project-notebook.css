@@ -242,34 +242,70 @@ td input { min-height: 39px; }
   .setup-banner { align-items: stretch; flex-direction: column; }
 }
 
+#notebookPrintForm { display:none; }
+  #notebookPrintForm .print-only { display:block; }
+  #notebookPrintForm .no-print { display:none!important; }
+  #notebookPrintForm .print-cover { display:flex; align-items:center; gap:4mm; padding-bottom:3mm; margin-bottom:5mm; border-bottom:1.5pt solid #1d5274; color:#1d5274; }
+  #notebookPrintForm .print-cover img { width:16mm; height:16mm; object-fit:contain; }
+  #notebookPrintForm .print-cover strong,#notebookPrintForm .print-cover span { display:block; }
+  #notebookPrintForm .report-section { display:block; background:white!important; color:#17232d!important; border:0; border-radius:0; padding:0; margin:0 0 5mm; break-inside:auto; }
+  #notebookPrintForm .project-hero { display:grid; grid-template-columns:1fr 45mm; gap:5mm; border-bottom:1px solid #c5cdd2; padding-bottom:4mm; }
+  #notebookPrintForm .kicker { color:#1d5274; margin:0 0 1mm; font-size:8pt; }
+  #notebookPrintForm .nb-print-value.nb-print-title { font-size:18pt; font-weight:bold; line-height:1.2; }
+  #notebookPrintForm .hero-address { margin-top:1mm; }
+  #notebookPrintForm .section-heading { display:flex; align-items:baseline; gap:3mm; margin-bottom:3mm; padding-top:2mm; border-top:1px solid #bac7cf; break-after:avoid; }
+  #notebookPrintForm .section-number { display:inline; width:auto; height:auto; padding:0; background:none; color:#1d5274; font-size:11pt; }
+  #notebookPrintForm h2 { font-size:12pt; color:#1d5274; margin:0; }
+  #notebookPrintForm h3 { font-size:10pt; margin:0 0 1mm; break-after:avoid; }
+  #notebookPrintForm .section-heading p { display:none; }
+  #notebookPrintForm .page-break { break-before:auto; }
+  #notebookPrintForm .form-grid { display:grid; gap:3mm 6mm; }
+  #notebookPrintForm .form-grid.cols-2 { grid-template-columns:1fr 1fr; }
+  #notebookPrintForm .form-grid.cols-3 { grid-template-columns:repeat(3,1fr); }
+  #notebookPrintForm label { font-size:9pt; font-weight:normal; color:#17232d; }
+  #notebookPrintForm label > span { margin:0 0 1mm; font-weight:bold; font-size:8.5pt; }
+  #notebookPrintForm .nb-print-value { display:block; white-space:pre-wrap; color:#17232d; font-size:10pt; font-weight:normal; min-height:0; height:auto; padding:0; margin:0; border:0; overflow:visible; }
+  #notebookPrintForm .nb-print-value.renoweet-markdown { white-space:normal; }
+  #notebookPrintForm .nb-print-empty { border-bottom:1px solid #b7c2c8; min-height:5mm; }
+  #notebookPrintForm .nb-print-check { display:inline; font:15pt/1 Arial,sans-serif; color:#17232d; }
+  #notebookPrintForm .scope-list { display:block; }
+  #notebookPrintForm .scope-card { display:block; border:0; border-bottom:1px solid #d3dade; border-radius:0; padding:2mm 0; margin-bottom:2mm; break-inside:auto; }
+  #notebookPrintForm .scope-index { display:inline; float:left; width:7mm; height:auto; background:none; font-size:10pt; }
+  #notebookPrintForm .scope-copy,#notebookPrintForm .scope-side,#notebookPrintForm .scope-note { margin-left:8mm; }
+  #notebookPrintForm .nb-print-scope-title { font-weight:bold; color:#1d5274; }
+  #notebookPrintForm .scope-side { margin-top:1mm; font-size:8.5pt; }
+  #notebookPrintForm .scope-note { margin-top:1mm; }
+  #notebookPrintForm .check-grid { display:grid; grid-template-columns:1fr 1fr; gap:2mm 5mm; }
+  #notebookPrintForm .check-card { border:0; background:none; padding:1mm 0; border-radius:0; grid-template-columns:6mm 1fr; break-inside:avoid; }
+  #notebookPrintForm .notes-grid { display:block; }
+  #notebookPrintForm .note-card { background:none; border:0; border-radius:0; padding:2mm 0; break-inside:auto; }
+  #notebookPrintForm table { min-width:0; table-layout:fixed; font-size:9pt; }
+  #notebookPrintForm th,#notebookPrintForm td { padding:2mm; }
+  #notebookPrintForm tr { break-inside:avoid; } #notebookPrintForm thead { display:table-header-group; }
+  #notebookPrintForm .table-wrap { overflow:visible; }
+  #notebookPrintForm .photo-grid { display:block; }
+  #notebookPrintForm .nb-print-photo-row { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:4mm; break-inside:avoid; }
+  #notebookPrintForm .photo-card { border:1px solid #c4cdd3; border-radius:0; overflow:visible; background:none; }
+  #notebookPrintForm .photo-card img { width:100%; height:65mm; aspect-ratio:auto; object-fit:contain; background:white; }
+  #notebookPrintForm .photo-body { padding:2mm; }
+  #notebookPrintForm .signature-grid { display:grid; grid-template-columns:1fr 1fr; gap:8mm; margin-top:3mm; }
+  #notebookPrintForm .signature-card { background:none; border:0; border-top:1px solid #9dadb7; border-radius:0; padding:2mm 0; break-inside:avoid; }
+  #notebookPrintForm .nb-print-signature { display:block; width:100%; height:25mm; object-fit:contain; }
+  #notebookPrintForm .approval-check { background:none; border:0; padding:0; }
+  #notebookPrintForm .block-field { margin-top:3mm; }
+  #notebookPrintForm .paper-lines { min-height:30mm; background:repeating-linear-gradient(to bottom,transparent,transparent 8mm,#bdc6cc 8.2mm); }
+  #notebookPrintForm .paper-lines.tall { min-height:65mm; }
+  body.paper-print #notebookPrintForm .photo-grid,body.paper-print #notebookPrintForm .open-list { display:none!important; }
+  body.paper-print #notebookPrintForm .nb-print-empty { min-height:14mm; }
+body.nb-preview-open > main,body.nb-preview-open > .topbar { display:none!important; }
+body.nb-preview-open #notebookPrintForm { display:block; width:210mm; max-width:calc(100% - 24px); padding:14mm 15mm; margin:80px auto 24px; background:white; box-sizing:border-box; box-shadow:0 2px 16px #17232d33; }
+#notebookPrintPreview { position:fixed; top:0; left:0; right:0; z-index:1000; display:flex; align-items:center; justify-content:center; gap:12px; padding:12px; background:#edf2f5; border-bottom:1px solid #bac7cf; }
+@media(max-width:680px) { #notebookPrintPreview strong { display:none; } body.nb-preview-open #notebookPrintForm { padding:20px; } }
 @media print {
-  @page { size: A4; margin: 12mm; }
-  body { background: white; font-size: 10.5pt; color: #111; }
-  .no-print, .topbar, .editor-toolbar, .section-nav, .upload-row, .photo-actions, .row-delete, .report-footer { display: none !important; }
-  .print-only { display: block; }
-  main, .editor-shell { max-width: none; padding: 0; }
-  #dashboardView { display: none !important; }
-  #editorView { display: block !important; }
-  .print-cover { display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #1d5274; margin-bottom: 5mm; padding-bottom: 3mm; color: #1d5274; }
-  .print-cover img { width: 22mm; height: 22mm; object-fit: contain; }
-  .print-cover strong, .print-cover span { display: block; }
-  .report-section { box-shadow: none; border: 1px solid #bcc6cc; border-radius: 0; padding: 5mm; margin: 0 0 5mm; }
-  .project-hero { color: white !important; background: #1d5274 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .title-input, .hero-address input { color: white !important; }
-  .page-break { break-before: page; }
-  .scope-card, .check-card, .note-card, .photo-card, .signature-card { break-inside: avoid; }
-  .scope-card { grid-template-columns: 28px 1fr 43mm; padding: 3mm; }
-  .scope-note { grid-column: 2/4; }
-  .photo-grid { grid-template-columns: 1fr 1fr; }
-  .photo-card img { max-height: 72mm; }
-  textarea { overflow: hidden; resize: none; }
-  input, textarea, select { color: #111 !important; background: white !important; border: 1px solid #9da9b0 !important; }
-  .signature-card canvas { height: 35mm; }
-  .paper-lines { min-height: 45mm; background: repeating-linear-gradient(to bottom,transparent,transparent 9mm,#bdc6cc 9.2mm); }
-  .paper-lines.tall { min-height: 120mm; }
-  body.paper-print .photo-grid { display: none !important; }
-  body.paper-print #openItems { display: none !important; }
-  body.paper-print .paper-photo-notes { display: block !important; }
-  body.paper-print textarea { min-height: 25mm; }
-  body.paper-print .scope-note { min-height: 18mm; }
+  @page { size:A4; margin:14mm 15mm; }
+  body { background:white!important; color:#17232d!important; font:10pt/1.45 Arial,Helvetica,sans-serif; }
+  body > :not(#notebookPrintForm) { display:none!important; }
+  #notebookPrintForm,body.nb-preview-open #notebookPrintForm { display:block!important; width:auto; max-width:none; padding:0; margin:0; box-shadow:none; }
+  #notebookPrintForm * { opacity:1!important; text-shadow:none!important; box-shadow:none!important; overflow-wrap:anywhere; }
+
 }

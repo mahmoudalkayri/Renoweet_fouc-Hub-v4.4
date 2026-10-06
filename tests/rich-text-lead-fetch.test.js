@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=path.resolve(__dirname,'..'),sandbox={window:{},console,structuredClone:structuredClone,localStorage:{getItem:()=>''},setTimeout:()=>0,clearTimeout:()=>{}};
+vm.runInNewContext(fs.readFileSync(path.join(root,'renoweet-rich-text.js'),'utf8'),sandbox);
+const text=sandbox.window.RenoweetText;
+assert.match(text.render('## Work\n\n**Bold** and *italic*\n- one\n- two\n\n3. three'),/<h4>Work<\/h4>.*<strong>Bold<\/strong>.*<em>italic<\/em>.*<ul>.*<li>two<\/li>.*<ol start="3">/);
+assert.equal(text.render('<img src=x onerror=alert(1)>'),'<p>&lt;img src=x onerror=alert(1)&gt;</p>');
+assert.equal(text.render('Old plain scope\nLine two'),'<p>Old plain scope<br>Line two</p>');
+assert.equal(text.applyFormat('Remove wall',7,11,'bold').value,'Remove **wall**');
+assert.equal(text.applyFormat('First\nSecond',0,12,'number').value,'1. First\n2. Second');
+vm.runInNewContext(fs.readFileSync(path.join(root,'renoweet-os-project-bridge-v1.js'),'utf8'),sandbox);
+const bridge=sandbox.window.RenoweetOSProjectBridge;
+const existing={id:'P1',stage:'Completed',title:'Finished job',estimate:[{id:'E1',rate:200}],payments:[{id:'PAY',amount:100}],scopePhotos:[{id:'PHOTO',dataUrl:'data:image/png;base64,AAAA',caption:'Keep caption'}],invoice:{number:'INV-1',status:'Sent'}};
+const merged=bridge.applyNotebookToOsProject(existing,{id:'NOTE',status:'lead',title:'Survey',clientName:'Client',scopes:[],notes:{}});
+assert.equal(merged.stage,'Completed','Survey autosave must not reopen a completed OS job.');
+assert.deepEqual(merged.estimate,existing.estimate);assert.deepEqual(merged.payments,existing.payments);assert.deepEqual(merged.scopePhotos,existing.scopePhotos);assert.deepEqual(merged.invoice,existing.invoice);
+let authorizations=0,reads=0,token=false;
+const database={os:{projects:[{id:'LEAD',stage:'Lead',title:'Fresh lead'},{id:'CLOSED',stage:'Completed'},{id:'BOOKED',stage:'Lead',invoice:{bookkeepingQueuedAt:'now'}}],bookkeeping:[]}};
+sandbox.window.RenoweetDrive={hasAccessToken:()=>token,authorize:async()=>{authorizations++;token=true;},currentYear:()=>2026,loadExistingYear:async year=>{assert.equal(year,2026);reads++;return {data:structuredClone(database)};}};
+(async()=>{
+  const result=await bridge.fetchOpenProjects();assert.equal(result.projects.length,1);assert.equal(result.projects[0].id,'LEAD');assert.equal(result.allProjects.length,3);assert.equal(authorizations,1);assert.equal(reads,1);
+  result.projects[0].title='Tampered local result';assert.equal((await bridge.listOpenProjects())[0].title,'Fresh lead');
+  database.os.projects[0].stage='Quoted';assert.equal((await bridge.fetchOpenProjects()).projects.length,0,'A fresh fetch must remove leads that left the Lead stage.');assert.equal(authorizations,1);
+  database.os.projects[0].stage='Lead';await bridge.fetchOpenProjects();sandbox.window.RenoweetDrive.loadExistingYear=async()=>{throw new Error('offline');};await assert.rejects(()=>bridge.fetchOpenProjects(),/offline/);assert.equal((await bridge.listOpenProjects())[0].id,'LEAD','A failed fetch must retain the last verified list.');
+  sandbox.window.RenoweetDrive.loadExistingYear=async()=>null;await assert.rejects(()=>bridge.fetchOpenProjects(),/No current-year OS database/);
+  console.log('Safe Markdown, OS lifecycle/financial preservation and fresh Drive lead/status fetching passed.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

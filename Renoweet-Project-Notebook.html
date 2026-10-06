@@ -50,8 +50,9 @@
         <section class="os-project-panel no-print" aria-labelledby="osProjectsTitle">
           <div class="os-project-panel-head">
             <div><p class="kicker">RENOWEET OS</p><h2 id="osProjectsTitle" data-i18n="osProjects">Open OS-projecten</h2><p class="muted" data-i18n="osProjectsCopy">Lead-projecten die nog niet naar Bookkeeping zijn gestuurd. Open ze hier als projectnotitieboek; de OS Project ID voorkomt dubbele projecten.</p></div>
-            <button class="btn btn-outline" id="refreshOsProjectsBtn" type="button" data-i18n="refreshOs">Vernieuwen</button>
+            <div><button class="btn btn-primary" id="fetchOsProjectsBtn" type="button" data-i18n="fetchOs">Ophalen uit Drive</button> <button class="btn btn-outline" id="refreshOsProjectsBtn" type="button" data-i18n="refreshOs">Vernieuwen</button></div>
           </div>
+          <p class="small muted" data-i18n="fetchHint"></p><p id="osFetchStatus" class="small" role="status"></p>
           <div id="osProjectList" class="os-project-list" aria-live="polite"></div>
         </section>
 
@@ -225,7 +226,11 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <input id="jsonImportInput" type="file" accept="application/json,.json" hidden>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="renoweet-drive-core-v3.0.js"></script>
   <script src="renoweet-os-project-bridge-v1.js"></script>
+  <link rel="stylesheet" href="styles-rich-text.css">
+  <script src="renoweet-rich-text.js"></script>
   <script src="renoweet-project-notebook.js"></script>
 </body>
 </html>

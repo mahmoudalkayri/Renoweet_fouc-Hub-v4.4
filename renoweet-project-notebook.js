@@ -49,6 +49,8 @@
       allScopeDone:'All scope items are agreed or not applicable.', blankPrintTitle:'Blank site survey form', category:'Category', reportLanguage:'Report language'
     }
   };
+  Object.assign(I18N.nl,{fetchOs:'Ophalen uit Drive',fetchingOs:'Ophalen…',fetchedOs:'Actuele OS-statussen opgehaald',fetchFailed:'Ophalen mislukt. De bestaande lijst blijft behouden. ',fetchHint:'Ophalen leest de actuele OS-leads uit de huidige Drive-jaardatabase. Sla wijzigingen in OS eerst op. Notitieboeken en foto’s op dit apparaat blijven behouden.'});
+  Object.assign(I18N.en,{fetchOs:'Fetch from Drive',fetchingOs:'Fetching…',fetchedOs:'Current OS statuses fetched',fetchFailed:'Fetch failed. Your existing list has been kept. ',fetchHint:'Fetch reads current OS leads from the current-year Drive database. Save OS changes first. Notebooks and photos on this device are kept.'});
 
   const CHECK_DEFS = [
     ['structure','Constructieve status wanden','Structural status of walls','Vaststellen of te wijzigen wanden niet-dragend zijn.','Confirm whether altered walls are non-loadbearing.'],
@@ -164,6 +166,23 @@
     try{state.osProjects=await (window.RenoweetOSProjectBridge?.listOpenProjects?.()||Promise.resolve([]));renderOsProjects();}
     catch(error){console.warn(error);state.osProjects=[];renderOsProjects();if(!silent)toast(t('osSyncPending'));}
   }
+  async function fetchOsProjects(){
+    const button=$('#fetchOsProjectsBtn');if(button.disabled)return;
+    button.disabled=true;button.textContent=t('fetchingOs');
+    try{
+      const result=await window.RenoweetOSProjectBridge.fetchOpenProjects();
+      state.osProjects=result.projects;
+      // Refresh linked project identity/status, keeping local survey notes/photos.
+      for(const p of state.projects){
+        const os=result.allProjects.find(item=>item.id===p.osProjectId);if(!os)continue;
+        const seed=window.RenoweetOSProjectBridge.notebookSeedFromOs(os);
+        for(const key of ['title','clientName','clientEmail','clientPhone','address','status'])p[key]=seed[key];
+        p.osFetchedAt=result.fetchedAt;await state.store.saveProject(p);
+      }
+      renderProjects();renderOsProjects();$('#osFetchStatus').textContent=`${t('fetchedOs')} · ${result.year} · ${new Date(result.fetchedAt).toLocaleString(state.lang==='nl'?'nl-NL':'en-GB')}`;toast(t('fetchedOs'));
+    }catch(error){console.warn(error);$('#osFetchStatus').textContent=t('fetchFailed')+(error.message||'');toast(t('fetchFailed'));}
+    finally{button.disabled=false;button.textContent=t('fetchOs');}
+  }
   function renderProjects(){
     const query=$('#projectSearch').value.trim().toLowerCase(), filter=$('#statusFilter').value;
     const projects=state.projects.filter(p=>(!filter||p.status===filter)&&(!query||[p.title,p.clientName,p.address].join(' ').toLowerCase().includes(query)));
@@ -254,6 +273,38 @@
     let restored=false; const restore=()=>{if(restored)return;restored=true;snapshot.forEach(x=>{if(x.el.type==='checkbox')x.el.checked=x.checked;else x.el.value=x.value;});restoreSignature('clientSignature',sig.client);restoreSignature('contractorSignature',sig.contractor);document.body.classList.remove('paper-print');state.suppress=false;window.removeEventListener('afterprint',restore);};
     window.addEventListener('afterprint',restore);setTimeout(()=>window.print(),60);setTimeout(restore,15000);
   }
+  function buildPrintForm(){
+    if(document.body.classList.contains('nb-preview-open')&&$('#notebookPrintForm'))return;
+    $('#notebookPrintForm')?.remove();
+    if(!state.current)return;
+    const original=$('#report'),copy=original.cloneNode(true);copy.id='notebookPrintForm';
+    const fields=[...original.querySelectorAll('input,textarea,select')],clones=[...copy.querySelectorAll('input,textarea,select')];
+    fields.forEach((field,index)=>{
+      const clone=clones[index],value=document.createElement('div');value.className='nb-print-value';
+      if(field.type==='checkbox'){value.className='nb-print-check';value.textContent=field.checked?'☑':'☐';}
+      else if(field.type==='file'){clone.remove();return;}
+      else {let text=field.tagName==='SELECT'?field.selectedOptions[0]?.textContent||'':field.value;if(field.type==='date'&&text)text=formatDate(text);value.textContent=text||'\u00a0';if(!text.trim())value.classList.add('nb-print-empty');if(field.classList.contains('title-input'))value.classList.add('nb-print-title');if(field.classList.contains('scope-title'))value.classList.add('nb-print-scope-title');}
+      if(field.tagName==='TEXTAREA'&&field.value.trim()&&window.RenoweetText){value.classList.add('renoweet-markdown');value.innerHTML=window.RenoweetText.render(field.value);}
+      clone.replaceWith(value);
+    });
+    const canvases=[...original.querySelectorAll('canvas')];
+    [...copy.querySelectorAll('canvas')].forEach((canvas,index)=>{const image=document.createElement('img');image.className='nb-print-signature';image.src=canvases[index].toDataURL('image/png');image.alt='Signature';canvas.replaceWith(image);});
+    copy.querySelectorAll('.no-print,.section-nav,.upload-row,.photo-actions,.row-delete,.report-footer').forEach(node=>node.remove());
+    if(!document.body.classList.contains('paper-print'))copy.querySelectorAll('.paper-photo-notes').forEach(node=>node.remove());
+    copy.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
+    for(const grid of copy.querySelectorAll('.photo-grid')){
+      const photos=[...grid.querySelectorAll('.photo-card')];grid.replaceChildren();
+      if(!photos.length){grid.remove();continue;}
+      for(let at=0;at<photos.length;at+=2){const row=document.createElement('div');row.className='nb-print-photo-row';row.append(...photos.slice(at,at+2));grid.appendChild(row);}
+    }
+    document.body.appendChild(copy);
+  }
+  window.addEventListener('beforeprint',buildPrintForm);
+  window.addEventListener('afterprint',()=>{if(!document.body.classList.contains('nb-preview-open'))$('#notebookPrintForm')?.remove();});
+  function showPrintPreview(){
+    buildPrintForm();document.body.classList.add('nb-preview-open');
+    const toolbar=document.createElement('div');toolbar.id='notebookPrintPreview';toolbar.className='no-print';toolbar.innerHTML=`<strong>${esc(t('inspectionReport'))}</strong><button type="button" class="btn btn-primary" id="printNotebookPreview">${state.lang==='nl'?'Afdrukken / opslaan als PDF':'Print / save as PDF'}</button><button type="button" class="btn btn-outline" id="closeNotebookPreview">${state.lang==='nl'?'Sluiten':'Close'}</button>`;document.body.appendChild(toolbar);window.scrollTo(0,0);
+  }
 
   async function linkProjectToOs(p){
     try{const result=await window.RenoweetOSProjectBridge.createFromNotebook(p);p.osProjectId=result.osProjectId;p.osLinkStatus='linked';p.osLinkedAt=new Date().toISOString();return true;}
@@ -273,7 +324,8 @@
     if(seed.id)p.id=seed.id;
     const collision=state.projects.find(item=>item.id===p.id||item.osProjectId===osProject.id);if(collision){if(!collision.osProjectId)collision.osProjectId=osProject.id;await state.store.saveProject(collision);openProject(collision.id);return collision;}
     await state.store.saveProject(p);state.projects.unshift(p);
-    try{await window.RenoweetOSProjectBridge.syncFromNotebook(p);p.osLinkStatus='linked';p.osLinkedAt=new Date().toISOString();await state.store.saveProject(p);}catch(error){console.warn(error);p.osLinkStatus='pending';}
+    // Opening an OS lead must not rewrite its commercial scope or status.
+    p.osLinkStatus='linked';p.osLinkedAt=new Date().toISOString();await state.store.saveProject(p);
     renderProjects();renderOsProjects();toast(t('osProjectImported'));openProject(p.id);return p;
   }
   async function createProjectFromDialog(){
@@ -299,6 +351,9 @@
     if(e.target.closest('#importJsonAction')){$('#jsonImportInput').click();return;}
     if(e.target.closest('#openOsBtn')){window.open('./Renoweet-OS-Drive-v2.2.html','focus_os');return;}
     if(e.target.closest('#refreshOsProjectsBtn')){await refreshOsProjects();return;}
+    if(e.target.closest('#fetchOsProjectsBtn')){await fetchOsProjects();return;}
+    if(e.target.closest('#printNotebookPreview')){window.print();return;}
+    if(e.target.closest('#closeNotebookPreview')){document.body.classList.remove('nb-preview-open');$('#notebookPrintForm')?.remove();$('#notebookPrintPreview')?.remove();return;}
     const osCard=e.target.closest('.os-project-card');if(osCard&&e.target.closest('.open-os-notebook')){await workOnOsProject(osCard.dataset.osProjectId);return;}
     if(e.target.closest('#accountBtn')){accountDialog();return;}
     const closer=e.target.closest('[data-close-dialog]');if(closer){$('#'+closer.dataset.closeDialog).close();return;}
@@ -312,7 +367,7 @@
     const row=e.target.closest('[data-measure-index]');if(row&&e.target.closest('.remove-measure')){state.current.measurements.splice(Number(row.dataset.measureIndex),1);renderMeasurements();scheduleSave();return;}
     const photoCard=e.target.closest('.photo-card');if(photoCard&&e.target.closest('.delete-photo')){if(!confirm(t('photoDeleteConfirm')))return;const p=state.photos.find(x=>x.id===photoCard.dataset.photoId);await state.store.deletePhoto(p);state.photos=state.photos.filter(x=>x.id!==p.id);renderPhotos();toast(t('photoDeleted'));return;}
     const clear=e.target.closest('[data-clear-signature]');if(clear){restoreSignature(clear.dataset.clearSignature,'');scheduleSave();return;}
-    if(e.target.closest('#printReportBtn')){await saveCurrent();window.print();return;}
+    if(e.target.closest('#printReportBtn')){await saveCurrent();for(const comment of $$('[data-photo-comment]')){clearTimeout(comment._timer);await updatePhoto(comment.closest('.photo-card'));}showPrintPreview();return;}
     if(e.target.closest('#printBlankBtn')){prepareBlankPrint();return;}
   });
 

@@ -201,7 +201,8 @@
     const timestamp = now();
     project.id = project.id || notebookProject.osProjectId || osProjectId();
     project.updated = timestamp;
-    project.stage = projectStage(notebookProject.status);
+    // OS controls the commercial lifecycle; a survey autosave cannot reopen it.
+    project.stage = existingProject.stage || projectStage(notebookProject.status);
     project.customer = {...(project.customer || {}), name: notebookProject.clientName || '', phone: notebookProject.clientPhone || '', email: notebookProject.clientEmail || '', address: notebookProject.address || ''};
     project.title = notebookProject.title || project.title || 'Werkopname';
     const description = notebookProject.customerComments || notebookProject.intakeSummary || '';
@@ -343,10 +344,23 @@
     return localTime >= driveTime ? local : drive;
   }
 
-  async function listOpenProjects() {
-    const state = await readOsState();
+  let fetchedState = null;
+  function openProjects(state) {
     if (!state) return [];
     return (state.db.projects || []).filter(project => isEligibleOpenProject(project, state.db)).map(clone).sort((a, b) => String(b.updated || b.created || '').localeCompare(String(a.updated || a.created || '')));
+  }
+  async function listOpenProjects() {
+    return openProjects(fetchedState || await readOsState());
+  }
+  async function fetchOpenProjects() {
+    const core = window.RenoweetDrive;
+    if (!core) throw new Error('Drive tools are unavailable. Reload the Notebook.');
+    if (!core.hasAccessToken()) await core.authorize(true);
+    const remote = await core.loadExistingYear(core.currentYear());
+    if (!remote?.data?.os || !Array.isArray(remote.data.os.projects)) throw new Error('No current-year OS database was found on Drive. Open OS and connect it to the correct Drive account first.');
+    // Read only: never create or replace an OS project or discard pending edits.
+    fetchedState = {source:'drive-verified-cache',savedAt:new Date().toISOString(),dirty:false,databaseName:`Renoweet-${core.currentYear()}.json`,db:clone(remote.data.os)};
+    return {projects:openProjects(fetchedState),allProjects:clone(fetchedState.db.projects),fetchedAt:fetchedState.savedAt,year:core.currentYear()};
   }
 
   async function mergeIntoOsCache(project, baseState = null) {
@@ -405,7 +419,9 @@
     if (!notebookProject || typeof notebookProject !== 'object') throw new Error('A notebook project is required.');
     if (!notebookProject.osProjectId) notebookProject.osProjectId = osProjectId();
     const state = await readOsState();
-    const existing = state?.db?.projects?.find(item => item.id === notebookProject.osProjectId) || null;
+    let existing = state?.db?.projects?.find(item => item.id === notebookProject.osProjectId) || null;
+    const live = fetchedState?.db.projects.find(item => item.id === notebookProject.osProjectId);
+    if (live && (!existing || String(live.updated||'') >= String(existing.updated||''))) existing = live;
     const project = applyNotebookToOsProject(existing, notebookProject);
     if (stageIfNew && !existing) await stageProject(project);
     const local = await mergeIntoOsCache(project, state);
@@ -452,6 +468,7 @@
     hasBookkeepingTransfer,
     isEligibleOpenProject,
     listOpenProjects,
+    fetchOpenProjects,
     readOsState,
     createOsProjectId: osProjectId,
     pendingProjects,
@@ -466,7 +483,10 @@
       upsert: async project => {
         if (!Array.isArray(db.projects)) db.projects = [];
         const index = db.projects.findIndex(item => item.id === project.id);
-        if (index >= 0) db.projects[index] = clone(project);
+        if (index >= 0) {
+          const snapshot = project.siteSurvey?.snapshot;
+          db.projects[index] = snapshot ? applyNotebookToOsProject(db.projects[index],{...snapshot,id:project.siteSurvey.notebookProjectId,osProjectId:project.id}) : clone(project);
+        }
         else db.projects.unshift(clone(project));
         if (typeof localCacheDirty !== 'undefined') localCacheDirty = true;
         if (typeof restoredLocalCache !== 'undefined') restoredLocalCache = true;

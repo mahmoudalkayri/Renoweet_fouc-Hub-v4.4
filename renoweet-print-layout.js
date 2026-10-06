@@ -135,11 +135,70 @@
       }
       if(box&&!box.children.length)box.remove();
     }
+    // Split rich text by DOM ranges, preserving bold/italic and every character.
+    function addRichBlock(block,heading){
+      const copy=block.cloneNode(true),wrap=document.createElement('div');
+      if(heading)wrap.appendChild(heading.cloneNode(true));wrap.appendChild(copy);page.appendChild(wrap);
+      if(fits())return;
+      wrap.remove();if(page.children.length)page=newPage();page.appendChild(wrap);
+      if(fits())return;
+      wrap.remove();
+      const walker=document.createTreeWalker(block,NodeFilter.SHOW_TEXT),leaves=[];let leaf,total=0;
+      while((leaf=walker.nextNode())){leaves.push({node:leaf,start:total,end:total+leaf.length});total+=leaf.length;}
+      if(!total){append(block);return;}
+      function point(offset){const item=leaves.find(item=>offset<item.end)||leaves[leaves.length-1];return [item.node,Math.min(item.node.length,offset-item.start)];}
+      const text=block.textContent;let at=0,first=true;
+      while(at<total){
+        const container=document.createElement('div');
+        if(heading)container.appendChild(first?heading.cloneNode(true):continuation(heading));
+        const piece=block.cloneNode(false);container.appendChild(piece);page.appendChild(container);
+        function fill(end){const range=document.createRange(),a=point(at),b=point(end);range.setStart(...a);range.setEnd(...b);piece.replaceChildren(range.cloneContents());}
+        let low=at,high=total;
+        while(low<high){const mid=Math.ceil((low+high)/2);fill(mid);if(fits())low=mid;else high=mid-1;}
+        if(low===at)throw new Error('A formatted print paragraph cannot fit on A4.');
+        let end=low;
+        if(end<total){const space=text.lastIndexOf(' ',end-1);if(space>at)end=space+1;}
+        fill(end);at=end;first=false;if(at<total)page=newPage();
+      }
+    }
+    function addMarkdown(node,heading){
+      const children=[...node.children];
+      if(!children.length){if(heading)append(heading);return;}
+      for(let at=0;at<children.length;at++){
+        const child=children[at];let h=at===0?heading:null;
+        if(/^H[1-6]$/.test(child.tagName)&&children[at+1]){
+          if(h)append(h);h=child;at++;const holder=node.cloneNode(false);holder.appendChild(children[at].cloneNode(true));addRichBlock(holder,h);continue;
+        }
+        const holder=node.cloneNode(false);holder.appendChild(child.cloneNode(true));addRichBlock(holder,h);
+      }
+    }
+    function addPhotos(node,heading){
+      if(page.children.length)page=newPage();
+      if(heading)append(heading);
+      const figures=[...node.children];
+      for(let at=0;at<figures.length;at+=2){
+        const row=node.cloneNode(false);row.style.gridTemplateColumns='1fr 1fr';row.style.marginBottom='6mm';row.append(...figures.slice(at,at+2).map(item=>item.cloneNode(true)));page.appendChild(row);
+        if(fits())continue;
+        row.remove();if(page.children.length)page=newPage();page.appendChild(row);
+        if(fits())continue;
+        row.remove();
+        // Exceptional long captions use their own flowing description pages.
+        for(const figure of figures.slice(at,at+2)){
+          const single=node.cloneNode(false);single.style.gridTemplateColumns='1fr';const photo=figure.cloneNode(true),caption=photo.querySelector('figcaption');caption?.remove();single.appendChild(photo);append(single);
+          if(caption){const body=document.createElement('div');body.className='renoweet-markdown';body.style.whiteSpace='pre-wrap';body.appendChild(caption.cloneNode(true));addRichBlock(body);}
+          if(page.children.length)page=newPage();
+        }
+      }
+    }
     try{
       for(const content of contents){
         const nodes=[...content.children];
         for(let i=0;i<nodes.length;i++){
           const node=nodes[i];
+          if(/^H[1-6]$/.test(node.tagName)&&nodes[i+1]?.matches('.ros-scope-photos')){addPhotos(nodes[++i],node);continue;}
+          if(node.matches('.ros-scope-photos')){addPhotos(node);continue;}
+          if(/^H[1-6]$/.test(node.tagName)&&nodes[i+1]?.matches('.renoweet-markdown')){addMarkdown(nodes[++i],node);continue;}
+          if(node.matches('.renoweet-markdown')){addMarkdown(node);continue;}
           if(node.matches('table.ros-quote-table,table.ros-doc-table')){addTable(node);continue;}
           if(node.matches('.ros-invoice-terms')&&node.children.length){addTerms(node);continue;}
           if(node.tagName==='H2'&&nodes[i+1]?.tagName==='H3'){
