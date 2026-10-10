@@ -2,8 +2,8 @@
 companyName=Renoweet
 kvk=97746312
 btw=NL005285311B07
-bankAccount=NL45INGB0111929547
-accountName=Mahmoud Idris
+bankAccount=NL69 INGB 0121 8767 56
+accountName=Renoweet
 address=Hiridostraat 2c65, 1101 CW Amsterdam
 email=renoweet@hotmail.com
 phone=06 43865003
