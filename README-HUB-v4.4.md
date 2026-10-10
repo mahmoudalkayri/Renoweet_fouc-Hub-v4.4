@@ -1,5 +1,13 @@
 # Renoweet Focus Hub v4.4.4
 
+## Quarter archive export fix — 10 October 2026
+
+Closing a quarter creates an XLSX archive before locking its financial records. Scope photo data, saved invoice documents, or long notes could exceed Excel's 32,767-character cell limit and stop that archive. The shared exporter now stores oversized fields as numbered chunks in a **Long Text** sheet and leaves a readable reference in the original cell. The **Canonical JSON** sheet continues to preserve every complete original record, including photos, exact financial amounts, and filing status. Unicode characters remain intact across chunk boundaries.
+
+This fixes quarter-close archives, XLSX downloads, year-end archives, and complete backups. It does not alter the live database or recalculate VAT. If the old error appeared, the archive failed before the quarter lock; the saved filing status and previously verified bookkeeping save remain separate from closing the quarter. After installing this update, reconnect to the same Drive database and retry **Close quarter**. Do not file the government return again for this Hub archive error.
+
+The historical parking review is filtered by the selected year. Viewing 2027 hides the 2026 invoice list; selecting 2026 again restores that review. The correction window remains 1 January through 6 October 2026.
+
 ## Nextgenhome doorlopende-post exceptions — 6 October 2026
 
 The owner confirmed that parking on invoices **2026-0101001** (1 January 2026) and **2026-0402003** (4 February 2026) is a genuine doorlopende post. Only untaxed parking on these exact invoice numbers is excluded from the historical 21% parking calculation. Other invoices, including other Nextgenhome invoices, retain their existing treatment.

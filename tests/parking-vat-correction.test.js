@@ -97,6 +97,12 @@ const exceptionsBook=book([exemptOne,exemptTwo,otherNextgen]);const audit=A.park
 ui.data=exceptionsBook;ui.activePeriod=()=>({...q1,label:'Q1 2026'});ui.renderVatAccounting();assert(host.innerHTML.includes('Nextgenhome parking exceptions'));assert(host.innerHTML.includes('2026-0101001'));assert(host.innerHTML.includes('2026-0402003'));assert(host.innerHTML.includes('no parking BTW correction'));assert(host.innerHTML.includes('Doorlopende posten • niet in 1a / 1b / 1e'));
 const justException=A.vatReport(book([exemptTwo]),q1),markup=ui.vatRateSummaryHtml(justException);assert(markup.includes('<b>100.00</b>'),'Turnover total in VAT table excludes the doorlopende post');assert(markup.includes('<b>21.00</b>'));assert(markup.includes('30.00'),'The excluded disbursement remains visible separately');
 assert.equal(JSON.stringify([exemptOne,exemptTwo,otherNextgen]),exceptionSnapshot,'Exception reports never edit the records');
+// The historical list belongs to the selected year and remains available when returning to 2026.
+const nextYear={year:2027,quarter:1,start:'2027-01-01',end:'2027-03-31'};
+const nextYearAudit=A.parkingCorrectionReview(exceptionsBook,nextYear);
+assert.equal(nextYearAudit.rows.length,0);assert.equal(nextYearAudit.excluded.length,0);assert.equal(nextYearAudit.vatAdjustment,0);
+ui.activePeriod=()=>({...nextYear,label:'Q1 2027'});ui.renderVatAccounting();assert(!host.innerHTML.includes('Historical parking correction'));
+ui.activePeriod=()=>({...q1,label:'Q1 2026'});ui.renderVatAccounting();assert(host.innerHTML.includes('Historical parking correction'));assert(host.innerHTML.includes('2026-0101001'));
 console.log('Nextgenhome exceptions: exact invoice scope, original amounts, mixed work VAT, imports, already-taxed records, proportional credits, cash basis and VAT review passed.');
 assert.equal(P.policy.end,'2026-10-06');
 console.log('Parking correction: fixed totals, original records, XLSX recharges, 21/9/0, partial/final deductions, credits, periods, expenses, cash basis, VAT UI, original preview and BOD passed.');
