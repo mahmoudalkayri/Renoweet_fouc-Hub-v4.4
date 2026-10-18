@@ -115,7 +115,7 @@ function prepare(shouldIssue=true){if(!editable())return false;const p=getP();if
 for(const name of ['markInvoiceSent','printInvoiceClean','sendInvoiceByEmail','sendInvoiceByWhatsApp']){
  const original=window[name];window[name]=function(...args){
   if(!prepare(name!=='printInvoiceClean'))return false;
-  const p=getP();if(name!=='printInvoiceClean'&&p.invoice.documentSnapshot){p.invoice.sharedAt=new Date().toISOString();const d=(p.invoiceDocuments||[]).find(x=>x.number===p.invoice.number);if(d)d.invoice=JSON.parse(JSON.stringify(p.invoice));scheduleSave()}
+  const p=getP();if(name==='markInvoiceSent'&&p.invoice.documentSnapshot){p.invoice.sharedAt=new Date().toISOString();const d=(p.invoiceDocuments||[]).find(x=>x.number===p.invoice.number);if(d)d.invoice=JSON.parse(JSON.stringify(p.invoice));scheduleSave()}
   return original.apply(this,args);
  }
 }

@@ -355,7 +355,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 </div></div>
 <div class="send-choice" id="sendChoiceModal">
   <div class="send-choice-box">
-    <h3>Send invoice</h3>
+    <h3>Send document</h3>
     <div class="small" id="sendChoiceInfo"></div>
     <div class="send-choice-actions" id="sendChoiceActions"></div>
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeSendChoice()">Cancel</button>
@@ -364,8 +364,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.48"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.48"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.49"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.49"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -1296,12 +1296,12 @@ function tabHTML(p,t){
 }
 function totalsHTML(p){let t=projectTotals(p);return `<div class="totalbox"><div class="totalrow"><span>Werkzaamheden</span><b>${money(t.workSubtotal)}</b></div>${t.travel?`<div class="totalrow"><span>Reiskosten</span><b>${money(t.travel)}</b></div>`:''}<div class="totalrow"><span>Subtotaal excl. btw</span><b>${money(t.taxableSubtotal)}</b></div>${vatBreakdownRows(t)}${t.parking?`<div class="totalrow"><span>Voorgeschoten parkeerkosten*</span><b>${money(t.parking)}</b></div>`:''}<div class="totalrow"><span>Totaal</span><b>${money(t.total)}</b></div></div>`}
 function quoteHTML(p){
- if(!p.quote.advancePct)p.quote.advancePct=50;if(p.quote.installments==null)p.quote.installments=0;if((p.quote.paymentTerms||'').includes('14 dagen na factuurdatum'))p.quote.paymentTerms=buildPaymentTermsText(p.quote.advancePct,p.quote.installments);
+ if(p.quote.advancePct==null||p.quote.advancePct==='')p.quote.advancePct=50;if(p.quote.installments==null)p.quote.installments=0;if((p.quote.paymentTerms||'').includes('14 dagen na factuurdatum'))p.quote.paymentTerms=buildPaymentTermsText(p.quote.advancePct,p.quote.installments);
  if(!p.quote.number)p.quote.number=nextQuote();
  if(!p.quote.date)p.quote.date=today();
  let t=projectTotals(p), valid=new Date(p.quote.date+'T12:00:00');valid.setDate(valid.getDate()+(+p.quote.validDays||14));let validDate=valid.toISOString().slice(0,10);
  const rows=(p.estimate||[]).map(x=>{const cfg=OSVAT.lineConfig(x,p,'quote');return `<tr><td class="qd">${RenoweetText.inline(x.desc)}</td><td class="qq">${x.qty} ${esc(x.unit)}</td><td class="qr">${money(x.rate)}</td><td class="qv">${vatTreatmentLabel(cfg.treatment,cfg.rate)}</td><td class="qa">${money(x.qty*x.rate)}</td></tr>`}).join('');
- return `<div class="card no-print" style="margin-bottom:12px"><div class="formgrid"><div class="field"><label>Offertenummer</label><input id="q_number" value="${esc(p.quote.number)}"></div><div class="field"><label>Offertedatum</label><input id="q_date" type="date" value="${p.quote.date}"></div><div class="field"><label>Geldig (dagen)</label><input id="q_valid" type="number" min="1" value="${+p.quote.validDays||14}"></div><div class="field"><label>Standaard-BTW voor nieuwe regels / reiskosten</label><select id="q_vat_treatment" onchange="applyQuoteVatTreatment()">${vatTreatmentOptions(t.defaultTreatment,t.defaultRate)}</select></div><div class="field"><label>Parkeren voorgeschoten voor klant (€)</label><input id="q_parking" type="number" min="0" step="0.01" value="${+p.quote.parking||0}"></div><div class="field"><label>Reiskosten (€)</label><input id="q_travel" type="number" min="0" step="0.01" value="${+p.quote.travel||0}"></div><div class="field full"><label>Uitgangspunten</label>${RenoweetText.editor('q_assumptions',p.quote.assumptions||'')}</div><div class="field full"><label>Uitsluitingen</label>${RenoweetText.editor('q_exclusions',p.quote.exclusions||'')}</div><div class="field"><label>Aanbetaling na akkoord (%)</label><input id="q_advance_pct" type="number" min="0" max="100" step="1" value="${+p.quote.advancePct||50}" onchange="refreshPaymentTermsTemplate()"></div><div class="field"><label>Tussenbetalingen vóór eindbetaling</label><input id="q_installments" type="number" min="0" max="10" step="1" value="${+p.quote.installments||0}" onchange="refreshPaymentTermsTemplate()"></div><div class="field full"><label>Betalingsvoorwaarden</label>${RenoweetText.editor('q_payment_terms',p.quote.paymentTerms||'')}<div class="small">Aanbetaling is verschuldigd zodra de offerte is goedgekeurd. Pas de tekst hieronder aan wanneer bedragen/mijlpalen projectspecifiek zijn.</div></div></div><div class="small" style="margin-top:8px">Kies de BTW per werkregel in het tabblad Estimate. De standaard hierboven geldt voor nieuwe/oudere regels zonder eigen keuze en voor reiskosten. Parkeerkosten worden apart zonder BTW opgenomen.</div></div>
+ return `<div class="card no-print" style="margin-bottom:12px"><div class="formgrid"><div class="field"><label>Offertenummer</label><input id="q_number" value="${esc(p.quote.number)}"></div><div class="field"><label>Offertedatum</label><input id="q_date" type="date" value="${p.quote.date}"></div><div class="field"><label>Geldig (dagen)</label><input id="q_valid" type="number" min="1" value="${+p.quote.validDays||14}"></div><div class="field"><label>Standaard-BTW voor nieuwe regels / reiskosten</label><select id="q_vat_treatment" onchange="applyQuoteVatTreatment()">${vatTreatmentOptions(t.defaultTreatment,t.defaultRate)}</select></div><div class="field"><label>Parkeren voorgeschoten voor klant (€)</label><input id="q_parking" type="number" min="0" step="0.01" value="${+p.quote.parking||0}"></div><div class="field"><label>Reiskosten (€)</label><input id="q_travel" type="number" min="0" step="0.01" value="${+p.quote.travel||0}"></div><div class="field full"><label>Uitgangspunten</label>${RenoweetText.editor('q_assumptions',p.quote.assumptions||'')}</div><div class="field full"><label>Uitsluitingen</label>${RenoweetText.editor('q_exclusions',p.quote.exclusions||'')}</div><div class="field"><label>Aanbetaling na akkoord (%)</label><input id="q_advance_pct" type="number" min="0" max="100" step="1" value="${Number(p.quote.advancePct)||0}" onchange="refreshPaymentTermsTemplate()"></div><div class="field"><label>Tussenbetalingen vóór eindbetaling</label><input id="q_installments" type="number" min="0" max="10" step="1" value="${+p.quote.installments||0}" onchange="refreshPaymentTermsTemplate()"></div><div class="field full"><label>Betalingsvoorwaarden</label>${RenoweetText.editor('q_payment_terms',p.quote.paymentTerms||'')}<div class="small">Aanbetaling is verschuldigd zodra de offerte is goedgekeurd. Pas de tekst hieronder aan wanneer bedragen/mijlpalen projectspecifiek zijn.</div></div></div><div class="small" style="margin-top:8px">Kies de BTW per werkregel in het tabblad Estimate. De standaard hierboven geldt voor nieuwe/oudere regels zonder eigen keuze en voor reiskosten. Parkeerkosten worden apart zonder BTW opgenomen.</div></div>
  <div class="ros-quote-preview">
   <section class="ros-quote-page" data-quote-page="1">
    <div class="ros-quote-content"><div style="display:flex;justify-content:space-between;gap:18mm;align-items:flex-start"><div class="ros-doc-brand"><div class="ros-doc-brandline"><img src="${document.querySelector('.pin-logo')?.src||''}" alt="Renoweet"><h2>${window.RenoweetCompany.html('companyName')}</h2></div><p>Renovatie • Timmerwerk • Technische oplossingen<br>${window.RenoweetCompany.html('address')}<br>KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')}<br>${window.RenoweetCompany.html('phone')} • ${window.RenoweetCompany.html('email')}<br><b>${window.RenoweetCompany.html('website')}</b></p></div><div style="text-align:right;min-width:60mm"><h1 style="margin:0 0 3mm;font-size:23pt">OFFERTE</h1><div style="font-size:10pt;line-height:1.5"><b>Offertenr.</b> ${esc(p.quote.number)}<br><b>Datum</b> ${fmtDate(p.quote.date)}<br><b>Geldig t/m</b> ${fmtDate(validDate)}</div></div></div>
@@ -1351,23 +1351,75 @@ async function printQuotationClean(){
  try{const p=getP();if(!p)return;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;renderTabs();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const file=await makeRenoweetQuotePdfFile();downloadInvoiceFile(file);toast('Quotation PDF downloaded. Open the PDF to print.');}catch(e){console.error(e);alert('Could not create the quotation PDF: '+(e?.message||e));}
 }
 
-function quoteShareMessage(p){return `Beste ${p?.customer?.name||'klant'},
+function quoteShareMessage(p){
+ const total=projectTotals(p,'quote').total,company=window.RenoweetCompany;
+ return `Beste ${p?.customer?.name||'klant'},
 
 Hierbij ontvangt u onze offerte ${p?.quote?.number||''} voor ${p?.title||'uw project'}. De offerte bevat de prijsaanbieding, scope, uitgangspunten, uitsluitingen en betalingsvoorwaarden.
 
-Bij akkoord kunt u dit per WhatsApp of e-mail bevestigen. Daarna plannen we de uitvoering in overleg.
+Totaal offerte: ${money(total)} (incl. eventuele btw).
 
-${window.RenoweetCompany.get('website')}
+Bij akkoord kunt u dit per WhatsApp of e-mail bevestigen. Daarna plannen we de uitvoering in overleg.
+Betaling volgens de betalingsvoorwaarden in de offerte.
+
+IBAN: ${company.get('bankAccount')}
+Rekeninghouder: ${company.get('accountName')}
+Betalingskenmerk: ${p?.quote?.number||''}
+
+${company.get('website')}
 
 Met vriendelijke groet,
-${window.RenoweetCompany.html('accountName')}
+${company.get('accountName')}
 Renoweet
-${window.RenoweetCompany.html('phone')}`;}
-async function nativeShareQuote(file,p){if(!navigator.share)return false;if(navigator.canShare&&!navigator.canShare({files:[file]}))return false;try{await navigator.share({title:`Offerte ${p.quote.number} - Renoweet`,text:quoteShareMessage(p),files:[file]});return true}catch(e){if(e&&e.name==='AbortError')return true;throw e}}
-function markQuoteSentAfterShare(p){p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();renderTabs();}
+${company.get('phone')}`;
+}
+async function nativeShareQuote(file,p){if(!navigator.share)return false;if(navigator.canShare&&!navigator.canShare({files:[file]}))return false;try{await navigator.share({title:`Offerte ${p.quote.number} - Renoweet`,text:quoteShareMessage(p),files:[file]});return true}catch(e){if(e?.name==='AbortError')return null;if(e?.name==='NotAllowedError')return false;throw e}}
+function markQuoteSentAfterShare(p){p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();if(getP()===p)renderTabs();}
+function reserveDocumentSendWindow(label){
+ let tab=null;try{tab=window.open('about:blank','_blank');if(tab){tab.opener=null;tab.document.title=`${label} voorbereiden`;tab.document.body.textContent=`De PDF wordt klaargemaakt. ${label} opent zodra het document gereed is.`;}}catch(e){}
+ return tab;
+}
+function closeDocumentSendWindow(tab){try{if(tab&&!tab.closed)tab.close()}catch(e){}}
+function openPreparedDocument(url,tab,label,file,onOpen){
+ if(tab&&!tab.closed){try{tab.location.replace(url);onOpen?.();toast(`PDF gedownload. Voeg ${file.name} toe in ${label}.`);return true}catch(e){closeDocumentSendWindow(tab)}}
+ const modal=document.getElementById('sendChoiceModal'),info=document.getElementById('sendChoiceInfo'),actions=document.getElementById('sendChoiceActions');
+ if(!modal||!info||!actions)throw new Error(`De PDF is gedownload. Sta pop-ups toe en probeer ${label} opnieuw te openen.`);
+ info.textContent=`De PDF is gedownload als ${file.name}. Open ${label} en voeg deze PDF toe. Het standaardbericht staat al klaar.`;
+ actions.innerHTML=`<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(label)}</a><button class="btn" onclick="closeSendChoice()">Sluiten</button>`;
+ let opened=false;actions.querySelector('a').onclick=()=>{if(!opened){opened=true;onOpen?.()}closeSendChoice()};modal.classList.add('open');return false;
+}
+function prepareQuoteForSharing(){
+ const p=getP();if(!p)return null;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return null;
+ if(!p.quote.number)p.quote.number=nextQuote();if(!p.quote.date)p.quote.date=today();renderTabs();return p;
+}
+function documentShareSignature(p,kind){return JSON.stringify({customer:p.customer,title:p.title,scope:p.scope,scopePhotos:p.scopePhotos,estimate:p.estimate,quote:p.quote,invoice:kind==='invoice'?p.invoice:null})}
+async function documentFileForSharing(p,kind){
+ const signature=documentShareSignature(p,kind);await window.RenoweetCompany.ready;
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+ if(getP()!==p||signature!==documentShareSignature(p,kind))throw new Error('Het document is gewijzigd. Controleer het document en probeer opnieuw.');
+ const file=await (kind==='quote'?makeRenoweetQuotePdfFile():makeRenoweetInvoicePdfFile());
+ if(getP()!==p||signature!==documentShareSignature(p,kind))throw new Error('Het document is gewijzigd tijdens het maken van de PDF. Controleer het document en probeer opnieuw.');
+ return file;
+}
+function whatsappDocumentUrl(phone,message){return isMobileDevice()?`https://wa.me/${phone}?text=${encodeURIComponent(message)}`:`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`}
+let documentSendBusy=false;
 function smartSendQuote(){const p=getP();if(!p)return;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;if(!p.quote.number)p.quote.number=nextQuote();if(!p.quote.date)p.quote.date=today();const email=(p.customer.email||'').trim(),phone=(p.customer.phone||'').trim();if(email&&phone){const m=document.getElementById('sendChoiceModal'),info=document.getElementById('sendChoiceInfo'),actions=document.getElementById('sendChoiceActions');info.innerHTML=`Client has both:<br><b>${esc(email)}</b><br><b>${esc(phone)}</b>`;actions.innerHTML=`<button class="btn primary" onclick="closeSendChoice();sendQuoteByEmail()">Email PDF</button><button class="btn primary" onclick="closeSendChoice();sendQuoteByWhatsApp()">WhatsApp PDF</button>`;m.classList.add('open');return}if(email){sendQuoteByEmail();return}if(phone){sendQuoteByWhatsApp();return}alert('This client has no email address or phone number saved. Add one in the Intake tab first.');}
-async function sendQuoteByEmail(){try{const p=getP();saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;const email=(p.customer.email||'').trim();if(!email)return alert('No client email address is saved.');const file=await makeRenoweetQuotePdfFile();if(isMobileDevice()){const shared=await nativeShareQuote(file,p);if(shared){markQuoteSentAfterShare(p);toast('Choose Gmail to send the quotation PDF');return}}downloadInvoiceFile(file);const subject=`Offerte ${p.quote.number} - Renoweet`,body=quoteShareMessage(p);window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,'_blank');markQuoteSentAfterShare(p);setTimeout(()=>alert(`The quotation PDF has been downloaded as "${file.name}". Gmail has opened for ${email}. Attach the downloaded PDF and send it.`),350)}catch(e){if(e?.name==='AbortError')return;console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e))}}
-async function sendQuoteByWhatsApp(){try{const p=getP();saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;const phone=normalizeWhatsAppNumber(p.customer.phone||'');if(!phone)return alert('No client WhatsApp/phone number is saved.');const file=await makeRenoweetQuotePdfFile();if(isMobileDevice()){const shared=await nativeShareQuote(file,p);if(shared){markQuoteSentAfterShare(p);toast('Choose WhatsApp and the client chat');return}}downloadInvoiceFile(file);window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(quoteShareMessage(p))}`,'_blank');markQuoteSentAfterShare(p);setTimeout(()=>alert(`The quotation PDF has been downloaded as "${file.name}". WhatsApp Web has opened the client chat. Attach the downloaded PDF and send it.`),350)}catch(e){if(e?.name==='AbortError')return;console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e))}}
+async function sendQuoteByEmail(){
+ if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
+ try{const p=prepareQuoteForSharing();if(!p)return false;const email=(p.customer.email||'').trim();if(!email){alert('No client email address is saved.');return false}
+ if(!isMobileDevice())tab=reserveDocumentSendWindow('Gmail');const file=await documentFileForSharing(p,'quote');
+ if(isMobileDevice()){const shared=await nativeShareQuote(file,p);if(shared===null)return false;if(shared){markQuoteSentAfterShare(p);return true}}
+ downloadInvoiceFile(file);const subject=`Offerte ${p.quote.number} - Renoweet`,body=quoteShareMessage(p),url=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+ return openPreparedDocument(url,tab,'Gmail',file,()=>markQuoteSentAfterShare(p));
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
+}
+async function sendQuoteByWhatsApp(){
+ if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
+ try{const p=prepareQuoteForSharing();if(!p)return false;const phone=normalizeWhatsAppNumber(p.customer.phone||'');if(!phone){alert('No client WhatsApp/phone number is saved.');return false}
+ tab=reserveDocumentSendWindow('WhatsApp');const file=await documentFileForSharing(p,'quote');downloadInvoiceFile(file);
+ return openPreparedDocument(whatsappDocumentUrl(phone,quoteShareMessage(p)),tab,'WhatsApp',file,()=>markQuoteSentAfterShare(p));
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
+}
 
 function invoiceHTML(p){
  if(!p.invoice)p.invoice={};
@@ -1398,7 +1450,7 @@ function invoiceHTML(p){
       ${t.parking?`<div class="ros-doc-summary-row"><span class="label">Parkeerkosten</span><strong>${money(t.parking)}</strong></div>`:''}
       <div class="ros-doc-summary-row grand"><span class="label">Totaal</span><strong>${money(grand)}</strong></div>
     </div>
-    ${reverseChargeNote(t,p).replace('ros-quote-note','ros-invoice-terms')}<div class="ros-invoice-terms"><p><b>Betaling</b></p><p>Betaling binnen <b>${+p.invoice.dueDays||3} dagen</b> na factuurdatum op <b>${window.RenoweetCompany.html('bankAccount')}</b> onder vermelding van factuurnummer ${esc(p.invoice.number||'DRAFT')}.</p><p><b>Rekeninghouder: ${window.RenoweetCompany.html('accountName')}</b></p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p><p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>${window.RenoweetCompany.html('website')}</b>.</p></div>
+    ${reverseChargeNote(t,p).replace('ros-quote-note','ros-invoice-terms')}<div class="ros-invoice-terms"><p><b>Betaling</b></p>${invoiceIsPaid(p)?'<p><strong>Deze factuur is volledig betaald.</strong></p>':`<p>Betaling binnen <b>${+p.invoice.dueDays||3} dagen</b> na factuurdatum op <b>${window.RenoweetCompany.html('bankAccount')}</b> onder vermelding van factuurnummer ${esc(p.invoice.number||'DRAFT')}.</p><p><b>Rekeninghouder: ${window.RenoweetCompany.html('accountName')}</b></p><p>Bij niet-tijdige betaling is Renoweet gerechtigd wettelijke rente en incassokosten in rekening te brengen.</p>`}<p>Op alle werkzaamheden en leveringen van Renoweet zijn de Algemene Voorwaarden van Renoweet van toepassing. Zie ook <b>${window.RenoweetCompany.html('website')}</b>.</p></div>
    </div>
    <div class="ros-invoice-footer"><span>Renoweet • Slim en Duurzaam. Voor elke klus.</span><span>Factuur ${esc(p.invoice.number||'DRAFT')}</span></div>
   </section>
@@ -1415,20 +1467,41 @@ async function makeRenoweetInvoicePdfFile(){
  return renoweetDocumentPdf('.ros-invoice-preview','.ros-invoice-page',`Factuur-${(p.invoice?.number||'factuur').trim()}.pdf`);
 }
 
-function invoiceShareMessage(p){
- const nr=p?.invoice?.number||"";
+function invoiceIsPaid(p){
+ const invoice=p?.invoice||{},number=String(invoice.number||''),book=window.__renoweetCanonical?.bookkeeping;
+ const row=number&&(book?.invoices||[]).find(r=>String(r['Invoice #']||r['Invoice number']||'')===number);
+ if(row){
+  const status=String(row['Lifecycle status']||row.Status||'').toLowerCase();if(['cancelled','credited','draft'].includes(status))return false;
+  const id=String(row['Record ID']||row._rid||row.id||number),matches=r=>String(r.invoiceId||r['Invoice ID']||'')===id||String(r['Invoice #']||'')===number;
+  const payments=(book.payments||[]).filter(matches),credits=(book.creditNotes||[]).filter(matches);
+  if(payments.length){const paid=payments.reduce((sum,r)=>sum+(Number(r.amount??r.Amount)||0),0),credit=credits.reduce((sum,r)=>sum+(Number(r.gross??r.Gross)||0),0),gross=Number(row['Gross incl. VAT']??row['Total incl VAT']??row['Total incl. VAT']??projectTotals(p,'invoice').total);return paid>0&&paid+credit>=gross-.009}
+  return status==='paid';
+ }
+ const status=String(invoice.status||'').toLowerCase();if(['cancelled','credited'].includes(status))return false;
+ return invoice.paid===true||status==='paid';
+}
+function markInvoiceSharedAfterShare(p){
+ if(!invoiceIsPaid(p))p.invoice.status='Sent';
+ if(p.invoice.documentSnapshot){p.invoice.sharedAt=new Date().toISOString();const d=(p.invoiceDocuments||[]).find(d=>d.number===p.invoice.number);if(d)d.invoice=JSON.parse(JSON.stringify(p.invoice))}
+ scheduleSave();if(getP()===p)renderTabs();
+}
+function invoiceShareMessage(p,whatsapp=false){
+ const nr=p?.invoice?.number||'',company=window.RenoweetCompany,paid=invoiceIsPaid(p),notice='Deze factuur is volledig betaald. U hoeft niets meer te betalen.';
+ const payment=paid?(whatsapp?'*'+notice+'*':notice):`IBAN: ${company.get('bankAccount')}\nRekeninghouder: ${company.get('accountName')}\nBetalingskenmerk: ${nr}`;
  return `Geachte heer/mevrouw,
 
-Hierbij ontvangt u factuur ${nr} als bijlage. Mocht u vragen hebben, dan hoor ik het graag.
+Hierbij ontvangt u factuur ${nr} als bijlage.
+Totaal factuur: ${money(projectTotals(p,'invoice').total)}.
 
---
+${payment}
+
+Mocht u vragen hebben, dan hoor ik het graag.
 
 Met vriendelijke groet,
-
-${window.RenoweetCompany.html('accountName')}
+${company.get('accountName')}
 Renoweet
-${window.RenoweetCompany.html('phone')}
-${window.RenoweetCompany.get('website')}`;
+${company.get('phone')}
+${company.get('website')}`;
 }
 
 function normalizeWhatsAppNumber(raw){
@@ -1499,94 +1572,31 @@ async function nativeShareInvoice(file,p){
    });
    return true;
  }catch(e){
-   if(e && e.name==="AbortError")return true;
+   if(e && e.name==="AbortError")return null;
+   if(e && e.name==="NotAllowedError")return false;
    throw e;
  }
 }
 
 async function sendInvoiceByEmail(){
- try{
-   const p=getP();
-   if(!p)return;
-
-   saveProjectFromForm(false);
-   if(!validateReverseChargeInvoice(p))return;
-   if(!p.invoice.number)p.invoice.number=nextInvoice();
-   if(!p.invoice.date)p.invoice.date=today();
-
-   const email=(p.customer.email||"").trim();
-   if(!email){alert("No client email address is saved.");return}
-
-   const file=await makeRenoweetInvoicePdfFile();
-
-   // Phones: use the native share sheet, which can pass the PDF itself to Gmail.
-   if(isMobileDevice()){
-     const shared=await nativeShareInvoice(file,p);
-     if(shared){
-       toast("Choose Gmail to send the PDF");
-       return;
-     }
-   }
-
-   // Laptop/desktop fallback: download PDF and open Gmail compose pre-addressed.
-   downloadInvoiceFile(file);
-
-   const subject=`Factuur ${p.invoice.number} - Renoweet`;
-   const body=invoiceShareMessage(p);
-   const gmail=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-   window.open(gmail,"_blank");
-
-   setTimeout(()=>{
-     alert(`The invoice PDF has been downloaded as "${file.name}". Gmail has opened for ${email}. Attach the downloaded PDF to the email and send it.`);
-   },350);
-
- }catch(e){
-   if(e && e.name==="AbortError")return;
-   console.error(e);
-   alert("Could not create/send the invoice PDF: "+(e?.message||e));
- }
+ if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
+ try{const p=getP();if(!p)return false;saveProjectFromForm(false);if(!validateReverseChargeInvoice(p))return false;
+ if(!p.invoice.number)p.invoice.number=nextInvoice(p.invoice.date);if(!p.invoice.date)p.invoice.date=today();
+ const email=(p.customer.email||'').trim();if(!email){alert('No client email address is saved.');return false}renderTabs();
+ if(!isMobileDevice())tab=reserveDocumentSendWindow('Gmail');const file=await documentFileForSharing(p,'invoice');
+ if(isMobileDevice()){const shared=await nativeShareInvoice(file,p);if(shared===null)return false;if(shared){markInvoiceSharedAfterShare(p);return true}}
+ downloadInvoiceFile(file);const subject=`Factuur ${p.invoice.number} - Renoweet`,url=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(invoiceShareMessage(p))}`;
+ return openPreparedDocument(url,tab,'Gmail',file,()=>markInvoiceSharedAfterShare(p));
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the invoice PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
 }
-
 async function sendInvoiceByWhatsApp(){
- try{
-   const p=getP();
-   if(!p)return;
-
-   saveProjectFromForm(false);
-   if(!validateReverseChargeInvoice(p))return;
-   if(!p.invoice.number)p.invoice.number=nextInvoice();
-   if(!p.invoice.date)p.invoice.date=today();
-
-   const phone=normalizeWhatsAppNumber(p.customer.phone||"");
-   if(!phone){alert("No client WhatsApp/phone number is saved.");return}
-
-   const file=await makeRenoweetInvoicePdfFile();
-
-   // Phones: native share sheet can pass the actual PDF to WhatsApp.
-   if(isMobileDevice()){
-     const shared=await nativeShareInvoice(file,p);
-     if(shared){
-       toast("Choose WhatsApp and the client chat");
-       return;
-     }
-   }
-
-   // Laptop/desktop fallback: download PDF and open the exact WhatsApp chat.
-   downloadInvoiceFile(file);
-
-   const text=encodeURIComponent(invoiceShareMessage(p));
-   const wa=`https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
-   window.open(wa,"_blank");
-
-   setTimeout(()=>{
-     alert(`The invoice PDF has been downloaded as "${file.name}". WhatsApp Web has opened the client chat. Attach the downloaded PDF and send it.`);
-   },350);
-
- }catch(e){
-   if(e && e.name==="AbortError")return;
-   console.error(e);
-   alert("Could not create/send the invoice PDF: "+(e?.message||e));
- }
+ if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
+ try{const p=getP();if(!p)return false;saveProjectFromForm(false);if(!validateReverseChargeInvoice(p))return false;
+ if(!p.invoice.number)p.invoice.number=nextInvoice(p.invoice.date);if(!p.invoice.date)p.invoice.date=today();
+ const phone=normalizeWhatsAppNumber(p.customer.phone||'');if(!phone){alert('No client WhatsApp/phone number is saved.');return false}renderTabs();
+ tab=reserveDocumentSendWindow('WhatsApp');const file=await documentFileForSharing(p,'invoice');downloadInvoiceFile(file);
+ return openPreparedDocument(whatsappDocumentUrl(phone,invoiceShareMessage(p,true)),tab,'WhatsApp',file,()=>markInvoiceSharedAfterShare(p));
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the invoice PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
 }
 
 
@@ -2047,6 +2057,6 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
 <script src="./renoweet-os-project-bridge-v1.js"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.48"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.49"></script>
 </body>
 </html>

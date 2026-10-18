@@ -1,5 +1,17 @@
 # Renoweet Focus Hub v4.4.4
 
+## Quotation sharing and paid invoice display — 18 October 2026
+
+Quotation and invoice WhatsApp actions reserve their destination window during the button click, before preparing the PDF. This avoids losing the browser's permission to open a tab during asynchronous PDF generation. Desktop opens WhatsApp Web; mobile opens the client's WhatsApp chat through its standard link. Both include the prepared message. Downloaded PDFs must be attached manually in the chat. If pop-ups are blocked, an explicit **Open WhatsApp** link appears after the PDF download.
+
+The quotation message includes its number, the complete quote total (including calculated VAT), and the configured IBAN and account holder as plain, copyable text. The quote total is independent of any partial invoice or remaining balance. The PDF preview is refreshed before generation, and a document edited during generation is stopped rather than shared with mismatching details. Email composition uses the same updated quotation message.
+
+Paid invoice previews in OS and Bookkeeping now show **Deze factuur is volledig betaald.** in the Betaling section instead of bank and payment instructions. Paid invoice WhatsApp messages also show the paid notice. Matching Bookkeeping payment records take precedence over a stale OS status, and a paid partial invoice does not mark another instalment or the final invoice paid. Document totals and stored payment records remain unchanged.
+
+Related fixes: cancelling a native share does not mark a quotation sent or an invoice shared; repeated clicks during PDF creation are ignored; failed PDFs close their empty destination tab; zero-percent quotation advances remain zero when reopening or sharing the quotation. The browser cache version is 4.4.4.49.
+
+Validation: 22 automated suites pass, including new tests for desktop/mobile message links, exact quotation totals, plain bank details, popup blocking, PDF errors and edits, cancelled shares, paid/unpaid previews and separate instalments. Existing invoice, payment, VAT, Drive saving, recovery and archive tests are retained. Actual WhatsApp app delivery is not automated by the Hub and must be confirmed in WhatsApp by the user.
+
 ## Quarter archive export fix — 10 October 2026
 
 Closing a quarter creates an XLSX archive before locking its financial records. Scope photo data, saved invoice documents, or long notes could exceed Excel's 32,767-character cell limit and stop that archive. The shared exporter now stores oversized fields as numbered chunks in a **Long Text** sheet and leaves a readable reference in the original cell. The **Canonical JSON** sheet continues to preserve every complete original record, including photos, exact financial amounts, and filing status. Unicode characters remain intact across chunk boundaries.

@@ -32,6 +32,7 @@ assert.match(html,/<strong>Protect<\/strong>/);assert.match(html,/<em>clean<\/em
 assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
 assert.equal((html.match(/class="ros-scope-photos"/g)||[]).length,2);assert.equal((html.match(/<figcaption>/g)||[]).length,5);assert.ok(!html.includes('<script>bad</script>'));assert.ok(html.includes('&lt;script&gt;bad&lt;/script&gt;'));
 assert.equal(JSON.stringify(project),raw,'Preparing a quotation must not mutate project or financial data.');
+project.quote.advancePct=0;const noAdvance=ctx.quoteHTML(project);assert.equal(project.quote.advancePct,0,'Viewing or sending a quote must preserve an agreed zero advance.');assert.match(noAdvance,/<input[^>]*id="q_advance_pct"[^>]*value="0"/);
 ctx.openProject('reopen','scope');assert.ok(dom.nodes.get('projectTabContent').innerHTML.includes('rwScopePhotoUpload'));assert.equal(dom.nodes.get('f_scope').value,project.scope);
 const mergeStats={added:0,deleted:0,conflicts:0,conflictPaths:[]};
 const base=JSON.parse(raw),local=JSON.parse(raw),remote=JSON.parse(raw);local.scopePhotos.push({id:'NEW-LOCAL',caption:'Local'});remote.scopePhotos.push({id:'NEW-REMOTE',caption:'Remote'});
