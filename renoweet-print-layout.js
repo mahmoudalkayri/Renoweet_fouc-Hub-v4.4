@@ -224,7 +224,7 @@
       if(!pages[pages.length-1].children.length){pages.pop();stage.lastElementChild.remove();}
       await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve;})));
       if(document.fonts?.ready)await document.fonts.ready;
-      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      await new Promise(resolve=>{const timer=setTimeout(resolve,120);requestAnimationFrame(()=>requestAnimationFrame(()=>{clearTimeout(timer);resolve()}))});
       const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
       for(let i=0;i<pages.length;i++){
         page=pages[i];

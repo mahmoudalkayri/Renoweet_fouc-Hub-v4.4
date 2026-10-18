@@ -17,7 +17,34 @@ function app({mobile=false,blocked=false}={}){
  return {ctx,p,events,alerts,activity,downloads,popup,anchor,nodes,finish:()=>resolvePdf({name:'document.pdf'}),fail:()=>rejectPdf(new Error('PDF failed'))};
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
+function connectAutosave(test){
+ const ctx=test.ctx,clone=value=>value==null?value:JSON.parse(JSON.stringify(value));let revision=0;
+ Object.assign(ctx,{db:{projects:[test.p],bookkeeping:[],deleted:[]},currentProjectId:test.p.id,formDirty:false,
+  RenoweetDrive:{currentYear:()=>2026,clone,hasAccessToken:()=>false,saveSection:async(_section,payload)=>{
+   const os=clone(payload),project=os.projects[0];project.customer={id:'verified-customer',...Object.fromEntries(Object.entries(project.customer).reverse())};project.estimate.forEach(line=>{line._rid='verified-'+line.id});project.updated='2026-10-18T19:40:00Z';
+   return {data:{os,meta:{sections:{osRevision:++revision}}},sectionRevision:revision};}},
+  setTimeout:()=>0,clearTimeout:()=>{},addEventListener:()=>{},cacheBrowserState:async()=>true,resetProjectShadows:()=>{},render:()=>{},dbState:()=>{},
+  connectWorkbook:()=>{},saveWorkbook:()=>{},persist:()=>{},backupHTML:()=>{},lastSyncedDb:null});
+ ctx.document.addEventListener=()=>{};ctx.getP=()=>ctx.db.projects.find(project=>project.id===ctx.currentProjectId);
+ vm.runInContext(fs.readFileSync(require.resolve('../renoweet-os-drive-adapter-v3.6.js'),'utf8'),ctx);
+ const api=ctx.renoweetDriveOS;api.state.connected=true;api.state.baseline=clone(ctx.db);return api;
+}
 (async()=>{
+ // A normal Drive save clones the same project and adds IDs; this is not a quote edit.
+ const refreshing=app();let ready;refreshing.ctx.RenoweetCompany.ready=new Promise(resolve=>{ready=resolve});
+ const refreshingSend=refreshing.ctx.sendQuoteByWhatsApp(),fresh=JSON.parse(JSON.stringify(refreshing.p));
+ fresh.customer={id:'drive-customer',...fresh.customer};fresh._rid='drive-record';fresh.estimate[0]._rid='drive-line';fresh.updated='2026-10-18T19:35:00Z';
+ refreshing.ctx.getP=()=>fresh;ready();await tick();assert(refreshing.events.includes('pdf'),'A checksum-verified Drive refresh must not be mistaken for an edited quotation.');
+ refreshing.finish();assert.equal(await refreshingSend,true);assert.equal(fresh.quote.status,'Sent');assert.equal(refreshing.p.quote.status,'Draft','Sharing must update the current project, not a detached pre-save copy.');
+ // Use the actual Drive adapter to complete a background save while each PDF is being made.
+ for(const kind of ['quote','invoice']){
+  const concurrent=app(),drive=connectAutosave(concurrent),send=kind==='quote'?concurrent.ctx.sendQuoteByWhatsApp():concurrent.ctx.sendInvoiceByWhatsApp();
+  await tick();assert(concurrent.events.includes('pdf'));assert.equal(await drive.save(false),true);
+  const current=concurrent.ctx.getP();assert.notEqual(current,concurrent.p,'The integration must exercise the real adapter replacing the project object.');
+  concurrent.finish();assert.equal(await send,true,`${kind} sharing must survive a verified background Drive save.`);
+  assert.equal((kind==='quote'?current.quote:current.invoice).status,'Sent');assert.equal((kind==='quote'?concurrent.p.quote:concurrent.p.invoice).status,'Draft');
+  assert.equal(concurrent.alerts.length,0);assert.equal(concurrent.downloads.length,1);assert(new URL(concurrent.popup.url).searchParams.get('text').includes(kind==='quote'?'4161.10':'500.00'));
+ }
  const desktop=app(),originalMoney=JSON.stringify(desktop.p.estimate),sent=desktop.ctx.sendQuoteByWhatsApp();await tick();
  assert(desktop.events.indexOf('open')<desktop.events.indexOf('pdf'));assert.equal(await desktop.ctx.sendQuoteByWhatsApp(),false); // rapid second click is ignored
  desktop.finish();assert.equal(await sent,true);assert.equal(desktop.events.filter(e=>e==='open').length,1);
@@ -29,6 +56,8 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  const blocked=app({blocked:true}),blockedSend=blocked.ctx.sendQuoteByWhatsApp();await tick();blocked.finish();assert.equal(await blockedSend,false);assert.equal(blocked.p.quote.status,'Draft','A blocked popup must not mark the quotation sent before the user opens its fallback link.');assert(blocked.nodes.get('sendChoiceActions').innerHTML.includes('https://web.whatsapp.com/send?'));blocked.anchor.onclick();assert.equal(blocked.p.quote.status,'Sent');blocked.anchor.onclick();assert.equal(blocked.activity.length,1);
  const failed=app(),failedSend=failed.ctx.sendQuoteByWhatsApp();await tick();failed.fail();assert.equal(await failedSend,false);assert.equal(failed.popup.closed,true);assert.equal(failed.p.quote.status,'Draft');assert.equal(failed.downloads.length,0);
  const edited=app(),editedSend=edited.ctx.sendQuoteByWhatsApp();await tick();edited.p.estimate[0].rate=900;edited.finish();assert.equal(await editedSend,false);assert.equal(edited.p.quote.status,'Draft');assert.equal(edited.downloads.length,0,'Do not share a PDF that no longer matches the current quote.');
+ const remoteEdit=app(),remoteSend=remoteEdit.ctx.sendQuoteByWhatsApp();await tick();const changed=JSON.parse(JSON.stringify(remoteEdit.p));changed.estimate[0].rate=900;remoteEdit.ctx.getP=()=>changed;remoteEdit.finish();assert.equal(await remoteSend,false);assert.equal(remoteEdit.downloads.length,0,'A real price change in a replacement project must still stop sharing.');assert.equal(changed.quote.status,'Draft');
+ const background=app();background.ctx.requestAnimationFrame=()=>{};const backgroundSend=background.ctx.sendQuoteByWhatsApp();await tick();assert(background.events.includes('pdf'),'A background tab must not wait indefinitely for animation frames before creating its PDF.');background.finish();assert.equal(await backgroundSend,true);
  const missing=app();missing.p.customer.phone='---';assert.equal(await missing.ctx.sendQuoteByWhatsApp(),false);assert(!missing.events.includes('open'));assert(!missing.events.includes('pdf'));
  const cancelled=app({mobile:true});cancelled.ctx.navigator.canShare=()=>true;cancelled.ctx.navigator.share=async()=>{const e=new Error('Cancelled');e.name='AbortError';throw e};const emailSend=cancelled.ctx.sendQuoteByEmail();await tick();cancelled.finish();assert.equal(await emailSend,false);assert.equal(cancelled.p.quote.status,'Draft');assert.equal(cancelled.activity.length,0);
  const email=app(),mailSend=email.ctx.sendQuoteByEmail();await tick();email.finish();assert.equal(await mailSend,true);const mail=new URL(email.popup.url);assert.equal(mail.searchParams.get('to'),'client@example.test');assert(mail.searchParams.get('body').includes('4161.10'));
@@ -49,5 +78,5 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  const bkSource=fs.readFileSync(require.resolve('../renoweet-bookkeeping-v4.4.js'),'utf8'),host={innerHTML:''},bk={A,data:{payments:[],creditNotes:[]},html:escape,money:v=>v.toFixed(2),byId:()=>host,invoiceLogoSrc:()=>'',lineTreatment:l=>l.vatTreatment,vatTreatmentLabel:()=>'',openModal:()=>{},window:{RenoweetCompany:os.ctx.RenoweetCompany}};vm.createContext(bk);vm.runInContext(bkSource.slice(bkSource.indexOf('function showInvoicePreviewV44('),bkSource.indexOf('\nfunction injectExpenseFields(')),bk);
  const row={'Record ID':'invoice','Invoice #':'2026-001',Date:'2026-10-18','Gross incl. VAT':121,VAT:21,Status:'Open'},unchanged=JSON.stringify(row);bk.data.payments=[{invoiceId:'invoice',amount:121}];bk.showInvoicePreviewV44(row);assert(host.innerHTML.includes('<strong>Deze factuur is volledig betaald.</strong>'));assert(!host.innerHTML.includes('NL45INGB0111929547'));assert.equal(JSON.stringify(row),unchanged);
  bk.data.payments[0].amount=50;bk.showInvoicePreviewV44(row);assert(host.innerHTML.includes('NL45INGB0111929547'));assert(!host.innerHTML.includes('Deze factuur is volledig betaald.'));
- console.log('Document sharing passed: click-time popup, desktop/mobile prefilled chat, exact quote total and plain bank details, PDF failures/edits, blocked-popup fallback, duplicate clicks, email cancellation, paid previews and separate instalment balances.');
+ console.log('Document sharing passed: actual Drive autosave during quote/invoice sharing, stable project identity, background tabs, click-time popup, desktop/mobile prefilled chat, exact quote total and plain bank details, PDF failures/edits, blocked-popup fallback, duplicate clicks, email cancellation, paid previews and separate instalment balances.');
 })().catch(error=>{console.error(error);process.exitCode=1});

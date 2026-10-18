@@ -1,5 +1,15 @@
 # Renoweet Focus Hub v4.4.4
 
+## WhatsApp sharing during autosave — 18 October 2026, correction
+
+The previous sharing safeguard treated a new in-memory project object as a changed document. A successful Drive autosave normally creates that new object, so an unchanged quotation could stop with **Het document is gewijzigd** before its PDF was created.
+
+Sharing now checks the stable project ID, selected year, and document fields rather than object identity or sync metadata. Verified saves can finish before or during PDF creation. Actual changes to the document still stop sharing. The preview refreshes after company details load, and the prepared/sent status is applied to the current project record, preserving the result after autosave.
+
+PDF creation no longer depends on animation frames arriving in the original tab after Chrome opens the preparation tab. The print renderer has a timed fallback for background tabs. If PDF creation fails, the preparation tab is closed where permitted and receives a clear stopped message if it remains open. Browser cache version: **4.4.4.50**.
+
+Validation: all 22 automated suites pass. New integration cases run the actual OS Drive adapter while quotation and invoice PDFs are pending, covering object replacement, generated record IDs, property ordering, current-record status updates, and real price changes. Additional DOM checks complete PDF pagination with animation frames disabled. The quote totals, bank text, paid notices, archive fix and financial calculations from the working version are retained.
+
 ## Quotation sharing and paid invoice display — 18 October 2026
 
 Quotation and invoice WhatsApp actions reserve their destination window during the button click, before preparing the PDF. This avoids losing the browser's permission to open a tab during asynchronous PDF generation. Desktop opens WhatsApp Web; mobile opens the client's WhatsApp chat through its standard link. Both include the prepared message. Downloaded PDFs must be attached manually in the chat. If pop-ups are blocked, an explicit **Open WhatsApp** link appears after the PDF download.

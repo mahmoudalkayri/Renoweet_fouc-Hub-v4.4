@@ -293,7 +293,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script src="./company-details.js"></script>
 <link rel="stylesheet" href="./styles-rich-text.css">
 <script src="./renoweet-rich-text.js"></script>
-<script src="./renoweet-print-layout.js"></script>
+<script src="./renoweet-print-layout.js?v=4.4.4.50"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -364,8 +364,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.49"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.49"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.50"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.50"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -1373,13 +1373,21 @@ ${company.get('accountName')}
 Renoweet
 ${company.get('phone')}`;
 }
+function liveDocumentProject(p){
+ const current=getP();if(current?.id===p?.id)return current;
+ return typeof db!=='undefined'?(db.projects||[]).find(project=>project.id===p?.id)||null:null;
+}
 async function nativeShareQuote(file,p){if(!navigator.share)return false;if(navigator.canShare&&!navigator.canShare({files:[file]}))return false;try{await navigator.share({title:`Offerte ${p.quote.number} - Renoweet`,text:quoteShareMessage(p),files:[file]});return true}catch(e){if(e?.name==='AbortError')return null;if(e?.name==='NotAllowedError')return false;throw e}}
-function markQuoteSentAfterShare(p){p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();if(getP()===p)renderTabs();}
+function markQuoteSentAfterShare(p){p=liveDocumentProject(p);if(!p)return;p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();if(getP()?.id===p.id)renderTabs();}
 function reserveDocumentSendWindow(label){
  let tab=null;try{tab=window.open('about:blank','_blank');if(tab){tab.opener=null;tab.document.title=`${label} voorbereiden`;tab.document.body.textContent=`De PDF wordt klaargemaakt. ${label} opent zodra het document gereed is.`;}}catch(e){}
  return tab;
 }
-function closeDocumentSendWindow(tab){try{if(tab&&!tab.closed)tab.close()}catch(e){}}
+function closeDocumentSendWindow(tab){
+ if(!tab||tab.closed)return;
+ try{tab.document.title='Document niet verzonden';tab.document.body.textContent='Het maken van de PDF is gestopt. Keer terug naar Renoweet voor de foutmelding. U kunt dit venster sluiten.'}catch(e){}
+ try{tab.close()}catch(e){}
+}
 function openPreparedDocument(url,tab,label,file,onOpen){
  if(tab&&!tab.closed){try{tab.location.replace(url);onOpen?.();toast(`PDF gedownload. Voeg ${file.name} toe in ${label}.`);return true}catch(e){closeDocumentSendWindow(tab)}}
  const modal=document.getElementById('sendChoiceModal'),info=document.getElementById('sendChoiceInfo'),actions=document.getElementById('sendChoiceActions');
@@ -1392,13 +1400,27 @@ function prepareQuoteForSharing(){
  const p=getP();if(!p)return null;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return null;
  if(!p.quote.number)p.quote.number=nextQuote();if(!p.quote.date)p.quote.date=today();renderTabs();return p;
 }
-function documentShareSignature(p,kind){return JSON.stringify({customer:p.customer,title:p.title,scope:p.scope,scopePhotos:p.scopePhotos,estimate:p.estimate,quote:p.quote,invoice:kind==='invoice'?p.invoice:null})}
+function documentShareSignature(p,kind){
+ // Compare the fields printed on the document, not save metadata or object identity.
+ const pick=(object,keys)=>Object.fromEntries(keys.map(key=>[key,object?.[key]??null]));
+ const quoteKeys=['number','date','validDays','vat','vatRate','vatTreatment','travel','parking','advancePct','installments','paymentTerms','assumptions','exclusions'];
+ const view={id:p.id,title:p.title||'',customer:pick(p.customer,['name','address','email','phone','vatId']),
+  quote:pick(p.quote,kind==='quote'?quoteKeys:['vat','vatRate','vatTreatment','travel','parking']),
+  estimate:kind==='invoice'&&p.invoice?.documentSnapshot?null:(p.estimate||[]).map(line=>pick(line,['desc','qty','unit','rate','vatTreatment','vatRate','vatReferenceRate','vatAmount']))};
+ if(kind==='quote'){view.scope=p.scope||'';view.scopePhotos=(p.scopePhotos||[]).map(photo=>pick(photo,['dataUrl','name','caption']))}
+ else {view.invoice=pick(p.invoice,['number','date','dueDays','kind','partialAmount','amountBasis','allocationMode','lineAllocations','partialDescription','finalDescriptions','paid','paymentDate','paymentMethod','documentSnapshot']);view.isPaid=invoiceIsPaid(p);view.instalments=(p.invoiceDocuments||[]).map(item=>({number:item.number,kind:item.kind,cancelled:item.status==='Cancelled',document:item.document}))}
+ return JSON.stringify(view,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,value[key]])):value);
+}
 async function documentFileForSharing(p,kind){
- const signature=documentShareSignature(p,kind);await window.RenoweetCompany.ready;
- await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
- if(getP()!==p||signature!==documentShareSignature(p,kind))throw new Error('Het document is gewijzigd. Controleer het document en probeer opnieuw.');
+ const id=p.id,year=window.renoweetDriveOS?.state?.year,signature=documentShareSignature(p,kind);
+ const unchanged=()=>{const current=getP();return current?.id===id&&window.renoweetDriveOS?.state?.year===year&&signature===documentShareSignature(current,kind)};
+ await window.RenoweetCompany.ready;
+ if(!unchanged())throw new Error('Het document is gewijzigd. Controleer het document en probeer opnieuw.');
+ renderTabs();
+ if(!unchanged())throw new Error('Het document is gewijzigd. Controleer het document en probeer opnieuw.');
+ // DOM layout is measured by the PDF renderer; a background tab may never receive animation frames.
  const file=await (kind==='quote'?makeRenoweetQuotePdfFile():makeRenoweetInvoicePdfFile());
- if(getP()!==p||signature!==documentShareSignature(p,kind))throw new Error('Het document is gewijzigd tijdens het maken van de PDF. Controleer het document en probeer opnieuw.');
+ if(!unchanged())throw new Error('Het document is gewijzigd tijdens het maken van de PDF. Controleer het document en probeer opnieuw.');
  return file;
 }
 function whatsappDocumentUrl(phone,message){return isMobileDevice()?`https://wa.me/${phone}?text=${encodeURIComponent(message)}`:`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`}
@@ -1481,9 +1503,10 @@ function invoiceIsPaid(p){
  return invoice.paid===true||status==='paid';
 }
 function markInvoiceSharedAfterShare(p){
+ p=liveDocumentProject(p);if(!p)return;
  if(!invoiceIsPaid(p))p.invoice.status='Sent';
  if(p.invoice.documentSnapshot){p.invoice.sharedAt=new Date().toISOString();const d=(p.invoiceDocuments||[]).find(d=>d.number===p.invoice.number);if(d)d.invoice=JSON.parse(JSON.stringify(p.invoice))}
- scheduleSave();if(getP()===p)renderTabs();
+ scheduleSave();if(getP()?.id===p.id)renderTabs();
 }
 function invoiceShareMessage(p,whatsapp=false){
  const nr=p?.invoice?.number||'',company=window.RenoweetCompany,paid=invoiceIsPaid(p),notice='Deze factuur is volledig betaald. U hoeft niets meer te betalen.';
@@ -2057,6 +2080,6 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
 <script src="./renoweet-os-project-bridge-v1.js"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.49"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.50"></script>
 </body>
 </html>
