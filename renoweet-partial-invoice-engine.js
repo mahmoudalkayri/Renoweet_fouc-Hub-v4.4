@@ -1,7 +1,7 @@
 /* Partial invoice documents; issued snapshots are independent of later scope changes. */
 (function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('./renoweet-os-vat-engine-v1.js'):root.RenoweetOSVat);if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.RenoweetPartialInvoices=api})(typeof window!=='undefined'?window:globalThis,function(V){
 'use strict';
-const round=V.round2,clone=x=>JSON.parse(JSON.stringify(x)),docs=p=>(p.invoiceDocuments||[]).filter(d=>d.kind==='partial'&&d.status!=='Cancelled');
+const round=V.round2,clone=x=>JSON.parse(JSON.stringify(x)),historicalDocument=d=>d.bookkeepingSnapshot?.document||d.document,docs=p=>(p.invoiceDocuments||[]).filter(d=>d.kind==='partial'&&d.status!=='Cancelled').map(d=>({...d,document:historicalDocument(d)}));
 const cents=x=>Math.round(round(x)*100),money=x=>x/100;
 const groupKey=x=>`${x.treatment||x.vatTreatment}:${x.rate??x.vatReferenceRate??x.vatRate}`;
 function number(base,index){return `${String(base).replace(/\.\d+$/,'')}.${String(index).padStart(2,'0')}`}
@@ -25,21 +25,25 @@ function allocationRows(p){
  for(const d of docs(p))for(const l of d.document.lines){
   const net=round(l.quantity*l.unitNet),vat=round(l.vatAmount??net*l.vatRate/100),key=groupKey(l);
   const row=rows.find(r=>r.key===l.sourceKey&&groupKey(r)===key);
-  if(row){row.billedNet=round(row.billedNet+net);row.billedVat=round(row.billedVat+vat)}
-  else{const old=legacy.get(key)||{net:0,vat:0};old.net=round(old.net+net);old.vat=round(old.vat+vat);legacy.set(key,old)}
+  // A revised line can be smaller than the part already invoiced. Consume only
+  // its remaining capacity; carry the rest over matching current VAT lines.
+  const assignedNet=row?Math.min(net,Math.max(0,round(row.net-row.billedNet))):0,assignedVat=row?Math.min(vat,Math.max(0,round(row.vat-row.billedVat))):0;
+  if(row){row.billedNet=round(row.billedNet+assignedNet);row.billedVat=round(row.billedVat+assignedVat)}
+  const old=legacy.get(key)||{net:0,vat:0,treatment:l.vatTreatment,rate:l.vatReferenceRate??l.vatRate};
+  old.net=round(old.net+net-assignedNet);old.vat=round(old.vat+vat-assignedVat);legacy.set(key,old);
  }
- for(const row of rows){if(row.billedNet>row.net+.001||row.billedVat>row.vat+.001)throw new Error('Earlier partial invoices exceed a revised estimate line. Correct them before allocating another advance.')}
- // Older issued invoices were stored by VAT group. Preserve their exact net and
- // VAT amounts and distribute their consumption over matching estimate lines.
+ const historical=[];
  for(const [key,used] of legacy){
-  const matching=rows.filter(r=>groupKey(r)===key);
+  const matching=rows.filter(r=>groupKey(r)===key),overflow={net:0,vat:0};
   for(const field of ['net','vat']){
-   const billed=field==='net'?'billedNet':'billedVat',weights=matching.map(r=>cents(r[field]-r[billed]));
-   if(cents(used[field])>weights.reduce((s,n)=>s+n,0))throw new Error('Earlier partial invoices exceed the remaining amount at this BTW rate. Correct them before allocating another advance.');
-   const parts=splitCents(cents(used[field]),weights);matching.forEach((r,i)=>r[billed]=round(r[billed]+money(parts[i])));
+   const billed=field==='net'?'billedNet':'billedVat',weights=matching.map(r=>Math.max(0,cents(r[field]-r[billed]))),capacity=weights.reduce((sum,n)=>sum+n,0),taken=Math.min(cents(used[field]),capacity);
+   const parts=splitCents(taken,weights);matching.forEach((r,i)=>r[billed]=round(r[billed]+money(parts[i])));overflow[field]=money(cents(used[field])-taken);
   }
+  // Removed work or a changed VAT mix does not rewrite a posted advance. Show
+  // that historical consumption separately; the final invoice offsets it exactly.
+  if(cents(overflow.net)||cents(overflow.vat))historical.push({key:'history:'+key,description:'Eerder gefactureerd — gewijzigde / vervallen offertregels',treatment:used.treatment,rate:used.rate,chargedRate:used.treatment==='REVERSE_CHARGE_NL'?0:used.rate,net:0,vat:0,gross:0,billedNet:overflow.net,billedVat:overflow.vat,historicalExcess:true});
  }
- return rows.map(r=>({...r,billedGross:round(r.billedNet+r.billedVat),remainingNet:round(r.net-r.billedNet),remainingVat:round(r.vat-r.billedVat),remainingGross:round(r.net+r.vat-r.billedNet-r.billedVat)}));
+ return [...rows,...historical].map(r=>({...r,billedGross:round(r.billedNet+r.billedVat),remainingNet:r.historicalExcess?0:round(r.net-r.billedNet),remainingVat:r.historicalExcess?0:round(r.vat-r.billedVat),remainingGross:r.historicalExcess?0:round(r.net+r.vat-r.billedNet-r.billedVat)}));
 }
 function partialPlan(p){
  const rows=allocationRows(p),invoice=p.invoice||{},amount=round(invoice.partialAmount),basis=invoice.amountBasis==='net'?'net':'gross',mode=invoice.allocationMode||'low-first';
@@ -138,7 +142,7 @@ function bookkeepingCorrection(p,row){
  for(const [field,expected] of [['Gross incl. VAT',corrected.total],['VAT',corrected.vat],['Invoice subtotal',corrected.subtotal]])if(row[field]!=null&&cents(row[field])!==cents(expected))throw new Error('Bookkeeping line items and invoice totals do not match. Save the corrected invoice again.');
  const candidate=clone(p);candidate.invoiceDocuments=candidate.invoiceDocuments.filter(d=>d.number!==p.invoice.number);delete candidate.invoice.documentSnapshot;
  const before=allocationRows(candidate);candidate.invoiceDocuments.push({number:p.invoice.number,kind:'partial',status:'Issued',document:corrected});
- let after;try{after=allocationRows(candidate)}catch(e){throw new Error('Correct the BTW rates per work line in Estimate first, then import the Bookkeeping correction. '+e.message)}
+ let after;try{after=allocationRows(candidate);if(after.some(r=>r.historicalExcess))throw new Error('The corrected advance does not fit the work at its corrected BTW rate.')}catch(e){throw new Error('Correct the BTW rates per work line in Estimate first, then import the Bookkeeping correction. '+e.message)}
  const rows=before.map((r,index)=>({...r,allocatedNet:round(after[index].billedNet-r.billedNet),allocatedVat:round(after[index].billedVat-r.billedVat),allocatedGross:round(after[index].billedGross-r.billedGross)}));rows.forEach(r=>r.allocatedAmount=r.allocatedGross);
  const total=V.calculate(p,'invoice');return {...corrected,kind:'partial',projectTotal:total.total,projectNet:round(total.subtotal+total.parking),projectVat:total.vat,previousGross:round(before.reduce((s,r)=>s+r.billedGross,0)),allocation:{mode:'custom',basis:'gross',rows},invoiceNote:old.invoiceNote||''};
 }
@@ -151,14 +155,53 @@ function importBookkeepingCorrection(p,row,{confirmedCustomerUnsent=false}={}){
  d.queueRow={...(d.queueRow||{}),'Invoice number':p.invoice.number,'Subtotal ex VAT':document.subtotal,VAT:document.vat,'Total incl VAT':document.total,'VAT treatment':document.vatTreatment,'VAT rate':document.mixed?'':document.vatRate,'Line items JSON':JSON.stringify(document.lines),'Project total incl VAT':document.projectTotal};
  return document;
 }
+function bookedPartialDocument(row,fallback){
+ let lines=row['Line items'];if(!Array.isArray(lines)){try{lines=JSON.parse(row['Line items JSON']||'[]')}catch(e){throw new Error('De geboekte factuurregels zijn niet leesbaar.')}}
+ const value=keys=>{for(const key of keys)if(row[key]!=null&&String(row[key]).trim()!==''){const n=Number(row[key]);if(!Number.isFinite(n))throw new Error('De geboekte factuurbedragen zijn ongeldig.');return n}return null};
+ const gross=value(['Gross incl. VAT','Total incl VAT']),vat=value(['VAT']),net=value(['Invoice subtotal','Net revenue','Subtotal ex VAT']);
+ if(!Array.isArray(lines)||!lines.length){
+  if(fallback&&gross!=null&&vat!=null&&cents(fallback.total)===cents(gross)&&cents(fallback.vat)===cents(vat))lines=fallback.lines;
+  else {const rate=value(['VAT rate']),treatment=String(row['VAT treatment']||'').toUpperCase()||(rate===9?'NL_LOW':rate===21?'NL_HIGH':rate===0?'NL_ZERO':'');
+   if(gross==null||vat==null||![0,9,21].includes(rate)||!['NL_HIGH','NL_LOW','NL_ZERO','REVERSE_CHARGE_NL'].includes(treatment))throw new Error('De geboekte deelfactuur mist een betrouwbare BTW-specificatie.');
+   lines=[{id:'booked_advance',description:row['Work description']||'Geboekte deelfactuur',quantity:1,unitNet:round(gross-vat),vatRate:treatment==='REVERSE_CHARGE_NL'?0:rate,vatTreatment:treatment,vatReferenceRate:treatment==='REVERSE_CHARGE_NL'?rate:null,vatAmount:vat}];
+  }
+ }
+ lines=clone(lines).map((line,index)=>{const quantity=Number(line.quantity??1),unitNet=Number(line.unitNet),vatRate=Number(line.vatRate),vatTreatment=String(line.vatTreatment||'').toUpperCase()||(vatRate===9?'NL_LOW':vatRate===21?'NL_HIGH':vatRate===0?'NL_ZERO':'CUSTOM');
+  if(!Number.isFinite(quantity)||quantity<=0||!Number.isFinite(unitNet)||unitNet<0||!Number.isFinite(vatRate)||(line.vatAmount!=null&&!Number.isFinite(Number(line.vatAmount))))throw new Error('Controleer de vastgelegde bedragen en BTW op de eerdere deelfactuur.');
+  return {...line,id:line.id||'booked_'+index,quantity,unitNet,vatRate,vatTreatment,vatReferenceRate:vatTreatment==='REVERSE_CHARGE_NL'?Number(line.vatReferenceRate??21):null,vatAmount:line.vatAmount==null?null:Number(line.vatAmount)};
+ });
+ const document=fromLines(lines);
+ if(document.total<=0||document.vat<0||(gross!=null&&cents(document.total)!==cents(gross))||(vat!=null&&cents(document.vat)!==cents(vat))||(net!=null&&cents(document.subtotal)!==cents(net)))throw new Error('De geboekte factuurregels en opgeslagen totalen komen niet overeen. Controleer alleen die eerdere deelfactuur in Bookkeeping.');
+ return {...clone(fallback||{}),...document,kind:'partial'};
+}
+function documentSignature(document){return JSON.stringify([cents(document.subtotal),cents(document.vat),cents(document.total),document.vatBreakdown.filter(g=>cents(g.net)||cents(g.vat)).map(g=>[g.treatment,g.rate,cents(g.net),cents(g.vat)]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))])}
+function reconcilePostedPartials(p,rows=[]){
+ const updates=[],issues=[];
+ for(const d of (p.invoiceDocuments||[]).filter(d=>d.kind==='partial'&&d.status!=='Cancelled')){
+  const matches=rows.filter(row=>String(row['Invoice #']||row['Invoice number']||'').trim()===String(d.number).trim());if(!matches.length)continue;
+  try{
+   if(matches.length!==1)throw new Error('Dit factuurnummer staat meer dan één keer in Bookkeeping.');
+   const row=matches[0];if(row['Project ID']&&row['Project ID']!==p.id)throw new Error('De geboekte factuur hoort bij een ander project.');
+   if(/cancel|credit/.test(String(row['Lifecycle status']||row.Status||'').toLowerCase()))throw new Error('Deze eerdere deelfactuur is geannuleerd of gecrediteerd; controleer de vastgelegde correctie.');
+   const document=bookedPartialDocument(row,historicalDocument(d));
+   const snapshot={source:'Bookkeeping',invoiceNumber:d.number,recordId:row['Record ID']||row._rid||'',invoiceDate:row['Invoice date']??row.Date??null,vatDate:row['VAT date']??null,paidDate:row['Paid date']??null,document};
+   if(JSON.stringify(d.bookkeepingSnapshot)!==JSON.stringify(snapshot))updates.push({d,snapshot});
+  }catch(error){issues.push({number:d.number,message:error.message})}
+ }
+ if(issues.length)return {updated:[],issues};
+ for(const {d,snapshot} of updates){
+  if(d.bookkeepingSnapshot&&documentSignature(d.bookkeepingSnapshot.document)!==documentSignature(snapshot.document)){d.bookkeepingSnapshotHistory=d.bookkeepingSnapshotHistory||[];d.bookkeepingSnapshotHistory.push(clone(d.bookkeepingSnapshot))}
+  // Retain the original customer document, queue token and all payment records.
+  d.bookkeepingSnapshot=snapshot;
+ }
+ return {updated:updates.map(x=>x.d.number),issues:[]};
+}
 function bookkeepingDifferences(p,rows=[]){
- const signature=lines=>{const d=fromLines(lines);return JSON.stringify(d.vatBreakdown.map(g=>[g.treatment,g.rate,cents(g.net),cents(g.vat)]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))};
- return docs(p).filter(d=>rows.some(r=>{
-  if(String(r['Invoice #']||r['Invoice number']||'')!==d.number)return false;
-  let lines=r['Line items'];if(!Array.isArray(lines)){try{lines=JSON.parse(r['Line items JSON']||'[]')}catch(e){return true}}
-  return Array.isArray(lines)&&lines.length&&signature(lines)!==signature(d.document.lines);
+ return docs(p).filter(d=>rows.some(row=>{
+  if(String(row['Invoice #']||row['Invoice number']||'').trim()!==String(d.number).trim())return false;
+  try{return documentSignature(bookedPartialDocument(row,d.document))!==documentSignature(fromLines(d.document.lines))}catch(e){return true}
  })).map(d=>d.number);
 }
 function queueMetadata(p){const document=projectDocument(p),final=document.kind==='final'||(document.kind!=='partial'&&document.previousGross>0);return {'Invoice kind':p.invoice.kind||'full','Parent invoice number':p.invoice.baseNumber||p.invoice.number,'Project total incl VAT':document.projectTotal,...(final?{'Closing statement JSON':JSON.stringify(closingStatement(p,document))}:{}),'Payment received':p.invoice.paid?'Yes':'No','Payment date':p.invoice.paid?p.invoice.paymentDate||'':'','Paid amount':p.invoice.paid?document.total:0,'Payment method':p.invoice.paymentMethod||'Bank'}}
-return {number,nextNumber,allocationRows,partialPlan,finalWorkRows,closingStatement,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,bookkeepingCorrectionReason,bookkeepingCorrection,importBookkeepingCorrection,bookkeepingDifferences,queueMetadata};
+return {number,nextNumber,allocationRows,partialPlan,finalWorkRows,closingStatement,projectDocument,previewProject,issue,draftReopenReason,reopenDraft,bookkeepingCorrectionReason,bookkeepingCorrection,importBookkeepingCorrection,bookkeepingDifferences,reconcilePostedPartials,historicalDocument,queueMetadata};
 });

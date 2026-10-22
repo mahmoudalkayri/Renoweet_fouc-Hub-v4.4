@@ -1,5 +1,15 @@
 # Renoweet Focus Hub v4.4.4
 
+## Revised quotations after an issued advance — 22 October 2026
+
+An issued partial invoice no longer locks the project to its original quotation. Change the agreed work, quantities, prices or line VAT treatments in Estimate, then choose **Nieuwe deelfactuur** or **Eindfactuur / resterend bedrag**. New documents use the revised project amounts. The final invoice subtracts each earlier partial invoice's exact net, VAT and gross figures and shows the definitive project total.
+
+The Hub keeps the original customer invoice snapshots, Bookkeeping records, payment entries, dates and original queue rows. When a matching posted Bookkeeping invoice is available, OS stores a separate historical snapshot for deductions; those historical figures do not replace the revised quotation. A changed, reduced or removed estimate line no longer forces the earlier Bookkeeping correction into the quote. Read-only historical rows explain any earlier amounts which no longer fit the current lines or VAT mix. Duplicate, inconsistent, cancelled or wrong-project records still require review; further advances remain capped by the revised overall balance. A revised project total below the amount already invoiced still requires a credit note.
+
+The existing **Bookkeeping-correctie overnemen** action remains available for deliberately correcting an original invoice that was never sent to the client. It is not required for an ordinary quote revision.
+
+Validation: 23 automated suites, including end-to-end OS invoice creation, actual Bookkeeping conversion and payment recording across Q3/Q4, unchanged earlier VAT periods, final net/VAT/gross reconciliation, invoice reopening, saving, Drive recovery, document sharing and quarter archives. Browser cache version: **4.4.4.51**.
+
 ## WhatsApp sharing during autosave — 18 October 2026, correction
 
 The previous sharing safeguard treated a new in-memory project object as a changed document. A successful Drive autosave normally creates that new object, so an unchanged quotation could stop with **Het document is gewijzigd** before its PDF was created.
