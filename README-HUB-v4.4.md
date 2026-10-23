@@ -1,10 +1,18 @@
 # Renoweet Focus Hub v4.4.4
 
+## Monthly bank payments — optional attachments, 23 October 2026
+
+Monthly payments no longer require an attachment before confirmation. Review the date, amount, BTW and Paid checkbox, then confirm. You can also edit the resulting monthly expense in the ordinary expense ledger without attaching a file. The attachment rule for other ordinary expenses is unchanged.
+
+The monthly screen and subscription editor now show a real **Attach file (optional)** button and the selected file name, rather than a filename text box. Existing files are preserved, and an attachment can be removed from the form before saving. **Bank statements** at the bottom of Monthly payments accepts the year's statement whenever you are ready. It is saved with that year's bookkeeping and included in the annual printout and JSON/XLSX backups. Adding or removing a statement reference does not create, duplicate or recalculate expenses, BTW or payments; the file itself stays in Drive when removed from the list.
+
+Validation: all 24 automated suites plus actual DOM interaction and real XLSX round-trip checks. New cases cover paid bank expenses with no attachment, retained record IDs on edit, later annual statements, optional file buttons and uploads during autosave. Browser cache version: **4.4.4.53**.
+
 ## Monthly payments — 23 October 2026
 
-Open **Bookkeeping → Monthly payments**, next to Expenses (also linked from the expense toolbar). Add a subscription with its supplier, first month, usual day, amount including BTW, expense category and 21%, 9% or 0% BTW. VAT and income-tax deduction percentages remain separate choices. Attach or link a supplier invoice, policy or contract once on the subscription; replace that proof on an individual month when necessary.
+Open **Bookkeeping → Monthly payments**, next to Expenses (also linked from the expense toolbar). Add a subscription with its supplier, first month, usual day, amount including BTW, expense category and 21%, 9% or 0% BTW. VAT and income-tax deduction percentages remain separate choices. Optionally attach a supplier invoice, policy or contract to the subscription, or add individual files later.
 
-The selected quarter displays its three months. Check the invoice date and gross amount, choose the actual BTW rate, check **Paid** and its payment date when the money has been debited, then choose **Confirm expense**. Confirmation records one ordinary General, Automobile or Fuel expense. An unchecked Paid box records an unpaid supplier invoice: it affects costs/input VAT according to the existing report logic, while cash reports wait for payment. **Save draft** keeps the row out of financial reports. Future schedules never create financial entries automatically. Proof is required before confirming.
+The selected quarter displays its three months. Check the invoice date and gross amount, choose the actual BTW rate, check **Paid** and its payment date when the money has been debited, then choose **Confirm expense**. Confirmation records one ordinary General, Automobile or Fuel expense. An unchecked Paid box records an unpaid supplier invoice: it affects costs/input VAT according to the existing report logic, while cash reports wait for payment. **Save draft** keeps the row out of financial reports. Future schedules never create financial entries automatically. Attachments are optional and can be added later.
 
 **Save changes** updates the same recorded expense, including its original Record ID, instead of adding a second charge. **Link existing expense** connects an expense already entered in that month without changing its financial values or recording it twice. Special VAT or insurance-settlement records should be edited in the normal expense ledger. **Skip month** omits an unneeded occurrence. **Undo recorded expense** removes that ledger entry and keeps its original in the recovery list. Closed quarters and historical read-only years remain protected, including the original invoice/payment dates when moving a payment between quarters.
 
