@@ -1,5 +1,33 @@
 # Renoweet Focus Hub v4.4.4
 
+## Company assets and van finance lease — 23 October 2026 · v4.4.4.56
+
+Open **Bookkeeping → Company assets**. One add/edit form stays above a compact, date-ordered monthly table. Asset purchases, their recoverable BTW, monthly depreciation, loan interest, principal and actual bank payments are separate. The asset register and monthly list use the existing yearly Drive data and are included in JSON/XLSX backups; no separate finance database or re-entry of earlier invoices is introduced.
+
+### Set up the supplied van
+
+1. Select bookkeeping year **2026**, open Company assets, and choose **Load van details**. This fills the form; it does not post an asset or confirm payments automatically.
+2. Review the purchase and first-use dates, business-use percentage, prior depreciation and residual value. The purchase date initially uses the contract date, 15 August 2025; check it against the actual purchase invoice. September 2025 as the first-use month and €720 prior depreciation follow the supplied 2025 calculation.
+3. Gross purchase €15,475.90, invoice BTW €2,685.90, asset cost €12,790, opening 2026 book value €12,070. **BTW already accounted for** prevents another purchase VAT claim. The suggested residual value **€1,990** reproduces the earlier **€180/month over the original five-year period**; it is a mathematical reconstruction, not an independent valuation. Review that estimate before Save.
+4. The lender schedule has **52 regular €273.14 instalments**, beginning 16 September 2025. It leaves **€2,000 principal outstanding**, shown separately as the final balloon balance. Its final-payment date is not supplied in the schedule and stays blank until confirmed from the contract. This balance is separate from the depreciation residual value.
+5. Save the asset, then review January onward in the monthly table. Check Paid or choose Edit, confirm the actual payment date, total and interest, and Save monthly entry. January 2026 is €100.85 interest + €172.29 principal = €273.14. No old lease payments are silently assumed paid.
+6. If affected quarters are closed, the form offers **Reopen affected quarters** through the existing correction workflow. Review and save again after reopening. This keeps closed records protected; adding the old van does not itself create new purchase BTW.
+
+### Monthly records and new assets
+
+The table shows all assets in date order, with year/quarter and text filters. Clicking a checkbox opens that month in the one top editor. Depreciation is included automatically for elapsed months; future months are shown as projections and excluded from actual reports. A changed inclusion needs a reason. A missed lease payment does not switch depreciation off. Saving a payment updates its existing ID; unconfirming retains a recovery copy. Print complete year includes the full monthly schedule and recorded status.
+
+For a new asset, enter its invoice total and BTW (0%, 9% or 21%), recoverable percentage, useful life and estimated residual value. Recoverable BTW is excluded from the asset cost. The ordinary 20%-of-cost annual depreciation ceiling and residual-value floor are enforced; real estate, goodwill and special accelerated-depreciation regimes are outside this ordinary equipment/vehicle workflow. A partial acquisition year starts in the chosen first-use month. Purchases below €450 are flagged for consideration as ordinary expenses.
+
+If a purchase or lease bank payment already exists in Expenses, link that record instead of adding VAT/cash again. Its original invoice amounts, VAT and dates stay intact, and its cost is classified as an asset/payment rather than deducted twice. Existing linked sources cannot be silently detached while keeping a second financial record. VAT-bearing financial-lease payment expenses require review before linking.
+
+For a new finance lease, the form calculates a level-payment schedule from principal, nominal annual interest, term, payment and optional balloon. Monthly confirmation permits the lender's actual interest/amount. The van always uses the supplied exact lender schedule. Confirmed instalments remain independent of later schedule edits.
+
+Dashboard, quarterly profit, VAT, cash, annual planning, the Annual Income Tax Pack and BOD use the same calculations. Depreciation and interest reduce profit once; principal reduces debt; actual bank payments reduce cash. The additional manual-depreciation box in Reports is for other adjustments only. On entering a new year, **Carry assets from previous year** brings forward asset and loan opening values once without repeating purchase VAT or copying old payments.
+
+Validation: **28 automated suites**, all three DOM interaction suites, and a real XLSX write/read round trip. Coverage includes the supplied van's exact schedule and final €2,000 balance, opening values, 0/9/21 BTW, partial/non-recoverable VAT, financial separation, duplicate/link/stale-record checks, month overrides, closed-period enforcement in both UI and Drive, no annual double deductions, year carry-forward, archive overflow, BOD imports and chart totals, printing, optional-upload cancellation, and the existing invoice/partial/final/WhatsApp/recovery tests. A live browser visual preview could not run because the environment's preview supervisor was unavailable; Google authorization and network responses are simulated in the interaction tests.
+
+
 ## Upload waiting, expense linking and recovery controls — 23 October 2026 · v4.4.4.55
 
 **Monthly payments can save while an optional attachment is unfinished.** The old shared upload flag could block every save indefinitely after a stalled upload or Google sign-in popup. Uploads now have an inline status, Cancel upload and a 45-second limit. Google authorization has a separate 30-second limit and reports a closed or blocked popup. Concurrent uploads share authorization and folder creation. Saving without the attachment, closing its editor or replacing its entry card cancels that pending upload; a late result cannot modify another form. Retry the optional attachment later if needed. A file already accepted by Drive may remain there after cancellation, but no abandoned file reference is added to bookkeeping.

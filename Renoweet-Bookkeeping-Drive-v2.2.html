@@ -294,10 +294,11 @@ body.locked header,body.locked main{filter:blur(8px);pointer-events:none;user-se
 .ros-bk-pdf-stage .ros-invoice-footer span:last-child{text-align:right;white-space:nowrap}
 
 </style>
-  <link rel="stylesheet" href="./styles-accounting-v4.4.css?v=4.4.4.55" />
+  <link rel="stylesheet" href="./styles-accounting-v4.4.css?v=4.4.4.56" />
 <script src="./company-details.js"></script>
-<script src="./renoweet-print-layout.js?v=4.4.4.55"></script>
-<link rel="stylesheet" href="./styles-monthly-payments.css?v=4.4.4.55">
+<script src="./renoweet-print-layout.js?v=4.4.4.56"></script>
+<link rel="stylesheet" href="./styles-company-assets.css?v=4.4.4.56">
+<link rel="stylesheet" href="./styles-monthly-payments.css?v=4.4.4.56">
 </head>
 <body class="locked">
 <div class="lock-screen" id="lockScreen">
@@ -352,6 +353,7 @@ body.locked header,body.locked main{filter:blur(8px);pointer-events:none;user-se
       <button class="tab" data-view="invoices">Invoices</button>
       <button class="tab" data-view="customers">Customers</button>
       <button class="tab" data-view="expenses">Expenses</button>
+      <button class="tab" data-view="companyAssets">Company assets</button>
       <button class="tab" data-view="monthlyPayments">Monthly payments</button>
       <button class="tab" data-view="autoFuel">Auto & Fuel</button>
       <button class="tab" data-view="btwReport">BTW Report</button>
@@ -365,6 +367,7 @@ body.locked header,body.locked main{filter:blur(8px);pointer-events:none;user-se
   <section id="invoices" class="view" hidden></section>
   <section id="customers" class="view" hidden></section>
   <section id="expenses" class="view" hidden></section>
+  <section id="companyAssets" class="view" hidden></section>
   <section id="monthlyPayments" class="view" hidden></section>
   <section id="autoFuel" class="view" hidden></section>
   <section id="btwReport" class="view" hidden></section>
@@ -2056,16 +2059,18 @@ document.querySelectorAll(".tab").forEach(btn=>{
 <!-- Renoweet Drive storage layer -->
 <script src="https://accounts.google.com/gsi/client"></script>
 <script src="./renoweet-drive-core-v3.0.js"></script>
-<script src="./renoweet-accounting-engine-v4.4.js?v=4.4.4.55"></script>
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.55"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.55"></script>
+<script src="./renoweet-accounting-engine-v4.4.js?v=4.4.4.56"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.56"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.56"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./renoweet-bookkeeping-drive-adapter-v3.7.js?v=4.4.4.55"></script>
-<script src="./renoweet-bookkeeping-enhancements-v4.3.js?v=4.4.4.55"></script>
-<script src="./renoweet-bookkeeping-v4.4.js?v=4.4.4.55"></script>
-<script src="./renoweet-recovery-records.js?v=4.4.4.55"></script>
-<script src="./renoweet-recovery-records-ui.js?v=4.4.4.55"></script>
-<script src="./renoweet-monthly-payments.js?v=4.4.4.55"></script>
-<script src="./renoweet-monthly-payments-ui.js?v=4.4.4.55"></script>
+<script src="./renoweet-bookkeeping-drive-adapter-v3.7.js?v=4.4.4.56"></script>
+<script src="./renoweet-bookkeeping-enhancements-v4.3.js?v=4.4.4.56"></script>
+<script src="./renoweet-bookkeeping-v4.4.js?v=4.4.4.56"></script>
+<script src="./renoweet-recovery-records.js?v=4.4.4.56"></script>
+<script src="./renoweet-recovery-records-ui.js?v=4.4.4.56"></script>
+<script src="./renoweet-monthly-payments.js?v=4.4.4.56"></script>
+<script src="./renoweet-monthly-payments-ui.js?v=4.4.4.56"></script>
+<script src="./renoweet-company-assets.js?v=4.4.4.56"></script>
+<script src="./renoweet-company-assets-ui.js?v=4.4.4.56"></script>
 </body>
 </html>
