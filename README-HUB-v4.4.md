@@ -1,5 +1,13 @@
 # Renoweet Focus Hub v4.4.4
 
+## Compact recorded monthly payments — 23 October 2026
+
+Confirmed monthly payments now leave the month's entry cards immediately. The quarterly **Recorded monthly payments** table shows each saved payment's month, invoice date, supplier, amount, BTW, paid status and payment date in compact rows. Existing confirmed payments use this table automatically; no data migration or re-entry is needed. **Edit** opens only that payment in a separate editor. Save updates the same Record ID, closes the editor and returns the entry to the table; Close discards unsaved form changes. Recorded unpaid expenses also move to the table and can be marked paid through Edit.
+
+Each month's entry area contains scheduled or draft payments still to confirm. Skipped entries are under a collapsed section with a Restore action. **Manage subscriptions** keeps its existing controls for future defaults and stopping/resuming payments. The annual report still contains the complete twelve-month history. Optional attachments and deferred bank statements are retained. Closed/read-only payments offer View, with financial editing disabled. Switching year or quarter closes the old payment editor; stale editors cannot recreate removed records.
+
+Validation: all 24 automated suites plus real DOM interaction checks. These include confirm-to-table transitions, reopening/editing without duplicates, cancelling edits, payment history, linking/undo, period locks, stale-record protection, optional uploads, annual printing and 60 completed subscriptions leaving zero October entry cards. Browser cache version: **4.4.4.54**.
+
 ## Monthly bank payments — optional attachments, 23 October 2026
 
 Monthly payments no longer require an attachment before confirmation. Review the date, amount, BTW and Paid checkbox, then confirm. You can also edit the resulting monthly expense in the ordinary expense ledger without attaching a file. The attachment rule for other ordinary expenses is unchanged.
