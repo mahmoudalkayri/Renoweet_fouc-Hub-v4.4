@@ -1,5 +1,17 @@
 # Renoweet Focus Hub v4.4.4
 
+## Monthly payments — 23 October 2026
+
+Open **Bookkeeping → Monthly payments**, next to Expenses (also linked from the expense toolbar). Add a subscription with its supplier, first month, usual day, amount including BTW, expense category and 21%, 9% or 0% BTW. VAT and income-tax deduction percentages remain separate choices. Attach or link a supplier invoice, policy or contract once on the subscription; replace that proof on an individual month when necessary.
+
+The selected quarter displays its three months. Check the invoice date and gross amount, choose the actual BTW rate, check **Paid** and its payment date when the money has been debited, then choose **Confirm expense**. Confirmation records one ordinary General, Automobile or Fuel expense. An unchecked Paid box records an unpaid supplier invoice: it affects costs/input VAT according to the existing report logic, while cash reports wait for payment. **Save draft** keeps the row out of financial reports. Future schedules never create financial entries automatically. Proof is required before confirming.
+
+**Save changes** updates the same recorded expense, including its original Record ID, instead of adding a second charge. **Link existing expense** connects an expense already entered in that month without changing its financial values or recording it twice. Special VAT or insurance-settlement records should be edited in the normal expense ledger. **Skip month** omits an unneeded occurrence. **Undo recorded expense** removes that ledger entry and keeps its original in the recovery list. Closed quarters and historical read-only years remain protected, including the original invoice/payment dates when moving a payment between quarters.
+
+**Edit subscription** applies new defaults from the chosen month; recorded monthly expenses retain their saved history. **Stop subscription** chooses the first month with no further payments, retaining recorded entries. Resume re-enables the schedule. Dates on the 29th–31st use the last available day of shorter months. **Print complete year** includes all twelve months, with separate recorded, paid, unpaid and scheduled/draft totals. Each line has its actual date, amount, BTW and status. Schedules and confirmed links are saved in the existing yearly Drive database and included in JSON/XLSX backups. In a new year, **Copy subscriptions from the previous year** imports active subscription defaults once, without copying expenses or payments.
+
+Validation: all 24 automated suites pass. Additional real-DOM interaction checks cover creating and editing subscriptions, quarter rows, paid/unpaid confirmation, stops, skips, undo, linking, annual printing, text escaping, closed/read-only controls and refresh during proof upload. Monthly schedules and links also round-trip through the real XLSX writer/reader. Browser cache version: **4.4.4.52**.
+
 ## Revised quotations after an issued advance — 22 October 2026
 
 An issued partial invoice no longer locks the project to its original quotation. Change the agreed work, quantities, prices or line VAT treatments in Estimate, then choose **Nieuwe deelfactuur** or **Eindfactuur / resterend bedrag**. New documents use the revised project amounts. The final invoice subtracts each earlier partial invoice's exact net, VAT and gross figures and shows the definitive project total.

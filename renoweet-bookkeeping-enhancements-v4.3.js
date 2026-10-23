@@ -98,6 +98,8 @@ window.storeProofFile=async function(file,type){
   const ds=qs('expDate')?.value||new Date().toISOString().slice(0,10);
   const meta=await uploadProofToDrive(file,type,ds);window.__renoweetProofUploadMeta=meta;return meta.name;
 };
+// Monthly proofs use their own date and do not change the ordinary expense editor.
+window.storeMonthlyProof=async function(file,type,ds){return uploadProofToDrive(file,type,ds)};
 
 async function getDriveFileBytes(id){return await (await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`)).arrayBuffer()}
 async function getLocalProofBytes(name){
