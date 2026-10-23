@@ -50,12 +50,12 @@
   const paid=value.paid===true,invoiceDate=date(value.date),paymentDate=paid?date(value.paymentDate||invoiceDate):'';
   return {date:invoiceDate,gross,vatRate,paid,paymentDate,proof:String(value.proof||'').trim(),proofId:String(value.proofId||''),proofMime:String(value.proofMime||''),vatPct:number(value.vatPct,'VAT deductible percentage',0,100),incomePct:number(value.incomePct,'income-tax deductible percentage',0,100),method:value.method||'Bank',notes:String(value.notes||'').trim()};
  }
- function saveMonth(book,id,value,input,context,{draftOnly=false,linkRecordId=''}={}){
+ function saveMonth(book,id,value,input,context,{draftOnly=false,linkRecordId='',expectedRecord=''}={}){
   const base=occurrence(book,id,value);if(!base)throw Error('This subscription is not scheduled for that month.');if(base.conflict)throw Error('Duplicate monthly expenses found. Review the expense ledger first.');if(base.requiresLedgerEdit)throw Error('This expense has custom VAT or an insurance settlement. Edit it in the main expense ledger.');
   guardDates(context,[value+'-01']);
   let existing=records(book,id,value)[0];
   if(linkRecordId){if(existing)throw Error('This month already has a recorded expense.');const found=Object.entries(ledgers).flatMap(([ledger,key])=>(book[key]||[]).map((r,index)=>({ledger,key,index,r}))).filter(x=>(x.r['Record ID']||x.r._rid)===linkRecordId);if(found.length!==1||found[0].r['Monthly subscription ID'])throw Error('Choose one existing expense that is not already linked.');const x=found[0];guardDates(context,[x.r['Document date']||x.r.Date,x.r['Payment date']]);
-   if(A.iso(x.r['Document date']||x.r.Date).slice(0,7)!==value)throw Error('The existing expense must have an invoice date in this scheduled month.');
+   if(expectedRecord&&JSON.stringify(x.r)!==expectedRecord)throw Error('The selected expense changed. Refresh the list before linking it.');
    x.r['Monthly subscription ID']=id;x.r['Monthly period']=value;x.r['Monthly payment name']=base.name;delete ensure(book).months[key(id,value)];return occurrence(book,id,value);
   }
   const fields=occurrenceInput(base,input);guardDates(context,[base.record?.['Document date']||base.record?.Date,base.record?.['Payment date'],fields.date,fields.paymentDate]);
@@ -69,6 +69,15 @@
   if(existing)book[existing.key][existing.index]=r;else{const ledger=ledgers[base.ledger];book[ledger]=book[ledger]||[];book[ledger].push(r)}
   delete ensure(book).months[key(id,value)];return occurrence(book,id,value);
  }
+ function linkCandidates(book,id,value,{scope='month',query=''}={}){
+  const base=occurrence(book,id,value);if(!base||base.status==='recorded')return [];
+  const fold=s=>String(s??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/,/g,'.'),terms=fold(query).trim().split(/\s+/).filter(Boolean),year=value.slice(0,4);
+  return Object.entries(ledgers).flatMap(([ledger,key])=>(book[key]||[]).map(r=>({ledger,r}))).filter(({r})=>{
+   const invoiceDate=A.iso(r['Document date']||r.Date),paymentDate=A.iso(r['Payment date']);if(r['Monthly subscription ID']||invoiceDate.slice(0,4)!==year)return false;
+   if(scope!=='year'&&invoiceDate.slice(0,7)!==value&&paymentDate.slice(0,7)!==value)return false;
+   const text=fold([invoiceDate,paymentDate,r.Supplier,r.Description,r.Category,r['Receipt/File'],Number(r.Gross).toFixed(2)].join(' '));return terms.every(term=>text.includes(term));
+  }).map(({ledger,r})=>({ledger,record:clone(r),id:r['Record ID']||r._rid,invoiceDate:A.iso(r['Document date']||r.Date),paymentDate:A.iso(r['Payment date']),gross:A.expenseFacts(r).gross,vat:A.expenseFacts(r).invoiceVat,score:(fold(r.Supplier)===fold(base.supplier)?2:0)+(Math.abs(A.expenseFacts(r).gross-base.gross)<.005?1:0)})).sort((a,b)=>b.score-a.score||b.invoiceDate.localeCompare(a.invoiceDate)||String(a.record.Supplier||'').localeCompare(String(b.record.Supplier||'')));
+ }
  function skipMonth(book,id,value,context,{undo=false}={}){
   const base=occurrence(book,id,value);if(!base||base.conflict)throw Error('Review the monthly row first.');guardDates(context,[value+'-01',base.record?.['Document date']||base.record?.Date,base.record?.['Payment date']]);
   if(base.record){if(!undo)throw Error('Use Undo recorded expense to remove a confirmed month.');const found=records(book,id,value)[0];book.deleted=book.deleted||[];book.deleted.push({'Deleted at':new Date().toISOString(),Type:'Monthly expense','Record ID':base.recordId,'Customer / Supplier':base.supplier,Description:base.name,Gross:base.gross,VAT:base.record.VAT,Net:base.record.Net,Status:'Removed','Original record':clone(found.r)});book[found.key].splice(found.index,1)}
@@ -77,5 +86,5 @@
  function copySubscriptions(book,source,year,context){editable(context);if(year!==context.year)throw Error('The selected year changed. Try again.');let count=0;for(const old of state(source).subscriptions){const target=ensure(book);if(target.subscriptions.some(s=>s.id===old.id))continue;const start=`${year}-01`;if(old.endMonth&&old.endMonth<start)continue;const version=[...old.versions].reverse().find(v=>v.from<=start)||old.versions[0];if(!version)continue;const fields=settings(version);target.subscriptions.push({id:old.id,startMonth:start,endMonth:'',versions:[{from:start,...fields}]});count++}return count}
  function addBankStatement(book,meta,context){editable(context);const id=String(meta.id||'').trim(),name=String(meta.name||'').trim();if(!id||!name)throw Error('The statement upload did not return a file reference.');const data=ensure(book);data.bankStatements=data.bankStatements||[];if(!data.bankStatements.some(x=>x.id===id))data.bankStatements.push({id,name,mimeType:String(meta.mimeType||''),year:context.year,attachedAt:new Date().toISOString()});return clone(data.bankStatements)}
  function removeBankStatement(book,id,context){editable(context);const data=ensure(book);data.bankStatements=(data.bankStatements||[]).filter(x=>x.id!==id);return clone(data.bankStatements)}
- return {state,rows,occurrence,saveSubscription,stopSubscription,resumeSubscription,saveMonth,skipMonth,copySubscriptions,addBankStatement,removeBankStatement,month,previousMonth,scheduledDate,number};
+ return {state,rows,occurrence,saveSubscription,stopSubscription,resumeSubscription,saveMonth,skipMonth,copySubscriptions,linkCandidates,addBankStatement,removeBankStatement,month,previousMonth,scheduledDate,number};
 });

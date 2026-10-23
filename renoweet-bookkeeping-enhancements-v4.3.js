@@ -10,8 +10,9 @@ const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
 const TOKEN_KEY='renoweetProofDriveTokenV1';
 let proofDriveToken='';
 let proofDriveExpires=0;
-let proofTokenClient=null;
+let proofAuthorization=null;
 let proofFolders={};
+const proofFolderPending=new Map();
 window.__renoweetProofUploadMeta=null;
 
 function qs(id){return document.getElementById(id)}
@@ -23,44 +24,66 @@ function saveToken(token,expiresIn){proofDriveToken=token||'';proofDriveExpires=
 async function ensureProofDriveToken(interactive=true){
   if(proofDriveToken&&proofDriveExpires>Date.now()+60000)return proofDriveToken;
   if(tokenFromSession())return proofDriveToken;
+  if(proofAuthorization)return proofAuthorization;
   if(!window.google?.accounts?.oauth2)throw new Error('Google sign-in is still loading. Reload and try again.');
-  if(!proofTokenClient)proofTokenClient=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:DRIVE_SCOPE,callback:()=>{}});
-  return await new Promise((resolve,reject)=>{
-    proofTokenClient.callback=(resp)=>{if(resp?.error)return reject(new Error(resp.error));saveToken(resp.access_token,resp.expires_in);resolve(proofDriveToken)};
-    try{proofTokenClient.requestAccessToken({prompt:interactive?'consent':''})}catch(e){reject(e)}
+  // Share one authorization attempt; closing or blocking the popup must settle it.
+  const pending=new Promise((resolve,reject)=>{
+    let settled=false,timer;
+    const finish=(error,resp)=>{if(settled)return;settled=true;clearTimeout(timer);if(error)return reject(error);saveToken(resp.access_token,resp.expires_in);resolve(proofDriveToken)};
+    timer=setTimeout(()=>finish(new Error('Google sign-in timed out. Retry the attachment and allow the sign-in popup.')),30000);
+    try{const client=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:DRIVE_SCOPE,
+      callback:resp=>finish(resp?.error?new Error(resp.error):!resp?.access_token?new Error('Google sign-in returned no access token.'):null,resp),
+      error_callback:error=>finish(new Error(error?.type==='popup_closed'?'Google sign-in was closed. Retry the attachment when ready.':'Google sign-in could not open. Allow the popup and retry the attachment.'))});
+      client.requestAccessToken({prompt:interactive?'consent':''});
+    }catch(error){finish(error)}
   });
+  proofAuthorization=pending;
+  try{return await pending}finally{if(proofAuthorization===pending)proofAuthorization=null}
+}
+function checkUploadSignal(signal){if(signal?.aborted)throw new DOMException('Upload cancelled','AbortError')}
+function awaitUpload(value,signal){
+  checkUploadSignal(signal);if(!signal)return value;
+  return new Promise((resolve,reject)=>{const abort=()=>{cleanup();reject(new DOMException('Upload cancelled','AbortError'))},cleanup=()=>signal.removeEventListener('abort',abort);signal.addEventListener('abort',abort,{once:true});Promise.resolve(value).then(v=>{cleanup();if(signal.aborted)abort();else resolve(v)},e=>{cleanup();reject(e)})});
 }
 async function driveFetch(url,opts={}){
-  const token=await ensureProofDriveToken(true);
+  checkUploadSignal(opts.signal);const token=await awaitUpload(ensureProofDriveToken(true),opts.signal);checkUploadSignal(opts.signal);
   const headers=new Headers(opts.headers||{});headers.set('Authorization','Bearer '+token);
   let r=await fetch(url,{...opts,headers});
-  if(r.status===401){proofDriveToken='';proofDriveExpires=0;sessionStorage.removeItem(TOKEN_KEY);const t=await ensureProofDriveToken(true);headers.set('Authorization','Bearer '+t);r=await fetch(url,{...opts,headers})}
+  if(r.status===401){proofDriveToken='';proofDriveExpires=0;sessionStorage.removeItem(TOKEN_KEY);const t=await awaitUpload(ensureProofDriveToken(true),opts.signal);checkUploadSignal(opts.signal);headers.set('Authorization','Bearer '+t);r=await fetch(url,{...opts,headers})}
   if(!r.ok){let msg='Google Drive error '+r.status;try{const j=await r.json();msg=j?.error?.message||msg}catch(e){}throw new Error(msg)}
   return r;
 }
 function escQ(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
-async function findFolder(name,parent='root'){
+async function findFolder(name,parent='root',signal){
   const q=`name='${escQ(name)}' and mimeType='application/vnd.google-apps.folder' and '${parent}' in parents and trashed=false`;
   const u='https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name,parents),nextPageToken&pageSize=1000&q='+encodeURIComponent(q);
-  const j=await (await driveFetch(u)).json();if(j.nextPageToken||(j.files||[]).length>1)throw new Error(`Multiple ${name} proof folders were found. Check Drive before uploading.`);return j.files?.[0]||null;
+  const j=await (await driveFetch(u,{signal})).json();if(j.nextPageToken||(j.files||[]).length>1)throw new Error(`Multiple ${name} proof folders were found. Check Drive before uploading.`);return j.files?.[0]||null;
 }
-async function createFolder(name,parent='root'){
+async function createFolder(name,parent='root',signal){
   const body={name,mimeType:'application/vnd.google-apps.folder',parents:[parent]};
-  return await (await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id,name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  return await (await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id,name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal})).json();
 }
-async function ensureFolder(name,parent='root'){
-  const key=parent+'|'+name;if(proofFolders[key])return proofFolders[key];
-  let f=await findFolder(name,parent);if(!f)f=await createFolder(name,parent);proofFolders[key]=f.id;return f.id;
+async function ensureFolder(name,parent='root',signal){
+  checkUploadSignal(signal);const key=parent+'|'+name;if(proofFolders[key])return proofFolders[key];
+  let pending=proofFolderPending.get(key);
+  if(!pending){
+    const work=(async()=>{let folder=await findFolder(name,parent,signal);if(!folder)folder=await createFolder(name,parent,signal);checkUploadSignal(signal);proofFolders[key]=folder.id;return folder.id})();
+    pending=work.finally(()=>{if(proofFolderPending.get(key)===pending)proofFolderPending.delete(key)});proofFolderPending.set(key,pending);
+  }
+  try{return await awaitUpload(pending,signal)}catch(error){
+    // A second upload can retry a shared folder lookup cancelled by its first owner.
+    if(error.name==='AbortError'&&!signal?.aborted){if(proofFolderPending.get(key)===pending)proofFolderPending.delete(key);return ensureFolder(name,parent,signal)}throw error;
+  }
 }
 function quarterOfDate(ds){const d=new Date(String(ds||'').slice(0,10)+'T12:00:00');return isNaN(d)?1:Math.floor(d.getMonth()/3)+1}
 function yearOfDate(ds){const d=new Date(String(ds||'').slice(0,10)+'T12:00:00');return isNaN(d)?new Date().getFullYear():d.getFullYear()}
-async function ensureProofFolderForDate(ds){
-  await ensureProofDriveToken(true);
-  const root=await ensureFolder('Renoweet Data','root');
+async function ensureProofFolderForDate(ds,signal){
+  checkUploadSignal(signal);await awaitUpload(ensureProofDriveToken(true),signal);checkUploadSignal(signal);
+  const root=await ensureFolder('Renoweet Data','root',signal);
   const y=yearOfDate(ds),q=quarterOfDate(ds);
-  const yf=await ensureFolder(String(y),root);
-  const proofs=await ensureFolder('Proofs',yf);
-  return await ensureFolder('Q'+q,proofs);
+  const yf=await ensureFolder(String(y),root,signal);
+  const proofs=await ensureFolder('Proofs',yf,signal);
+  return await ensureFolder('Q'+q,proofs,signal);
 }
 function safeBaseName(s){return String(s||'proof').replace(/[^A-Za-z0-9._-]+/g,'-').replace(/-+/g,'-').slice(0,90)}
 async function optimizeImageProof(file){
@@ -79,14 +102,15 @@ async function optimizeImageProof(file){
   const base=safeBaseName(file.name.replace(/\.[^.]+$/,''));
   return new File([blob],base+'.jpg',{type:'image/jpeg',lastModified:file.lastModified||Date.now()});
 }
-async function uploadProofToDrive(file,type,ds){
-  const optimized=await optimizeImageProof(file);
-  const parent=await ensureProofFolderForDate(ds);
+async function uploadProofToDrive(file,type,ds,{signal}={}){
+  checkUploadSignal(signal);await awaitUpload(ensureProofDriveToken(true),signal);
+  const optimized=await awaitUpload(optimizeImageProof(file),signal);checkUploadSignal(signal);
+  const parent=await ensureProofFolderForDate(ds,signal);checkUploadSignal(signal);
   const ext=(optimized.name.match(/\.[^.]+$/)||[''])[0].toLowerCase();
   const name=`EXP-${String(ds||new Date().toISOString().slice(0,10)).replace(/-/g,'')}-${Date.now()}-${safeBaseName(type)}${ext||'.bin'}`;
   const meta={name,parents:[parent],appProperties:{renoweetType:'expense-proof',year:String(yearOfDate(ds)),quarter:'Q'+quarterOfDate(ds)}};
   const fd=new FormData();fd.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));fd.append('file',optimized,name);
-  const r=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,webViewLink',{method:'POST',body:fd});
+  const r=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,size,mimeType,webViewLink',{method:'POST',body:fd,signal});
   const j=await r.json();
   return {id:j.id,name:j.name||name,size:Number(j.size)||optimized.size,mimeType:j.mimeType||optimized.type,originalSize:file.size,optimizedSize:optimized.size,webViewLink:j.webViewLink||''};
 }
@@ -99,7 +123,7 @@ window.storeProofFile=async function(file,type){
   const meta=await uploadProofToDrive(file,type,ds);window.__renoweetProofUploadMeta=meta;return meta.name;
 };
 // Monthly proofs use their own date and do not change the ordinary expense editor.
-window.storeMonthlyProof=async function(file,type,ds){return uploadProofToDrive(file,type,ds)};
+window.storeMonthlyProof=async function(file,type,ds,options){return uploadProofToDrive(file,type,ds,options)};
 
 async function getDriveFileBytes(id){return await (await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`)).arrayBuffer()}
 async function getLocalProofBytes(name){

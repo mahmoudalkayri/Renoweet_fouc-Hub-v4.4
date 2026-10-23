@@ -1,5 +1,16 @@
 # Renoweet Focus Hub v4.4.4
 
+## Upload waiting, expense linking and recovery controls — 23 October 2026 · v4.4.4.55
+
+**Monthly payments can save while an optional attachment is unfinished.** The old shared upload flag could block every save indefinitely after a stalled upload or Google sign-in popup. Uploads now have an inline status, Cancel upload and a 45-second limit. Google authorization has a separate 30-second limit and reports a closed or blocked popup. Concurrent uploads share authorization and folder creation. Saving without the attachment, closing its editor or replacing its entry card cancels that pending upload; a late result cannot modify another form. Retry the optional attachment later if needed. A file already accepted by Drive may remain there after cancellation, but no abandoned file reference is added to bookkeeping.
+
+**Link existing expense** now opens a searchable table with 25 results per page. Search supplier, description, amount, invoice/payment date or attachment filename. The default includes expenses invoiced or paid in the scheduled month; **Entire selected year** also finds other months. General, Automobile and Fuel expenses are included. Linking adds only the subscription references: it keeps the existing record ID, amounts, BTW, deductions, invoice/payment dates, notes and attachment. Existing links, changed records, duplicate IDs and closed/read-only periods are guarded.
+
+Under **Control → Cancelled and deleted records**, expand the recovery history. Search the year-wide list and use **Delete permanently**, or select multiple copies and **Delete selected permanently**. Confirm and type **DELETE**. These controls remove inactive recovery copies only; they do not change live invoices, payments, expenses or financial totals. Original invoice/payment quarter locks and read-only years are respected. Existing Drive history is retained.
+
+Validation: all **26 automated suites** pass, plus both DOM interaction suites and a real XLSX round trip. New coverage includes stalled uploads, cancel/timeout/retry, late results, closed/blocked authorization, concurrent uploads, 61-result pagination, cross-month payments, stale links, atomic recovery deletion and unchanged live financial data. Existing invoice, partial/final invoice, VAT, quotation sharing, Drive, archive, checksum and year-boundary checks remain included. Live Google sign-in/network responses are simulated in these tests; no live customer data was changed.
+
+
 ## Compact recorded monthly payments — 23 October 2026
 
 Confirmed monthly payments now leave the month's entry cards immediately. The quarterly **Recorded monthly payments** table shows each saved payment's month, invoice date, supplier, amount, BTW, paid status and payment date in compact rows. Existing confirmed payments use this table automatically; no data migration or re-entry is needed. **Edit** opens only that payment in a separate editor. Save updates the same Record ID, closes the editor and returns the entry to the table; Close discards unsaved form changes. Recorded unpaid expenses also move to the table and can be marked paid through Edit.
