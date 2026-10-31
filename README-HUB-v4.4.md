@@ -1,3 +1,17 @@
+# Saved-project exit warning fix — 31 October 2026 · v4.4.4.60
+
+A queued 250 ms emergency-draft timer could fire while Save was waiting for storage or Drive verification, reactivating the unsaved flag after the project was saved. Save now cancels that timer; verified Drive saves clear the editor flag only when the visible project matches the verified record. Hiding a clean editor no longer creates another dirty draft. A stale flag with no active editor no longer triggers the browser's Leave app warning.
+
+New edits entered while saving are preserved. Edits arriving during the final local-cache verification are captured and included in the next save; a failed sync, a new unsaved project, pending photos and unsaved customer form changes retain exit protection.
+
+**Customers → Add a new project** now remembers the deliberate customer selection and skips the redundant existing-customer confirmation. Manual creation, or changing the selected customer's contact identity, still uses the duplicate-contact safeguard. A new job can have a different work address. Project numbering, customer address locks and financial calculations are retained.
+
+Validation: 29 regression suites and five DOM interaction suites passed. The new race tests cover the pending draft timer, verified dashboard/open-editor exits, page hiding, genuine dirty drafts, both customer-creation routes, edits during Drive/final-cache verification and failed syncs. Live browser visual verification was unavailable because the managed preview service was not running.
+
+Repeat the new check with `DOM_TEST_MODULE=/path/to/happy-dom/lib/index.js npm run test:save-leave`.
+
+---
+
 # Customer details window — 31 October 2026 · v4.4.4.59
 
 In **OS → Customers**, click a customer row or card to open their details. You can edit the name, phone, email and BTW-id, fill missing information and save. Contact changes apply to the projects already grouped under that customer in the selected database. Existing Bookkeeping invoice records and saved invoice-document snapshots are not rewritten.

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Renoweet OS</title>
-<script src="./renoweet-project-references.js?v=4.4.4.59"></script>
+<script src="./renoweet-project-references.js?v=4.4.4.60"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -295,7 +295,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script src="./company-details.js"></script>
 <link rel="stylesheet" href="./styles-rich-text.css">
 <script src="./renoweet-rich-text.js"></script>
-<script src="./renoweet-print-layout.js?v=4.4.4.59"></script>
+<script src="./renoweet-print-layout.js?v=4.4.4.60"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -373,8 +373,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.59"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.59"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.60"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.60"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -488,7 +488,7 @@ const serviceTemplates=[
 ];
 let db={projects:[],bookkeeping:[],deleted:[]}, workbook=null,fileHandle=null,saveTimer=null,isSaving=false,currentView='dashboard',currentProjectId=null,currentTab='intake';
 let draftProject=null,pendingPhotoFiles=[],photosFolderHandle=null;
-let customerEditor=null;
+let customerEditor=null,draftCustomerSelection=null;
 let googleAccessToken='', googleTokenClient=null, planWeekOffset=0;
 const LOCAL_CACHE_DB='renoweet-os-local-cache-v1';
 const LOCAL_CACHE_STORE='state';
@@ -655,11 +655,12 @@ async function restoreBrowserCache(){
 }
 function projectDraftStorageKey(){return `${PROJECT_DRAFT_KEY}::${new Date().getFullYear()}`}
 function clearProjectDraftRecovery(projectId=''){
+ clearTimeout(projectDraftTimer);projectDraftTimer=null;
  try{const raw=localStorage.getItem(projectDraftStorageKey());if(!raw)return;const saved=JSON.parse(raw);if(!projectId||saved?.project?.id===projectId)localStorage.removeItem(projectDraftStorageKey())}catch(e){localStorage.removeItem(projectDraftStorageKey())}
 }
 function saveProjectDraftRecoveryNow(){
  clearTimeout(projectDraftTimer);projectDraftTimer=null;
- const p=getP();if(!p||!currentProjectId)return false;
+ const p=getP();if(!p||!currentProjectId||!formDirty)return false;
  updateProjectFromVisibleForm(p);p.updated=nowStamp();
  const isNew=!!(draftProject&&draftProject.id===p.id);
  try{localStorage.setItem(projectDraftStorageKey(),JSON.stringify({schema:'renoweet.project-draft',version:1,savedAt:p.updated,isNew,tab:currentTab,project:cloneSafe(p)}))}catch(e){console.warn('Could not write emergency project draft',e)}
@@ -668,7 +669,7 @@ function saveProjectDraftRecoveryNow(){
  else dbState(false,'Saved locally • Drive pending',`Project ${p.id} is protected on this device. Reconnect Google Drive to sync.`);
  return true
 }
-function queueProjectDraftRecovery(){clearTimeout(projectDraftTimer);projectDraftTimer=setTimeout(saveProjectDraftRecoveryNow,250)}
+function queueProjectDraftRecovery(){clearTimeout(projectDraftTimer);const id=currentProjectId;projectDraftTimer=setTimeout(()=>{if(currentProjectId===id&&formDirty)saveProjectDraftRecoveryNow()},250)}
 async function restoreProjectDraftRecovery(){
  let saved=null;try{saved=JSON.parse(localStorage.getItem(projectDraftStorageKey())||'null')}catch(e){clearProjectDraftRecovery();return false}
  const p=saved?.project;if(saved?.schema!=='renoweet.project-draft'||!p?.id)return false;
@@ -1248,7 +1249,7 @@ async function saveCustomerDetails(addProject=false){
   if(!saved)throw new Error('The local safety copy could not be saved. Keep this window open and try Save details again.');
   if(editor.context!==customerContext())throw new Error('The selected database changed while saving. Reopen the customer in the correct year before continuing.');
   scheduleSave();render();
-  if(addProject){closeCustomer(true);startNewProject(values)}else{closeCustomer(true);toast('Customer saved locally • syncing')}
+  if(addProject){closeCustomer(true);startNewProject(values,editor.ids)}else{closeCustomer(true);toast('Customer saved locally • syncing')}
   return true;
  }catch(e){customerEditorMessage(e.message||'Customer details could not be saved. Please try again.');return false}
  finally{editor.busy=false;if(customerEditor===editor)form.querySelector('fieldset').disabled=customerReadOnly()}
@@ -1354,9 +1355,26 @@ function render(){ensureProjectReferences();let root=$('viewRoot');if(currentVie
 
 function getP(){if(draftProject&&draftProject.id===currentProjectId)return draftProject;return db.projects.find(p=>p.id===currentProjectId)}
 const tabs=[['intake','Intake'],['scope','Scope'],['estimate','Estimate'],['quote','Quotation'],['materials','Materials'],['documents','Documents & Photos'],['payments','Payments'],['orders','Orders'],['schedule','Schedule'],['followups','Follow-up'],['acceptance','Acceptance'],['messages','Messages'],['invoice','Invoice'],['activity','Activity'],['checklist','Checklist'],['projectbackup','Backup']];
-function openProject(id,tab='intake'){draftProject=null;pendingPhotoFiles=[];formDirty=false;currentProjectId=id;currentTab=tab;let p=getP();if(!p)return;$('projectModal').classList.add('open');$('modalTitle').textContent=p.title||'New project';$('modalMeta').textContent=`${projectReference(p)} • ${p.stage}`;renderTabs()}
-function startNewProject(customer=null){draftProject=blankProject();if(customer&&typeof customer.name==='string')draftProject.customer={...draftProject.customer,...cloneSafe(customer)};pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${projectReference(draftProject)} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
-function closeProject(){if(formDirty&&!confirm('This project has locally protected changes. Discard this draft/edit and close?'))return;const closingId=currentProjectId;if(draftProject&&closingId===draftProject.id){draftProject=null;pendingPhotoFiles=[]}clearProjectDraftRecovery(closingId);formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render()}
+function openProject(id,tab='intake'){clearTimeout(projectDraftTimer);projectDraftTimer=null;draftCustomerSelection=null;draftProject=null;pendingPhotoFiles=[];formDirty=false;currentProjectId=id;currentTab=tab;let p=getP();if(!p)return;$('projectModal').classList.add('open');$('modalTitle').textContent=p.title||'New project';$('modalMeta').textContent=`${projectReference(p)} • ${p.stage}`;renderTabs()}
+function startNewProject(customer=null,customerProjectIds=[]){clearTimeout(projectDraftTimer);projectDraftTimer=null;draftCustomerSelection=null;draftProject=blankProject();if(customer&&typeof customer.name==='string')draftProject.customer={...draftProject.customer,...cloneSafe(customer)};if(customerProjectIds.length)draftCustomerSelection={draftId:draftProject.id,projectIds:[...customerProjectIds],contact:customerContactSignature(draftProject.customer)};pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${projectReference(draftProject)} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
+function finishVerifiedProjectSave(savedOs){
+ const p=getP();
+ if(!currentProjectId||!p){clearTimeout(projectDraftTimer);projectDraftTimer=null;formDirty=false;return}
+ if(draftProject?.id===p.id||pendingPhotoFiles.length)return;
+ const saved=(savedOs.projects||[]).find(x=>x.id===p.id);if(!saved)return;
+ const visible=cloneSafe(p);updateProjectFromVisibleForm(visible);
+ if(!sameData(canonicalizeForSignature(visible),canonicalizeForSignature(saved))){
+  if(!sameData(canonicalizeForSignature(visible),canonicalizeForSignature(p))){formDirty=true;saveProjectDraftRecoveryNow()}
+  return;
+ }
+ clearProjectDraftRecovery(p.id);formDirty=false;
+}
+function hasUnsavedEditorChanges(){
+ if(customerEditor&&JSON.stringify(customerEditorValues())!==JSON.stringify(customerEditor.values))return true;
+ return !!(currentProjectId&&getP()&&(formDirty||pendingPhotoFiles.length||draftProject?.id===currentProjectId));
+}
+function protectUnsavedProjectOnExit(){if(currentProjectId&&formDirty)saveProjectDraftRecoveryNow()}
+function closeProject(){if(formDirty&&!confirm('This project has locally protected changes. Discard this draft/edit and close?'))return;const closingId=currentProjectId;if(draftProject&&closingId===draftProject.id){draftProject=null;pendingPhotoFiles=[]}clearProjectDraftRecovery(closingId);draftCustomerSelection=null;formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render()}
 function renderTabs(){let p=getP();$('projectTabs').innerHTML=tabs.map(([k,l])=>`<button class="${currentTab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`).join('');$('projectTabContent').innerHTML=tabHTML(p,currentTab);bindTab()}
 function switchTab(t){saveProjectFromForm(false);currentTab=t;renderTabs()}
 function tabHTML(p,t){
@@ -1748,16 +1766,18 @@ function bindTab(){const body=$('projectTabContent');if(body){body.querySelector
 function readEstimate(p){let rs=document.querySelectorAll('#estRows tr');if(rs.length)p.estimate=[...rs].map((r,i)=>({id:p.estimate[i]?.id||lineid(),desc:r.querySelector('.e_desc').value,qty:+r.querySelector('.e_qty').value||0,unit:r.querySelector('.e_unit').value,rate:+r.querySelector('.e_rate').value||0,...estimateVatFields(r.querySelector('.e_vat')?.value||'',p)}))}
 function readMaterials(p){let rs=document.querySelectorAll('#matRows tr');if(rs.length)p.materials=[...rs].map((r,i)=>({id:p.materials[i]?.id||lineid(),desc:r.querySelector('.m_desc').value,qty:r.querySelector('.m_qty').value,supplier:r.querySelector('.m_supplier').value,cost:+r.querySelector('.m_cost').value||0}))}
 function normalizePhoneForStorage(raw){let t=String(raw||'').trim();if(!t)return '';let d=t.replace(/\D/g,'');if(d.startsWith('0031'))d='31'+d.slice(4);if(d.startsWith('316')&&d.length===11)return `+31 6 ${d.slice(3,7)} ${d.slice(7)}`;if(d.startsWith('06')&&d.length===10)return `06 ${d.slice(2,6)} ${d.slice(6)}`;return t.replace(/\s+/g,' ')}
+function customerContactSignature(customer){return JSON.stringify([String(customer?.name||'').trim().toLowerCase(),normalizeWhatsAppNumber(customer?.phone),String(customer?.email||'').trim().toLowerCase(),String(customer?.vatId||'').trim().toLowerCase()])}
+function isSelectedCustomerForDraft(p,existing){return !!(draftCustomerSelection&&draftCustomerSelection.draftId===p.id&&draftCustomerSelection.projectIds.includes(existing.id)&&draftCustomerSelection.contact===customerContactSignature(p.customer)&&draftCustomerSelection.contact===customerContactSignature(existing.customer))}
 function findExistingCustomerFor(p){const phone=normalizeWhatsAppNumber(p.customer?.phone),email=String(p.customer?.email||'').trim().toLowerCase();return (db.projects||[]).find(x=>x.id!==p.id&&((phone&&normalizeWhatsAppNumber(x.customer?.phone)===phone)||(email&&String(x.customer?.email||'').trim().toLowerCase()===email)))}
 function updateProjectFromVisibleForm(p){if(!p)return;if($('f_title')){p.title=$('f_title').value;p.stage=$('f_stage').value;p.customer.name=$('f_name').value;p.customer.phone=normalizePhoneForStorage($('f_phone').value);p.customer.email=$('f_email').value;p.customer.address=$('f_address').value;p.customer.vatId=($('f_vat_id')?.value||p.customer.vatId||'').trim();p.description=$('f_description').value;p.notes=$('f_notes').value}if($('f_scope'))p.scope=$('f_scope').value;readEstimate(p);readMaterials(p);if($('s_start'))p.schedule={...p.schedule,start:$('s_start').value,end:$('s_end').value||$('s_start').value,time:$('s_time').value,endTime:$('s_endtime')?$('s_endtime').value:(p.schedule.endTime||''),notes:$('s_notes').value,shareClient:!!$('s_share_client')?.checked,inviteEmail:($('s_invite_email')?.value||'').trim()};if($('q_number')){p.quote.number=$('q_number').value;p.quote.date=$('q_date').value;p.quote.validDays=+$('q_valid').value||14;p.quote.parking=+$('q_parking').value||0;p.quote.travel=+$('q_travel').value||0;p.quote.exclusions=$('q_exclusions').value;p.quote.paymentTerms=$('q_payment_terms').value;p.quote.advancePct=+$('q_advance_pct')?.value||0;p.quote.installments=+$('q_installments')?.value||0;p.quote.assumptions=$('q_assumptions').value;if($('q_vat_treatment')){{const raw=$('q_vat_treatment').value;p.quote.vatTreatment=normalizeSalesVatTreatment(raw,p.quote.vat);p.quote.vat=raw==='REVERSE_CHARGE_NL_9'?9:raw==='REVERSE_CHARGE_NL_21'?21:vatReferenceRate(p.quote.vatTreatment,p.quote.vat)}}}if($('inv_number')){p.invoice.number=$('inv_number').value.trim();p.invoice.date=$('inv_date').value;p.invoice.dueDays=+$('inv_due').value||3;p.customer.vatId=($('inv_customer_vat')?.value||p.customer.vatId||'').trim();if($('inv_vat_treatment')){{const raw=$('inv_vat_treatment').value;p.invoice.vatTreatment=normalizeSalesVatTreatment(raw,p.invoice.vatRate??p.quote.vat);p.invoice.vatRate=raw==='REVERSE_CHARGE_NL_9'?9:raw==='REVERSE_CHARGE_NL_21'?21:vatReferenceRate(p.invoice.vatTreatment,p.invoice.vatRate??p.quote.vat)}}}document.querySelectorAll('.c_done').forEach(c=>{if(p.checklist[c.dataset.i])p.checklist[c.dataset.i].done=c.checked})}
-function saveProjectFromForm(show=true){let p=getP();if(!p)return;updateProjectFromVisibleForm(p);p.updated=nowStamp();try{localStorage.setItem(projectDraftStorageKey(),JSON.stringify({schema:'renoweet.project-draft',version:1,savedAt:p.updated,isNew:!!(draftProject&&draftProject.id===p.id),tab:currentTab,project:cloneSafe(p)}))}catch(e){}formDirty=false;scheduleSave();if(show)toast('Saved locally • syncing')}
-async function saveProjectAndClose(){let p=getP();if(!p)return;saveProjectFromForm(false);const isDraft=!!(draftProject&&p.id===draftProject.id);if(isDraft){if(!String(p.customer?.name||'').trim()){alert('Customer name is required before a new project can be saved.');currentTab='intake';renderTabs();return}if(!String(p.customer?.phone||'').trim()){alert('Phone number is required before a new project can be saved.');currentTab='intake';renderTabs();return}const existing=findExistingCustomerFor(p);if(existing){const use=confirm(`This phone/email already belongs to an existing customer:
+function saveProjectFromForm(show=true){let p=getP();if(!p)return;clearTimeout(projectDraftTimer);projectDraftTimer=null;updateProjectFromVisibleForm(p);p.updated=nowStamp();try{localStorage.setItem(projectDraftStorageKey(),JSON.stringify({schema:'renoweet.project-draft',version:1,savedAt:p.updated,isNew:!!(draftProject&&draftProject.id===p.id),tab:currentTab,project:cloneSafe(p)}))}catch(e){}formDirty=false;scheduleSave();if(show)toast('Saved locally • syncing')}
+async function saveProjectAndClose(){let p=getP();if(!p)return;saveProjectFromForm(false);const isDraft=!!(draftProject&&p.id===draftProject.id);if(isDraft){if(!String(p.customer?.name||'').trim()){alert('Customer name is required before a new project can be saved.');currentTab='intake';renderTabs();return}if(!String(p.customer?.phone||'').trim()){alert('Phone number is required before a new project can be saved.');currentTab='intake';renderTabs();return}const existing=findExistingCustomerFor(p);if(existing&&!isSelectedCustomerForDraft(p,existing)){const use=confirm(`This phone/email already belongs to an existing customer:
 
 ${existing.customer.name||'Unnamed customer'}
 ${existing.customer.phone||''}
 ${existing.customer.email||''}
 
-Use the existing customer details for this new project?`);if(use)p.customer={...existing.customer,...p.customer,name:existing.customer.name||p.customer.name,phone:existing.customer.phone||p.customer.phone,email:existing.customer.email||p.customer.email,address:p.customer.address||existing.customer.address}}db.projects.unshift(p);draftProject=null;resetProjectShadows()}if(pendingPhotoFiles.length){try{const ok=await savePendingPhotosToFolder(p);if(!ok)alert('Project saved, but selected photos were not stored because the photos folder is not connected.')}catch(e){alert('Project saved, but photos could not be stored: '+(e.message||e))}}p.updated=nowStamp();formDirty=false;const localSaved=await cacheBrowserState(true);const localVerified=localSaved&&await verifyProjectCached(p.id);if(!localVerified){formDirty=true;alert(`Project ${p.id} could not be verified in this device's safety database. The editor will remain open; copy important text before closing.`);return}clearProjectDraftRecovery(p.id);let driveSaved=false;if(window.renoweetDriveOS?.state?.connected)driveSaved=await window.renoweetDriveOS.save(true,p.id);else scheduleSave();$('projectModal').classList.remove('open');currentProjectId=null;render();if(driveSaved)toast(isDraft?'Project created • Drive verified':'Saved • Drive verified');else{dbState(false,'Saved locally • Drive sync pending',`Project ${p.id} is verified on this device. Reconnect Drive or use Save now.`);toast(isDraft?'Project created locally':'Saved locally')}}
+Use the existing customer details for this new project?`);if(use)p.customer={...existing.customer,...p.customer,name:existing.customer.name||p.customer.name,phone:existing.customer.phone||p.customer.phone,email:existing.customer.email||p.customer.email,address:p.customer.address||existing.customer.address}}db.projects.unshift(p);draftProject=null;draftCustomerSelection=null;resetProjectShadows()}if(pendingPhotoFiles.length){try{const ok=await savePendingPhotosToFolder(p);if(!ok)alert('Project saved, but selected photos were not stored because the photos folder is not connected.')}catch(e){alert('Project saved, but photos could not be stored: '+(e.message||e))}}p.updated=nowStamp();formDirty=false;const localSaved=await cacheBrowserState(true);const localVerified=localSaved&&await verifyProjectCached(p.id);if(!localVerified){formDirty=true;alert(`Project ${p.id} could not be verified in this device's safety database. The editor will remain open; copy important text before closing.`);return}if(formDirty){saveProjectDraftRecoveryNow();scheduleSave();toast('Newer changes are protected locally • press Save again to finish');return}clearProjectDraftRecovery(p.id);let driveSaved=false;if(window.renoweetDriveOS?.state?.connected)driveSaved=await window.renoweetDriveOS.save(true,p.id);else scheduleSave();if(formDirty||pendingPhotoFiles.length){if(formDirty)saveProjectDraftRecoveryNow();toast('Newer changes or photos still need saving • editor kept open');return}clearProjectDraftRecovery(p.id);formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render();if(driveSaved)toast(isDraft?'Project created • Drive verified':'Saved • Drive verified');else{dbState(false,'Saved locally • Drive sync pending',`Project ${p.id} is verified on this device. Reconnect Drive or use Save now.`);toast(isDraft?'Project created locally':'Saved locally')}}
 function addEstimate(){let p=getP();readEstimate(p);p.estimate.push({id:lineid(),desc:'',qty:1,unit:'uur',rate:62.5,...estimateVatFields('',p)});renderTabs()}
 function removeEst(i){let p=getP();readEstimate(p);p.estimate.splice(i,1);renderTabs()}
 function addMaterial(){let p=getP();readMaterials(p);p.materials.push({id:lineid(),desc:'',qty:1,supplier:'',cost:0});renderTabs()}
@@ -2127,9 +2147,9 @@ $('closeModalBtn').onclick=closeProject;
 $('quickSearchBtn').onclick=()=>{$('searchModal').classList.add('open');$('globalSearch').value='';$('globalSearch').focus();renderSearch('')}
 $('globalSearch').oninput=e=>renderSearch(e.target.value);
 $('connectBtn').onclick=connectWorkbook;$('resetXlsxBtn').onclick=resetXlsxConnection;$('eraseLocalCacheBtn').onclick=eraseLocalCache;$('saveNowBtn').onclick=()=>saveWorkbook(true);
-window.addEventListener('beforeunload',e=>{if(formDirty){saveProjectDraftRecoveryNow();e.preventDefault();e.returnValue=''}});
-window.addEventListener('pagehide',()=>{if(currentProjectId)saveProjectDraftRecoveryNow()});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&currentProjectId)saveProjectDraftRecoveryNow()});
+window.addEventListener('beforeunload',e=>{if(hasUnsavedEditorChanges()){protectUnsavedProjectOnExit();e.preventDefault();e.returnValue=''}});
+window.addEventListener('pagehide',()=>protectUnsavedProjectOnExit());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')protectUnsavedProjectOnExit()});
 
 (async()=>{
  // Restore the still-valid Google Calendar access token after a page refresh.
@@ -2166,12 +2186,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 <!-- Renoweet Drive storage layer -->
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.59"></script>
+<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.60"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.59"></script>
+<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.60"></script>
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
-<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.59"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.59"></script>
+<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.60"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.60"></script>
 </body>
 </html>

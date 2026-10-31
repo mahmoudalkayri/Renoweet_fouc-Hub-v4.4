@@ -132,6 +132,7 @@ async function saveDrive(manual=false,expectedProjectId=''){
    const next=hasNewerChanges?(typeof mergeDatabases==='function'?mergeDatabases(payload,latest,saved.data.os).merged:latest):saved.data.os;
    applyRemote(next,false,hasNewerChanges);state.sectionRevision=saved.sectionRevision;window.__renoweetCanonical=RenoweetDrive.clone(saved.data||window.__renoweetCanonical||{});state.baseline=RenoweetDrive.clone(saved.data.os);
    try{lastSyncedDb=RenoweetDrive.clone(state.baseline)}catch(e){};try{await cacheBrowserState(hasNewerChanges)}catch(e){}
+   if(!hasNewerChanges&&typeof finishVerifiedProjectSave==='function')finishVerifiedProjectSave(saved.data.os);
    const pending=hasNewerChanges||JSON.stringify(localSnapshot())!==JSON.stringify(saved.data.os);clearRetry();state.syncPending=pending;saveNewerChanges=pending;
    status(pending?'Saved locally • syncing newer changes':'Saved to Google Drive ✓',`OS revision ${state.sectionRevision} • checksum verified • ${new Date().toLocaleTimeString()}`);
    if(manual)try{toast(pending?'Earlier changes verified • newer edits queued':'Saved & verified')}catch(e){};return !pending
