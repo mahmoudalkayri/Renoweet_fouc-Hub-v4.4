@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Renoweet OS</title>
-<script src="./renoweet-project-references.js?v=4.4.4.58"></script>
+<script src="./renoweet-project-references.js?v=4.4.4.59"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -47,6 +47,7 @@ th{color:var(--muted);font-weight:600;background:#0f1727;position:sticky;top:0;z
 label{font-size:12px;color:var(--muted);font-weight:700}input,textarea,select{width:100%;border:1px solid var(--line);background:#0c1424;color:var(--text);border-radius:10px;padding:11px 12px;outline:none}
 textarea{min-height:92px;resize:vertical}input:focus,textarea:focus,select:focus{border-color:#4f7eb6}
 .modal{display:none;position:fixed;inset:0;background:rgba(1,5,12,.78);z-index:50;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto}
+.customer-row{cursor:pointer}.customer-row:hover,.customer-row:focus-visible{background:var(--panel2);outline:2px solid #4f7eb6;outline-offset:-2px}.customer-card{width:100%;text-align:left;color:var(--text);font:inherit;cursor:pointer}.customer-card:focus-visible{outline:2px solid #4f7eb6}.customer-summary{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0}.customer-summary strong{display:block;font-size:20px}#customerModal fieldset{border:0;padding:0;margin:0;min-width:0}#customerModal input[readonly]{opacity:.8}#customerModal .customer-actions{margin-top:18px}#customerEditorMessage{min-height:20px;margin-top:12px}@media print{#customerModal{display:none!important}}
 .modal.open{display:flex}.modalbox{width:min(1040px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
 .modalhead{display:flex;justify-content:space-between;gap:12px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--line)}.modalhead h2{margin:0}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin:14px -2px;padding:2px 2px 7px;scrollbar-width:thin}.tabs button{flex:0 0 auto;border:1px solid var(--line);background:#0d1525;color:var(--muted);padding:9px 11px;border-radius:10px}.tabs button.active{background:var(--panel2);color:var(--text)}
@@ -294,7 +295,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script src="./company-details.js"></script>
 <link rel="stylesheet" href="./styles-rich-text.css">
 <script src="./renoweet-rich-text.js"></script>
-<script src="./renoweet-print-layout.js?v=4.4.4.58"></script>
+<script src="./renoweet-print-layout.js?v=4.4.4.59"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -350,6 +351,13 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
  <div class="tabs no-print" id="projectTabs"></div><div id="projectTabContent"></div>
 </div></div>
 
+<div class="modal no-print" id="customerModal" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">
+ <div class="modalbox" style="max-width:720px">
+  <div class="modalhead"><div><h2 id="customerModalTitle">Customer details</h2><div class="small">Update contact details or start another project.</div></div><button type="button" class="btn" onclick="closeCustomer()">Close</button></div>
+  <div id="customerModalContent"></div>
+ </div>
+</div>
+
 <div class="modal" id="searchModal"><div class="modalbox" style="max-width:720px">
  <div class="modalhead"><h2>Search</h2><button class="btn" onclick="closeSearch()">Close</button></div>
  <div style="margin-top:14px"><input id="globalSearch" placeholder="Customer, address, description, project..."></div><div id="searchResults" style="margin-top:12px"></div>
@@ -365,8 +373,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.58"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.58"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.59"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.59"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -480,6 +488,7 @@ const serviceTemplates=[
 ];
 let db={projects:[],bookkeeping:[],deleted:[]}, workbook=null,fileHandle=null,saveTimer=null,isSaving=false,currentView='dashboard',currentProjectId=null,currentTab='intake';
 let draftProject=null,pendingPhotoFiles=[],photosFolderHandle=null;
+let customerEditor=null;
 let googleAccessToken='', googleTokenClient=null, planWeekOffset=0;
 const LOCAL_CACHE_DB='renoweet-os-local-cache-v1';
 const LOCAL_CACHE_STORE='state';
@@ -1181,7 +1190,70 @@ function dashboardHTML(){
 }
 function projectsHTML(){return `<div class="card" style="margin-bottom:12px"><input id="projectFilter" placeholder="Search projects, customers or addresses"></div><div id="projectList">${projectRowsHTML(db.projects)}</div>`}
 function pipelineHTML(){return `<div class="kanban">${stages.map(s=>`<div class="kanban-col"><h3>${s} (${db.projects.filter(p=>p.stage===s).length})</h3>${db.projects.filter(p=>p.stage===s).map(p=>`<div class="jobcard" onclick="openProject('${p.id}')"><b>${esc(p.title||'Untitled')}</b><small>${window.RenoweetProjectReferences?.reference(p)?esc(projectReference(p))+' · ':''}${esc(p.customer.name||'')}</small><div style="margin-top:7px">${money(projectTotals(p).total)}</div></div>`).join('')||'<div class="small">No jobs</div>'}</div>`).join('')}</div>`}
-function customersHTML(){let map={};db.projects.forEach(p=>{let k=(p.customer.email||p.customer.phone||p.customer.name||p.id).toLowerCase();if(!map[k])map[k]={...p.customer,count:0,total:0};map[k].count++;map[k].total+=projectTotals(p).total});let cs=Object.values(map);return cs.length?`<div class="mobile-cards">${cs.map(c=>`<div class="project-mobile"><b>${esc(c.name)}</b><div class="meta">${esc(c.phone)}<br>${esc(c.email)}<br>${esc(c.address)}<br>${c.count} project(s) • ${money(c.total)}</div></div>`).join('')}</div><div class="tablewrap desktop-table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Address</th><th>Projects</th><th>Value</th></tr></thead><tbody>${cs.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td><td>${esc(c.address)}</td><td>${c.count}</td><td>${money(c.total)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty">No customers yet.</div>'}
+function customerKey(p){const c=p.customer||{};return String(c.email||c.phone||c.name||p.id).toLowerCase()}
+function customerGroups(){
+ const groups=new Map();
+ for(const p of db.projects||[]){const key=customerKey(p);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p)}
+ return [...groups.values()].map(projects=>customerGroupDetails(projects));
+}
+function customerGroupDetails(projects){
+ const customer={name:'',phone:'',email:'',address:'',vatId:''};
+ for(const p of projects)for(const key of Object.keys(customer))if(!String(customer[key]).trim()&&String(p.customer?.[key]||'').trim())customer[key]=p.customer[key];
+ return {customer,projects,count:projects.length,total:projects.reduce((sum,p)=>sum+projectTotals(p).total,0),addressLocked:projects.some(p=>p.stage==='Completed')&&!!String(customer.address).trim()};
+}
+function customersHTML(){
+ const cs=customerGroups(),action=c=>esc(JSON.stringify(c.projects[0].id));
+ return cs.length?`<div class="mobile-cards">${cs.map(c=>`<button type="button" class="project-mobile customer-card" onclick="openCustomer(${action(c)})"><b>${esc(c.customer.name||'Unnamed customer')}</b><div class="meta">${esc(c.customer.phone)}<br>${esc(c.customer.email)}<br>${esc(c.customer.address)}<br>${c.count} project(s) • ${money(c.total)}</div></button>`).join('')}</div><div class="tablewrap desktop-table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Address</th><th>Projects</th><th>Value</th></tr></thead><tbody>${cs.map(c=>`<tr class="customer-row" tabindex="0" role="button" aria-label="${esc('Edit '+(c.customer.name||'unnamed customer'))}" onclick="openCustomer(${action(c)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCustomer(${action(c)})}"><td><b>${esc(c.customer.name||'Unnamed customer')}</b></td><td>${esc(c.customer.phone)}</td><td>${esc(c.customer.email)}</td><td>${esc(c.customer.address)}</td><td>${c.count}</td><td>${money(c.total)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty">No customers yet.</div>';
+}
+function customerContext(){return JSON.stringify([window.renoweetDriveOS?.state?.year||'',activeDbName||''])}
+function customerReadOnly(){return !!window.renoweetDriveOS?.state?.readOnly}
+function customerSnapshot(projects){return JSON.stringify(canonicalizeForSignature(projects.map(p=>[p.id,p.customer||{}])))}
+function customerEditorValues(){return Object.fromEntries(['name','phone','email','address','vatId'].map(key=>[key,($('customer_'+key)?.value||'').trim()]))}
+function customerEditorMessage(message){const el=$('customerEditorMessage');if(el)el.textContent=message}
+function openCustomer(projectId){
+ if(customerEditor&&!closeCustomer())return;
+ const source=db.projects.find(p=>p.id===projectId);if(!source)return;
+ const group=customerGroups().find(c=>c.projects.some(p=>p.id===projectId));if(!group)return;
+ const {customer:c}=group,readonly=customerReadOnly();
+ customerEditor={ids:group.projects.map(p=>p.id),key:customerKey(source),context:customerContext(),snapshot:customerSnapshot(group.projects),values:Object.fromEntries(Object.entries(c).map(([k,v])=>[k,String(v).trim()])),busy:false,focus:document.activeElement};
+ $('customerModalContent').innerHTML=`<div class="customer-summary"><div><span class="small">Projects</span><strong>${group.count}</strong></div><div><span class="small">Total project value</span><strong>${money(group.total)}</strong></div></div><p class="small">Project count and value are calculated from the linked projects. Contact changes apply to these projects. Issued Bookkeeping records keep their saved details.</p><form id="customerDetailsForm" onsubmit="event.preventDefault();saveCustomerDetails()"><fieldset ${readonly?'disabled':''}><div class="formgrid">${[['name','Customer name','text'],['phone','Phone','tel'],['email','Email','email'],['address','Address','text'],['vatId','Customer BTW-id','text']].map(([key,label,type])=>`<div class="field"><label for="customer_${key}">${label}</label><input id="customer_${key}" type="${type}" ${key==='name'?'required':''} ${key==='address'&&group.addressLocked?'readonly aria-describedby="customerAddressNote"':''} value="${esc(c[key])}"></div>`).join('')}</div><p class="small" id="customerAddressNote">${group.addressLocked?'Address locked: this customer already has a completed project. Existing project addresses are kept.': 'You can fill in a missing address. Existing addresses become locked once the customer has a completed project.'}</p><div class="actions customer-actions"><button type="submit" class="btn primary">Save details</button><button type="button" class="btn" onclick="saveCustomerDetails(true)">+ Add a new project</button></div></fieldset><div id="customerEditorMessage" class="small" role="status" aria-live="polite">${readonly?'Historical year — customer details are read-only.':''}</div></form>`;
+ $('customerModal').classList.add('open');$('customer_name')?.focus();
+}
+document.addEventListener('keydown',event=>{if(!customerEditor)return;if(event.key==='Escape'){event.preventDefault();closeCustomer();return}if(event.key==='Tab'){const nodes=[...$('customerModal').querySelectorAll('button:not(:disabled),input:not(:disabled),[tabindex="0"]')],first=nodes[0],last=nodes[nodes.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}});
+function closeCustomer(force=false){
+ if(customerEditor?.busy&&!force)return false;
+ if(customerEditor&&!force&&JSON.stringify(customerEditorValues())!==JSON.stringify(customerEditor.values)&&!confirm('Discard unsaved customer changes?'))return false;
+ const focus=customerEditor?.focus;customerEditor=null;$('customerModal').classList.remove('open');focus?.focus?.();return true;
+}
+async function saveCustomerDetails(addProject=false){
+ const editor=customerEditor;if(!editor||editor.busy)return false;
+ if(editor.context!==customerContext()){customerEditorMessage('The selected database or year changed. Close this window and open the customer again.');return false}
+ if(customerReadOnly()){customerEditorMessage('Historical year — customer details are read-only.');return false}
+ const form=$('customerDetailsForm');if(!form.reportValidity())return false;
+ const projects=editor.ids.map(id=>db.projects.find(p=>p.id===id));
+ if(projects.some(p=>!p)||customerSnapshot(projects)!==editor.snapshot){customerEditorMessage('Customer details changed or a project was removed while this window was open. Close and reopen the customer to load the latest details.');return false}
+ // Include a newly synced project belonging to the same customer, without overwriting its details.
+ if((db.projects||[]).some(p=>customerKey(p)===editor.key&&!editor.ids.includes(p.id))){customerEditorMessage('This customer has a new linked project. Close and reopen this window before saving.');return false}
+ const group=customerGroupDetails(projects),values=customerEditorValues();
+ if(group.addressLocked&&values.address!==String(group.customer.address).trim()){customerEditorMessage('The address is locked because this customer has a completed project. Close and reopen this window to see the protected address.');return false}
+ values.phone=normalizePhoneForStorage(values.phone);
+ const newKey=customerKey({id:projects[0].id,customer:values});
+ if(db.projects.some(p=>!editor.ids.includes(p.id)&&customerKey(p)===newKey)){customerEditorMessage('These details match another customer. Open that customer or use separate contact details to avoid combining their project histories.');return false}
+ const originalValues={...editor.values};
+ const stamp=nowStamp();editor.busy=true;form.querySelector('fieldset').disabled=true;customerEditorMessage('Saving customer details on this device…');
+ try{
+  for(const p of projects){const before=cloneSafe(p);p.customer={...p.customer};for(const key of Object.keys(values)){if(key==='address'&&group.addressLocked&&String(p.customer.address||'').trim())continue;if(values[key]!==originalValues[key]||!String(p.customer[key]||'').trim())p.customer[key]=values[key]}if(!sameData(before.customer,p.customer)){stampProjectChanges(p,before,stamp);p.updated=stamp;projectShadows.set(p.id,cloneSafe(p))}}
+  editor.snapshot=customerSnapshot(projects);editor.values={...values};$('customer_phone').value=values.phone;
+  const saved=await cacheBrowserState(true);
+  if(!saved)throw new Error('The local safety copy could not be saved. Keep this window open and try Save details again.');
+  if(editor.context!==customerContext())throw new Error('The selected database changed while saving. Reopen the customer in the correct year before continuing.');
+  scheduleSave();render();
+  if(addProject){closeCustomer(true);startNewProject(values)}else{closeCustomer(true);toast('Customer saved locally • syncing')}
+  return true;
+ }catch(e){customerEditorMessage(e.message||'Customer details could not be saved. Please try again.');return false}
+ finally{editor.busy=false;if(customerEditor===editor)form.querySelector('fieldset').disabled=customerReadOnly()}
+}
+
 function scheduleHTML(){
  const ps=db.projects.filter(p=>p.schedule?.start).sort((a,b)=>String(a.schedule.start).localeCompare(String(b.schedule.start))||String(a.schedule.time||'').localeCompare(String(b.schedule.time||'')));
  const connected=!!googleAccessToken;
@@ -1283,7 +1355,7 @@ function render(){ensureProjectReferences();let root=$('viewRoot');if(currentVie
 function getP(){if(draftProject&&draftProject.id===currentProjectId)return draftProject;return db.projects.find(p=>p.id===currentProjectId)}
 const tabs=[['intake','Intake'],['scope','Scope'],['estimate','Estimate'],['quote','Quotation'],['materials','Materials'],['documents','Documents & Photos'],['payments','Payments'],['orders','Orders'],['schedule','Schedule'],['followups','Follow-up'],['acceptance','Acceptance'],['messages','Messages'],['invoice','Invoice'],['activity','Activity'],['checklist','Checklist'],['projectbackup','Backup']];
 function openProject(id,tab='intake'){draftProject=null;pendingPhotoFiles=[];formDirty=false;currentProjectId=id;currentTab=tab;let p=getP();if(!p)return;$('projectModal').classList.add('open');$('modalTitle').textContent=p.title||'New project';$('modalMeta').textContent=`${projectReference(p)} • ${p.stage}`;renderTabs()}
-function startNewProject(){draftProject=blankProject();pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${projectReference(draftProject)} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
+function startNewProject(customer=null){draftProject=blankProject();if(customer&&typeof customer.name==='string')draftProject.customer={...draftProject.customer,...cloneSafe(customer)};pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${projectReference(draftProject)} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
 function closeProject(){if(formDirty&&!confirm('This project has locally protected changes. Discard this draft/edit and close?'))return;const closingId=currentProjectId;if(draftProject&&closingId===draftProject.id){draftProject=null;pendingPhotoFiles=[]}clearProjectDraftRecovery(closingId);formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render()}
 function renderTabs(){let p=getP();$('projectTabs').innerHTML=tabs.map(([k,l])=>`<button class="${currentTab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`).join('');$('projectTabContent').innerHTML=tabHTML(p,currentTab);bindTab()}
 function switchTab(t){saveProjectFromForm(false);currentTab=t;renderTabs()}
@@ -2049,7 +2121,7 @@ if(pinInput)pinInput.addEventListener("keydown",e=>{if(e.key==="Enter")handlePin
 initPinLock();
 
 $('deleteProjectBtn').onclick=moveCurrentProjectToDeleted;
-$('newProjectBtn').onclick=startNewProject
+$('newProjectBtn').onclick=()=>startNewProject();
 $('saveProjectBtn').onclick=saveProjectAndClose
 $('closeModalBtn').onclick=closeProject;
 $('quickSearchBtn').onclick=()=>{$('searchModal').classList.add('open');$('globalSearch').value='';$('globalSearch').focus();renderSearch('')}
@@ -2094,12 +2166,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 <!-- Renoweet Drive storage layer -->
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.58"></script>
+<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.59"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.58"></script>
+<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.59"></script>
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
-<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.58"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.58"></script>
+<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.59"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.59"></script>
 </body>
 </html>

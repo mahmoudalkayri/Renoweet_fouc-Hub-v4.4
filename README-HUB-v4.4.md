@@ -1,3 +1,19 @@
+# Customer details window — 31 October 2026 · v4.4.4.59
+
+In **OS → Customers**, click a customer row or card to open their details. You can edit the name, phone, email and BTW-id, fill missing information and save. Contact changes apply to the projects already grouped under that customer in the selected database. Existing Bookkeeping invoice records and saved invoice-document snapshots are not rewritten.
+
+- Project count and total value remain calculated from the actual projects and cannot be edited here.
+- If the customer has a completed project and an existing address, the address is read-only. Different existing project addresses are retained. A missing address can still be filled; it becomes locked once saved for a customer with completed work. Before completion, you can edit the address. An unchanged address is not copied over other existing project addresses.
+- **Add a new project** saves the reviewed customer details, then opens a fresh Lead draft with the name, phone, email, address and BTW-id already filled. Change the new project's address in Intake if the new job is at a different location. Saving that project uses the existing Save workflow.
+- Starting this draft consumes no project number. The P26-041 numbering policy remains unchanged: numbers are assigned when quotations are issued.
+- Closing without saving discards changes only after confirmation. Historical years remain read-only. A customer changed by another device must be reopened before saving; unrelated Drive refreshes keep the form available. A failed local safety save leaves the form open for retry.
+
+Validation: 29 regression suites and four DOM interaction suites passed, including desktop/mobile customer opening, address protection, missing details, prefilled new leads, unchanged project counts/value and financial history, cancelled edits, Drive replacement/stale data, archived years, and local-save retry. The accounting, BTW, partial-invoice, assets and monthly-payment financial engines are unchanged from the attached version. Live browser visual verification was unavailable because the managed preview service was not running.
+
+For the customer interaction check, install Happy DOM or provide its absolute module path: `DOM_TEST_MODULE=/path/to/happy-dom/lib/index.js npm run test:customers`.
+
+---
+
 # Future-project numbers — 30 October 2026 · v4.4.4.58
 
 New project numbers start at **P26-041**, using the existing 40 projects as the opening sequence. No numbers are backfilled onto existing quoted/bookkept projects. Their original project IDs, quotations, invoices, financial history, photos and links are retained.
