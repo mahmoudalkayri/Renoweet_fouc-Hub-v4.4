@@ -1,3 +1,20 @@
+# Future-project numbers — 30 October 2026 · v4.4.4.58
+
+New project numbers start at **P26-041**, using the existing 40 projects as the opening sequence. No numbers are backfilled onto existing quoted/bookkept projects. Their original project IDs, quotations, invoices, financial history, photos and links are retained.
+
+- Creating or editing a lead does not consume a number. Draft quotations, draft previews and draft PDF downloads do not consume one either.
+- **Send quotation** includes the proposed number in the first PDF, then records it when the quotation is successfully handed to WhatsApp/email/native sharing. Cancelling sharing, failing PDF generation or closing a blocked-popup fallback leaves the counter unchanged.
+- **Mark sent** also assigns the number and moves the project to Quoted. If you send a PDF manually outside the app, use **Mark sent first**, then **Print / PDF** to obtain the numbered quotation.
+- The same number is used on later quotation/invoice prints and the linked Notebook. New unquoted drafts do not expose their long internal IDs on client prints. Existing project prints retain their previous identification.
+- Numbers are separate from quotation numbers, invoice numbers and the permanent internal project ID. No financial totals or BTW calculations were changed.
+- The 2026 counter opens at 40; the first newly issued quotation receives P26-041. The 2027 sequence starts at P27-001. Sequences can grow beyond 999.
+- Numbers remain reserved after project deletion. JSON backups and the XLSX Project Numbers / Project Number Counters sheets preserve the registry and counters; internal IDs still join every record.
+- Complete Drive sync before issuing the next quotation from another device. Independently offline devices cannot share a live counter. During a merge, the reference already stored in Drive wins and a conflicting new local reference receives the next free number; internal IDs and invoice amounts stay unchanged. Review a pending number before reprinting after a conflict.
+
+Validation: the complete 29-suite automated check passed, including real mixed-BTW quotation/invoice sharing, 40 unchanged legacy projects, P26-041 issuance, cancelled/failed sends, blocked-popup fallback, Drive object replacement, year rollover, duplicate-number reconciliation, deletion/recovery, and a real XLSX/canonical-checksum round trip. Three additional DOM interaction suites passed for assets and monthly payments/recovery. The accounting, VAT, partial-invoice, company-asset and monthly-payment financial engines remain byte-for-byte unchanged from the supplied working version. Live browser visual verification was unavailable because the managed preview service was not running.
+
+---
+
 # Renoweet Focus Hub v4.4.4
 
 ## Company assets and van finance lease — 23 October 2026 · v4.4.4.56

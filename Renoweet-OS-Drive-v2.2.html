@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Renoweet OS</title>
+<script src="./renoweet-project-references.js?v=4.4.4.58"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -293,7 +294,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script src="./company-details.js"></script>
 <link rel="stylesheet" href="./styles-rich-text.css">
 <script src="./renoweet-rich-text.js"></script>
-<script src="./renoweet-print-layout.js?v=4.4.4.56"></script>
+<script src="./renoweet-print-layout.js?v=4.4.4.58"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -364,8 +365,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.56"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.56"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.58"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.58"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -507,9 +508,11 @@ function xlsxProviderHelp(){
   : 'Make sure OneDrive has finished syncing the XLSX, then reconnect the same file.';
 }
 function uid(){const d=new Date(),ts=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+String(d.getSeconds()).padStart(2,'0')+String(d.getMilliseconds()).padStart(3,'0');const r=(crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,8):Math.random().toString(36).slice(2,10)).toUpperCase();return `P${ts}-${r}`}
+function ensureProjectReferences(){return window.RenoweetProjectReferences?.ensure(db,{year:window.renoweetDriveOS?.state?.year||new Date().getFullYear()})}
+function projectReference(p){ensureProjectReferences();return window.RenoweetProjectReferences?.get(p)||p?.projectNumber||p?.id||''}
 function lineid(){return Math.random().toString(36).slice(2,10).toUpperCase()}
 function toast(msg='Saved'){let t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500)}
-function blankProject(){return {id:uid(),created:today(),updated:nowStamp(),stage:'Lead',customer:{name:'',phone:'',email:'',address:'',vatId:''},title:'',description:'',scope:'',scopePhotos:[],notes:'',estimate:[{id:lineid(),desc:'Arbeid',qty:1,unit:'uur',rate:62.5,vatTreatment:'NL_HIGH',vatRate:21,vatReferenceRate:null}],materials:[],documents:[],payments:[],purchaseOrders:[],activity:[],followUps:[],acceptance:{status:'Pending',date:'',notes:''},schedule:{start:'',end:'',time:'',notes:'',shareClient:false,inviteEmail:'',inviteStatus:'',calendarSharedWith:'',calendarShareSignature:''},quote:{number:'',date:today(),validDays:14,vat:21,vatTreatment:'NL_HIGH',status:'Draft',parking:0,travel:0,exclusions:'Niet inbegrepen tenzij expliciet vermeld:\n- Vergunningen, constructieberekeningen en werkzaamheden van derden.\n- Verborgen gebreken, asbest of niet-zichtbare leidingen/constructies.\n- Herstelwerk buiten de omschreven scope.',paymentTerms:'Na akkoord op deze offerte is een aanbetaling verschuldigd ter voorbereiding en uitvoering van de werkzaamheden volgens planning. Het resterende bedrag wordt betaald volgens de afgesproken termijn(en), met de eindbetaling bij oplevering. Betalingstermijnen en vervaldata zijn conform de offerte en gemaakte afspraken.',advancePct:50,installments:0,assumptions:'Uitvoering op basis van zichtbare situatie en beschikbare informatie tijdens inspectie. Definitieve maten, materiaalkeuzes en bereikbaarheid worden vóór start bevestigd.'},invoice:{number:'',date:today(),dueDays:3,status:'Draft',vatTreatment:'',vatRate:null},checklist:defaultChecklist.map((x,i)=>({order:i+1,text:x,done:false}))}}
+function blankProject(){return {id:uid(),projectNumberPolicyVersion:1,created:today(),updated:nowStamp(),stage:'Lead',customer:{name:'',phone:'',email:'',address:'',vatId:''},title:'',description:'',scope:'',scopePhotos:[],notes:'',estimate:[{id:lineid(),desc:'Arbeid',qty:1,unit:'uur',rate:62.5,vatTreatment:'NL_HIGH',vatRate:21,vatReferenceRate:null}],materials:[],documents:[],payments:[],purchaseOrders:[],activity:[],followUps:[],acceptance:{status:'Pending',date:'',notes:''},schedule:{start:'',end:'',time:'',notes:'',shareClient:false,inviteEmail:'',inviteStatus:'',calendarSharedWith:'',calendarShareSignature:''},quote:{number:'',date:today(),validDays:14,vat:21,vatTreatment:'NL_HIGH',status:'Draft',parking:0,travel:0,exclusions:'Niet inbegrepen tenzij expliciet vermeld:\n- Vergunningen, constructieberekeningen en werkzaamheden van derden.\n- Verborgen gebreken, asbest of niet-zichtbare leidingen/constructies.\n- Herstelwerk buiten de omschreven scope.',paymentTerms:'Na akkoord op deze offerte is een aanbetaling verschuldigd ter voorbereiding en uitvoering van de werkzaamheden volgens planning. Het resterende bedrag wordt betaald volgens de afgesproken termijn(en), met de eindbetaling bij oplevering. Betalingstermijnen en vervaldata zijn conform de offerte en gemaakte afspraken.',advancePct:50,installments:0,assumptions:'Uitvoering op basis van zichtbare situatie en beschikbare informatie tijdens inspectie. Definitieve maten, materiaalkeuzes en bereikbaarheid worden vóór start bevestigd.'},invoice:{number:'',date:today(),dueDays:3,status:'Draft',vatTreatment:'',vatRate:null},checklist:defaultChecklist.map((x,i)=>({order:i+1,text:x,done:false}))}}
 const OSVAT=window.RenoweetOSVat;
 function normalizeSalesVatTreatment(v,rate=21){return OSVAT.normalizeTreatment(v,rate)}
 function vatReferenceRate(t,fallback=21){return OSVAT.referenceRate(t,fallback)}
@@ -601,6 +604,7 @@ function dbState(ok,msg,detail=''){ lastDbStatus={ok:!!ok,msg:String(msg||''),de
 
 function openLocalCacheDb(){return new Promise((resolve,reject)=>{let r=indexedDB.open(LOCAL_CACHE_DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(LOCAL_CACHE_STORE))r.result.createObjectStore(LOCAL_CACHE_STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function cacheBrowserState(dirty=true){
+ ensureProjectReferences();
  try{
   localCacheDirty=!!dirty;
   if(!localCacheDirty)lastSyncedDb=structuredClone(db);
@@ -668,7 +672,7 @@ async function restoreProjectDraftRecovery(){
   draftProject=null;
  }
  currentProjectId=p.id;currentTab=saved.tab||'intake';formDirty=true;localCacheDirty=true;
- await cacheBrowserState(true);render();$('projectModal').classList.add('open');$('modalTitle').textContent=(getP()?.title||'Recovered project draft');$('modalMeta').textContent=`${p.id} • recovered from this device`;renderTabs();toast('Unsaved project restored');return true
+ await cacheBrowserState(true);render();$('projectModal').classList.add('open');$('modalTitle').textContent=(getP()?.title||'Recovered project draft');$('modalMeta').textContent=`${projectReference(p)} • recovered from this device`;renderTabs();toast('Unsaved project restored');return true
 }
 async function verifyProjectCached(projectId){const cached=await readBrowserCache(activeDbName);return !!cached?.db?.projects?.some(p=>p.id===projectId)}
 async function switchDatabaseContext(selectedName){
@@ -764,6 +768,7 @@ function mergeProject3(base,local,remote,stats){
  const out=mergeObject3(b,local,remote,preferLocal,stats,'',local,remote);
  out.id=local.id||remote.id;
  out.created=local.created||remote.created||today();
+ if(window.RenoweetProjectReferences?.valid(remote.projectNumber))out.projectNumber=remote.projectNumber;
  out.updated=(preferLocal?local.updated:remote.updated)||local.updated||remote.updated||nowStamp();
  out.fieldUpdated={...(remote.fieldUpdated||{}),...(local.fieldUpdated||{})};
  const allFieldPaths=new Set([...Object.keys(local.fieldUpdated||{}),...Object.keys(remote.fieldUpdated||{})]);
@@ -814,7 +819,7 @@ function mergeDatabases(baseDb,localDb,remoteDb){
  const bb=baseDb?.bookkeeping||[],lb=localDb?.bookkeeping||[],rb=remoteDb?.bookkeeping||[];
  const bkKey=(x,i)=>x?.['Invoice number']||`${x?.['Project ID']||''}|${x?.['Invoice date']||''}|${i}`;
  const bookkeeping=mergeArray3(bb,lb,rb,bkKey,true,stats,'bookkeeping');
- return {merged:{projects,bookkeeping,deleted},stats};
+ const merged={projects,bookkeeping,deleted,projectNumberRegistry:{...(baseDb?.projectNumberRegistry||{}),...(localDb?.projectNumberRegistry||{})},projectNumberCounters:Object.fromEntries([...new Set([...Object.keys(baseDb?.projectNumberCounters||{}),...Object.keys(localDb?.projectNumberCounters||{})])].map(y=>[y,Math.max(baseDb?.projectNumberCounters?.[y]||0,localDb?.projectNumberCounters?.[y]||0)]))};window.RenoweetProjectReferences?.ensure(merged,{remote:remoteDb});return {merged,stats};
 }
 
 async function connectWorkbook(){
@@ -1003,7 +1008,7 @@ function rows(name){let ws=workbook?.Sheets?.[name];return ws?XLSX.utils.sheet_t
 function parseWorkbook(){
  let ps=rows('Projects'), est=rows('Estimate'), mats=rows('Materials'), checks=rows('Checklist'), docs=rows('Documents'), pays=rows('Payments'), orders=rows('Purchase Orders'), acts=rows('Activity'), follow=rows('FollowUps');
  db.projects=ps.filter(r=>r['Project ID']).map(r=>({
-  id:r['Project ID'],created:r.Created||today(),updated:r.Updated||today(),fieldUpdated:(()=>{try{return JSON.parse(r['Field Updated JSON']||'{}')}catch{return {}}})(),stage:r.Stage||'Lead',title:r.Title||'',
+  id:r['Project ID'],projectReference:r['Project number']||'',created:r.Created||today(),updated:r.Updated||today(),fieldUpdated:(()=>{try{return JSON.parse(r['Field Updated JSON']||'{}')}catch{return {}}})(),stage:r.Stage||'Lead',title:r.Title||'',
   customer:{name:r['Customer Name']||'',phone:r.Phone||'',email:r.Email||'',address:r.Address||'',vatId:r['Customer VAT ID']||''},
   description:r.Description||'',scope:r.Scope||'',scopePhotos:(()=>{try{return JSON.parse(r['Scope Photos JSON']||'[]')}catch{return []}})(),notes:r.Notes||'',
   documents:docs.filter(x=>x['Project ID']===r['Project ID']).map(x=>({id:x['Item ID']||lineid(),type:x.Type||'Document',title:x.Title||'',url:x.URL||'',notes:x.Notes||'',date:x.Date||''})),
@@ -1022,12 +1027,15 @@ function parseWorkbook(){
  }));
  db.bookkeeping=rows('Bookkeeping');
  db.deleted=rows('Deleted').filter(r=>r['Deleted at']||r['Project ID']||r.Title);
+ db.projectNumberCounters=Object.fromEntries(rows('Project Number Counters').map(r=>[r.Year,Number(r['Last number'])||0]));
+ db.projectNumberRegistry=Object.fromEntries(rows('Project Numbers').filter(r=>r['Project ID']&&r['Project number']).map(r=>[r['Project ID'],r['Project number']]));ensureProjectReferences();
 }
 function sheetFromRows(headers,dataRows){return XLSX.utils.json_to_sheet(dataRows,{header:headers})}
 function replaceDatabaseSheets(){
+ ensureProjectReferences();
  if(!workbook)workbook=XLSX.utils.book_new();
- let projectHeaders=["Invoice Settings JSON","Invoice Documents JSON","Project ID","Created","Updated","Field Updated JSON","Stage","Title","Customer Name","Phone","Email","Address","Customer VAT ID","Description","Scope","Notes","Schedule Start","Schedule End","Schedule Time","Schedule End Time","Schedule Notes","Share With Client","Calendar Invite Email","Calendar Invite Status","Google Calendar Shared With","Google Calendar Share Signature","Google Calendar Event ID","Google Calendar Link","Google Calendar Synced At","Quote Number","Quote Date","Quote Valid Days","Quote VAT","Quote VAT Treatment","Quote Status","Quote Parking","Quote Travel","Quote Exclusions","Quote Payment Terms","Quote Assumptions","Invoice Number","Invoice Date","Invoice Due Days","Invoice Status","Invoice VAT Treatment","Invoice VAT Rate","Acceptance Status","Acceptance Date","Acceptance Notes"];
- let projectRows=db.projects.map(p=>({"Project ID":p.id,Created:p.created,Updated:p.updated,"Field Updated JSON":JSON.stringify(p.fieldUpdated||{}),Stage:p.stage,Title:p.title,"Customer Name":p.customer.name,Phone:p.customer.phone,Email:p.customer.email,Address:p.customer.address,"Customer VAT ID":p.customer.vatId||"",Description:p.description,Scope:p.scope,"Scope Photos JSON":JSON.stringify(p.scopePhotos||[]),Notes:p.notes,"Schedule Start":p.schedule.start,"Schedule End":p.schedule.end,"Schedule Time":p.schedule.time,"Schedule End Time":p.schedule.endTime||"","Schedule Notes":p.schedule.notes,"Share With Client":!!p.schedule.shareClient,"Calendar Invite Email":p.schedule.inviteEmail||"","Calendar Invite Status":p.schedule.inviteStatus||"","Google Calendar Shared With":p.schedule.calendarSharedWith||"","Google Calendar Share Signature":p.schedule.calendarShareSignature||"","Google Calendar Event ID":p.schedule.calendarEventId||"","Google Calendar Link":p.schedule.calendarHtmlLink||"","Google Calendar Synced At":p.schedule.calendarSyncedAt||"","Quote Number":p.quote.number,"Quote Date":p.quote.date,"Quote Valid Days":p.quote.validDays,"Quote VAT":p.quote.vat,"Quote VAT Treatment":projectVatConfig(p,'quote').treatment,"Quote Status":p.quote.status,"Quote Parking":+p.quote.parking||0,"Quote Travel":+p.quote.travel||0,"Quote Exclusions":p.quote.exclusions||"","Quote Payment Terms":p.quote.paymentTerms||"","Quote Advance %":+p.quote.advancePct||50,"Quote Installments":+p.quote.installments||0,"Quote Assumptions":p.quote.assumptions||"","Invoice Number":p.invoice.number,"Invoice Date":p.invoice.date,"Invoice Due Days":p.invoice.dueDays,"Invoice Status":p.invoice.status,"Invoice Settings JSON":JSON.stringify(p.invoice||{}),"Invoice Documents JSON":JSON.stringify(p.invoiceDocuments||[]),"Invoice VAT Treatment":p.invoice.vatTreatment||"","Invoice VAT Rate":p.invoice.vatRate??"","Acceptance Status":p.acceptance?.status||"Pending","Acceptance Date":p.acceptance?.date||"","Acceptance Notes":p.acceptance?.notes||""}));
+ let projectHeaders=["Invoice Settings JSON","Invoice Documents JSON","Project ID","Project number","Project number policy","Created","Updated","Field Updated JSON","Stage","Title","Customer Name","Phone","Email","Address","Customer VAT ID","Description","Scope","Notes","Schedule Start","Schedule End","Schedule Time","Schedule End Time","Schedule Notes","Share With Client","Calendar Invite Email","Calendar Invite Status","Google Calendar Shared With","Google Calendar Share Signature","Google Calendar Event ID","Google Calendar Link","Google Calendar Synced At","Quote Number","Quote Date","Quote Valid Days","Quote VAT","Quote VAT Treatment","Quote Status","Quote Parking","Quote Travel","Quote Exclusions","Quote Payment Terms","Quote Assumptions","Invoice Number","Invoice Date","Invoice Due Days","Invoice Status","Invoice VAT Treatment","Invoice VAT Rate","Acceptance Status","Acceptance Date","Acceptance Notes"];
+ let projectRows=db.projects.map(p=>({"Project ID":p.id,"Project number":p.projectNumber||"","Project number policy":p.projectNumberPolicyVersion||"",Created:p.created,Updated:p.updated,"Field Updated JSON":JSON.stringify(p.fieldUpdated||{}),Stage:p.stage,Title:p.title,"Customer Name":p.customer.name,Phone:p.customer.phone,Email:p.customer.email,Address:p.customer.address,"Customer VAT ID":p.customer.vatId||"",Description:p.description,Scope:p.scope,"Scope Photos JSON":JSON.stringify(p.scopePhotos||[]),Notes:p.notes,"Schedule Start":p.schedule.start,"Schedule End":p.schedule.end,"Schedule Time":p.schedule.time,"Schedule End Time":p.schedule.endTime||"","Schedule Notes":p.schedule.notes,"Share With Client":!!p.schedule.shareClient,"Calendar Invite Email":p.schedule.inviteEmail||"","Calendar Invite Status":p.schedule.inviteStatus||"","Google Calendar Shared With":p.schedule.calendarSharedWith||"","Google Calendar Share Signature":p.schedule.calendarShareSignature||"","Google Calendar Event ID":p.schedule.calendarEventId||"","Google Calendar Link":p.schedule.calendarHtmlLink||"","Google Calendar Synced At":p.schedule.calendarSyncedAt||"","Quote Number":p.quote.number,"Quote Date":p.quote.date,"Quote Valid Days":p.quote.validDays,"Quote VAT":p.quote.vat,"Quote VAT Treatment":projectVatConfig(p,'quote').treatment,"Quote Status":p.quote.status,"Quote Parking":+p.quote.parking||0,"Quote Travel":+p.quote.travel||0,"Quote Exclusions":p.quote.exclusions||"","Quote Payment Terms":p.quote.paymentTerms||"","Quote Advance %":+p.quote.advancePct||50,"Quote Installments":+p.quote.installments||0,"Quote Assumptions":p.quote.assumptions||"","Invoice Number":p.invoice.number,"Invoice Date":p.invoice.date,"Invoice Due Days":p.invoice.dueDays,"Invoice Status":p.invoice.status,"Invoice Settings JSON":JSON.stringify(p.invoice||{}),"Invoice Documents JSON":JSON.stringify(p.invoiceDocuments||[]),"Invoice VAT Treatment":p.invoice.vatTreatment||"","Invoice VAT Rate":p.invoice.vatRate??"","Acceptance Status":p.acceptance?.status||"Pending","Acceptance Date":p.acceptance?.date||"","Acceptance Notes":p.acceptance?.notes||""}));
  let estRows=[],matRows=[],checkRows=[],docRows=[],paymentRows=[],orderRows=[],activityRows=[],followRows=[];
  db.projects.forEach(p=>{
   (p.estimate||[]).forEach((x,i)=>{const cfg=OSVAT.lineConfig(x,p,'quote');estRows.push({"Project ID":p.id,"Line ID":x.id||lineid(),Description:x.desc,Qty:+x.qty||0,Unit:x.unit,Rate:+x.rate||0,"VAT Treatment":cfg.treatment,"VAT Rate":['REVERSE_CHARGE_NL','NL_ZERO'].includes(cfg.treatment)?0:cfg.rate,"VAT Reference Rate":cfg.treatment==='REVERSE_CHARGE_NL'?cfg.rate:''})});
@@ -1040,6 +1048,8 @@ function replaceDatabaseSheets(){
   (p.followUps||[]).forEach(x=>followRows.push({"Project ID":p.id,"Follow-up ID":x.id||lineid(),Date:x.date||'',Type:x.type||'General',Text:x.text||'',Done:!!x.done}));
  });
  workbook.Sheets['Projects']=sheetFromRows(projectHeaders,projectRows);
+ workbook.Sheets['Project Number Counters']=sheetFromRows(['Year','Last number'],Object.entries(db.projectNumberCounters||{}).map(([Year,n])=>({Year,'Last number':n})));if(!workbook.SheetNames.includes('Project Number Counters'))workbook.SheetNames.push('Project Number Counters');
+ workbook.Sheets['Project Numbers']=sheetFromRows(['Project ID','Project number'],Object.entries(db.projectNumberRegistry||{}).map(([id,ref])=>({'Project ID':id,'Project number':ref})));if(!workbook.SheetNames.includes('Project Numbers'))workbook.SheetNames.push('Project Numbers');
  workbook.Sheets['Estimate']=sheetFromRows(["Project ID","Line ID","Description","Qty","Unit","Rate","VAT Treatment","VAT Rate","VAT Reference Rate"],estRows);
  workbook.Sheets['Materials']=sheetFromRows(["Project ID","Line ID","Material","Qty","Supplier","Cost"],matRows);
  workbook.Sheets['Checklist']=sheetFromRows(["Project ID","Item Order","Item","Done"],checkRows);
@@ -1159,10 +1169,10 @@ function setView(v){
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 document.querySelectorAll('[data-mview]').forEach(b=>b.onclick=()=>setView(b.dataset.mview));
 
-function projectRowsHTML(ps){
+function projectRowsHTML(ps){ensureProjectReferences();
  if(!ps.length)return '<div class="card empty">No projects yet.</div>';
- let desk=`<div class="tablewrap desktop-table"><table><thead><tr><th>Project</th><th>Customer</th><th>Stage</th><th>Value</th><th>Updated</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.title||'Untitled')}</b><div class="small">${esc(p.customer.address)}</div></td><td>${esc(p.customer.name)}</td><td>${stagePill(p.stage)}</td><td>${money(projectTotals(p).total)}</td><td>${fmtDate(p.updated)}</td><td><button class="btn" onclick="openProject('${p.id}')">Open</button></td></tr>`).join('')}</tbody></table></div>`;
- let mob=`<div class="mobile-cards">${ps.map(p=>`<div class="project-mobile" onclick="openProject('${p.id}')"><div class="row"><div><b>${esc(p.title||'Untitled')}</b><div class="small">${esc(p.customer.name||'')}</div></div>${stagePill(p.stage)}</div><div class="meta">${esc(p.customer.address||'')}<br>${money(projectTotals(p).total)} • Updated ${fmtDate(p.updated)}</div></div>`).join('')}</div>`;
+ let desk=`<div class="tablewrap desktop-table"><table><thead><tr><th>Project</th><th>Customer</th><th>Stage</th><th>Value</th><th>Updated</th><th></th></tr></thead><tbody>${ps.map(p=>`<tr><td><b>${esc(p.title||'Untitled')}</b><div class="small">${window.RenoweetProjectReferences?.reference(p)?'<b>'+esc(projectReference(p))+'</b> · ':''}${esc(p.customer.address)}</div></td><td>${esc(p.customer.name)}</td><td>${stagePill(p.stage)}</td><td>${money(projectTotals(p).total)}</td><td>${fmtDate(p.updated)}</td><td><button class="btn" onclick="openProject('${p.id}')">Open</button></td></tr>`).join('')}</tbody></table></div>`;
+ let mob=`<div class="mobile-cards">${ps.map(p=>`<div class="project-mobile" onclick="openProject('${p.id}')"><div class="row"><div><b>${esc(p.title||'Untitled')}</b><div class="small">${window.RenoweetProjectReferences?.reference(p)?esc(projectReference(p))+' · ':''}${esc(p.customer.name||'')}</div></div>${stagePill(p.stage)}</div><div class="meta">${esc(p.customer.address||'')}<br>${money(projectTotals(p).total)} • Updated ${fmtDate(p.updated)}</div></div>`).join('')}</div>`;
  return desk+mob
 }
 function dashboardHTML(){
@@ -1170,7 +1180,7 @@ function dashboardHTML(){
  return `<div class="grid cards4"><div class="card metric"><small>Active jobs</small><strong>${active}</strong></div><div class="card metric"><small>Quotes waiting</small><strong>${quoted}</strong></div><div class="card metric"><small>Follow-ups due</small><strong>${dueFollowUps}</strong></div><div class="card metric"><small>Pipeline value</small><strong>${money(value)}</strong></div></div><div class="section-title"><h2>Recent projects</h2><button class="btn" onclick="setView('projects')">View all</button></div>${projectRowsHTML(recent)}<div class="section-title"><h2>Renoweet flow</h2></div><div class="card"><b>Photos + description</b> → scope → estimate → quotation → acceptance → materials/orders → schedule → customer message → payments/invoice → review → referral.<div class="small" style="margin-top:8px">You approve every step.</div></div>`
 }
 function projectsHTML(){return `<div class="card" style="margin-bottom:12px"><input id="projectFilter" placeholder="Search projects, customers or addresses"></div><div id="projectList">${projectRowsHTML(db.projects)}</div>`}
-function pipelineHTML(){return `<div class="kanban">${stages.map(s=>`<div class="kanban-col"><h3>${s} (${db.projects.filter(p=>p.stage===s).length})</h3>${db.projects.filter(p=>p.stage===s).map(p=>`<div class="jobcard" onclick="openProject('${p.id}')"><b>${esc(p.title||'Untitled')}</b><small>${esc(p.customer.name||'')}</small><div style="margin-top:7px">${money(projectTotals(p).total)}</div></div>`).join('')||'<div class="small">No jobs</div>'}</div>`).join('')}</div>`}
+function pipelineHTML(){return `<div class="kanban">${stages.map(s=>`<div class="kanban-col"><h3>${s} (${db.projects.filter(p=>p.stage===s).length})</h3>${db.projects.filter(p=>p.stage===s).map(p=>`<div class="jobcard" onclick="openProject('${p.id}')"><b>${esc(p.title||'Untitled')}</b><small>${window.RenoweetProjectReferences?.reference(p)?esc(projectReference(p))+' · ':''}${esc(p.customer.name||'')}</small><div style="margin-top:7px">${money(projectTotals(p).total)}</div></div>`).join('')||'<div class="small">No jobs</div>'}</div>`).join('')}</div>`}
 function customersHTML(){let map={};db.projects.forEach(p=>{let k=(p.customer.email||p.customer.phone||p.customer.name||p.id).toLowerCase();if(!map[k])map[k]={...p.customer,count:0,total:0};map[k].count++;map[k].total+=projectTotals(p).total});let cs=Object.values(map);return cs.length?`<div class="mobile-cards">${cs.map(c=>`<div class="project-mobile"><b>${esc(c.name)}</b><div class="meta">${esc(c.phone)}<br>${esc(c.email)}<br>${esc(c.address)}<br>${c.count} project(s) • ${money(c.total)}</div></div>`).join('')}</div><div class="tablewrap desktop-table"><table><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Address</th><th>Projects</th><th>Value</th></tr></thead><tbody>${cs.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td><td>${esc(c.address)}</td><td>${c.count}</td><td>${money(c.total)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty">No customers yet.</div>'}
 function scheduleHTML(){
  const ps=db.projects.filter(p=>p.schedule?.start).sort((a,b)=>String(a.schedule.start).localeCompare(String(b.schedule.start))||String(a.schedule.time||'').localeCompare(String(b.schedule.time||'')));
@@ -1184,7 +1194,7 @@ function scheduleHTML(){
    return `<div class="plan-day ${ds===todayStr?'today':''}"><div class="plan-day-head"><b>${planDayLabel(ds)}</b><span>${ds.slice(8,10)}</span></div>${jobs.length?jobs.map(p=>planJobCard(p)).join(''):'<div class="small">No jobs</div>'}</div>`;
  }).join('');
  const setup=!clientId?`<div class="google-setup"><h3>Connect Renoweet OS to Google Calendar</h3><p>Enter the Google OAuth Web Client ID once. It stays in this browser only. In Google Cloud, enable Google Calendar API and add this Renoweet OS website address as an Authorized JavaScript origin.</p><div class="formgrid"><div class="field full"><label>Google OAuth Client ID</label><input id="googleClientIdInput" placeholder="...apps.googleusercontent.com" value="${esc(clientId)}"></div></div><div class="actions" style="margin-top:10px"><button class="btn primary" onclick="saveGoogleClientId()">Save Google Client ID</button></div></div>`:'';
- const rows=ps.map(p=>`<div class="plan-list-row"><div class="plan-date">${fmtDate(p.schedule.start)}<small>${esc(scheduleTimeLabel(p))}</small></div><div><b>${esc(p.title||'Untitled')}</b><div class="small">${esc(p.customer.name||'')} ${p.customer.address?'• '+esc(p.customer.address):''}</div><div class="plan-sync ${p.schedule.calendarEventId?'synced':'local'}">${p.schedule.calendarEventId?'Google Calendar linked':'Renoweet OS only'}</div></div><div class="actions"><button class="btn" onclick="openProject('${p.id}','schedule')">Open</button><button class="btn primary" onclick="syncProjectCalendarById('${p.id}')">${p.schedule.calendarEventId?'Update calendar':'Add to calendar'}</button>${p.schedule.calendarEventId?`<button class="btn danger" onclick="removeProjectCalendarById('${p.id}')">Remove calendar</button>`:''}</div></div>`).join('');
+ const rows=ps.map(p=>`<div class="plan-list-row"><div class="plan-date">${fmtDate(p.schedule.start)}<small>${esc(scheduleTimeLabel(p))}</small></div><div><b>${esc(p.title||'Untitled')}</b><div class="small">${window.RenoweetProjectReferences?.reference(p)?esc(projectReference(p))+' · ':''}${esc(p.customer.name||'')} ${p.customer.address?'• '+esc(p.customer.address):''}</div><div class="plan-sync ${p.schedule.calendarEventId?'synced':'local'}">${p.schedule.calendarEventId?'Google Calendar linked':'Renoweet OS only'}</div></div><div class="actions"><button class="btn" onclick="openProject('${p.id}','schedule')">Open</button><button class="btn primary" onclick="syncProjectCalendarById('${p.id}')">${p.schedule.calendarEventId?'Update calendar':'Add to calendar'}</button>${p.schedule.calendarEventId?`<button class="btn danger" onclick="removeProjectCalendarById('${p.id}')">Remove calendar</button>`:''}</div></div>`).join('');
  return `${setup}<div class="plan-toolbar"><div class="plan-status ${connected?'ok':''}">${connected?'● Google Calendar connected':'○ Google Calendar not connected'}</div><button class="btn" onclick="connectGoogleCalendar()">${connected?'Reconnect Google':'Connect Google Calendar'}</button><button class="btn primary" onclick="syncAllScheduledJobs()">Sync all jobs</button><span class="spacer"></span><button class="btn" onclick="shiftPlanWeek(-7)">← Previous</button><button class="btn" onclick="planWeekOffset=0;render()">This week</button><button class="btn" onclick="shiftPlanWeek(7)">Next →</button></div><div class="plan-grid">${week}</div>${ps.length?`<div class="section-title"><h2>Scheduled jobs</h2><span class="small">Renoweet OS → Google Calendar</span></div><div class="plan-list">${rows}</div>`:'<div class="card empty" style="margin-top:14px">No scheduled jobs yet. Open a project and use its Schedule tab.</div>'}`;
 }
 function syncStatusHTML(){
@@ -1194,7 +1204,7 @@ function syncStatusHTML(){
  const auto=lastAuto?.at?`Last auto backup ${new Date(lastAuto.at).toLocaleString('nl-NL')} • ${esc(lastAuto.name||'')}`:'Automatic backup folder not used yet';
  return `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-bottom:14px"><div class="card"><h3>Sync status</h3><p><b>Database: ${esc(activeDbName||'No XLSX selected')}</b></p><p class="small">Each XLSX filename is treated as a separate quarterly database.</p><p><b>${xlsx}</b></p><p class="small">${esc(lastDbStatus.detail||lastDbStatus.msg||'')}</p><p><b>${google}</b></p><p class="small">${auto}</p></div></div>`;
 }
-function databaseHealthIssues(){
+function databaseHealthIssues(){ensureProjectReferences();
  const issues=[],ids=new Map(),invs=new Map(),customers=new Map();
  for(const p of db.projects||[]){
   ids.set(p.id,(ids.get(p.id)||0)+1);
@@ -1205,6 +1215,7 @@ function databaseHealthIssues(){
   const ck=(normalizeWhatsAppNumber(p.customer?.phone)||String(p.customer?.email||'').trim().toLowerCase());if(ck){const a=customers.get(ck)||[];a.push(p.id);customers.set(ck,a)}
  }
  for(const [id,n] of ids)if(n>1)issues.push(`Duplicate Project ID: ${id} (${n} records)`);
+ const refs=new Map();for(const p of db.projects||[]){const ref=p.projectNumber;if(ref)refs.set(ref,(refs.get(ref)||0)+1)}for(const [ref,n] of refs)if(n>1)issues.push(`Duplicate project reference: ${ref} (${n} records)`);
  for(const [n,c] of invs)if(c>1)issues.push(`Duplicate invoice number: ${n} (${c} records)`);
  for(const r of db.deleted||[])if(r['Calendar Deletion Pending'])issues.push(`Pending calendar deletion: ${r['Project ID']||r['Title']||'deleted project'}`);
  if(localCacheDirty)issues.push('This device has unsynced local changes.');
@@ -1215,7 +1226,7 @@ function parseDeletedProject(row){
  try{const p=JSON.parse(String(row?.['Original JSON']||''));return p&&typeof p==='object'?p:null}catch(e){return null}
 }
 function normalizeProjectDraft(raw){
- const seed=blankProject(),copy=raw&&typeof raw==='object'&&!Array.isArray(raw)?JSON.parse(JSON.stringify(raw)):{};
+ const seed=blankProject();delete seed.projectNumberPolicyVersion;const copy=raw&&typeof raw==='object'&&!Array.isArray(raw)?JSON.parse(JSON.stringify(raw)):{};
  const p={...seed,...copy,customer:{...seed.customer,...(copy.customer||{})},quote:{...seed.quote,...(copy.quote||{})},invoice:{...seed.invoice,...(copy.invoice||{})},acceptance:{...seed.acceptance,...(copy.acceptance||{})},schedule:{...seed.schedule,...(copy.schedule||{})}};
  for(const key of ['estimate','materials','documents','payments','purchaseOrders','activity','followUps','checklist'])p[key]=Array.isArray(copy[key])?copy[key]:seed[key];
  p.id=String(copy.id||seed.id);return p
@@ -1223,7 +1234,7 @@ function normalizeProjectDraft(raw){
 function normalizeRecoveredProject(payload){
  const raw=payload?.project||payload;if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('This file does not contain a Renoweet project.');
  const id=String(raw.id||'').trim();if(!/^P[A-Z0-9-]{8,}$/i.test(id))throw new Error('The recovery file has no valid Project ID.');
- const seed=blankProject(),copy=JSON.parse(JSON.stringify(raw));
+ const seed=blankProject();delete seed.projectNumberPolicyVersion;const copy=JSON.parse(JSON.stringify(raw));
  const p={...seed,...copy,customer:{...seed.customer,...(copy.customer||{})},quote:{...seed.quote,...(copy.quote||{})},invoice:{...seed.invoice,...(copy.invoice||{})},acceptance:{...seed.acceptance,...(copy.acceptance||{})},schedule:{...seed.schedule,...(copy.schedule||{})}};
  for(const key of ['estimate','materials','documents','payments','purchaseOrders','activity','followUps','checklist'])p[key]=Array.isArray(copy[key])?copy[key]:seed[key];
  p.id=id;if(!String(p.title||'').trim())throw new Error('The recovery project has no title.');if(!String(p.customer?.name||'').trim())throw new Error('The recovery project has no customer name.');
@@ -1267,17 +1278,17 @@ async function permanentlyDeleteProject(index){
 }
 
 function backupHTML(){return `${syncStatusHTML()}<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))"><div class="card"><h3>OneDrive XLSX database</h3><p class="small">Each XLSX filename is a separate quarterly database. Example: Q1 Jan - Mar.xlsx and Q2 Apr - Jun.xlsx never merge with each other. Reset clears only this device's saved file handle; that database's cache is kept.</p><div class="actions"><button class="btn primary" onclick="connectWorkbook()">Connect XLSX</button><button class="btn" onclick="resetXlsxConnection()">Reset connection</button></div></div><div class="card"><h3>Restore one project</h3><p class="small">Import a Renoweet project recovery JSON. The original Project ID is preserved and duplicates are blocked.</p><input id="projectRecoveryInput" type="file" accept=".json,application/json" hidden onchange="restoreProjectRecoveryFile(this.files?.[0]);this.value=''"><button class="btn primary" onclick="document.getElementById('projectRecoveryInput').click()">Restore project file</button></div><div class="card"><h3>Save behavior</h3><p class="small">Changes autosave to the connected XLSX. If another device has unsynced edits, Renoweet merges matching record IDs and keeps the newest value when the same field changed on both devices.</p><button class="btn" onclick="saveWorkbook(true)">Save now</button></div><div class="card"><h3>Quarterly rotating safety backups</h3><p class="small">Connect a OneDrive folder once. Renoweet keeps only 3 automatic backups for the currently connected XLSX filename and overwrites the oldest slot before risky operations. Manual backups remain separate.</p><div class="actions"><button class="btn primary" onclick="connectBackupFolder()">Connect backup folder</button><button class="btn" onclick="createTimestampedBackup()">Manual backup</button></div><p class="small" style="margin-top:8px">Example: Q2 Apr - Jun_BACKUP_1.xlsx to BACKUP_3.xlsx.</p></div><div class="card"><h3>Database health</h3><p class="small">Checks duplicate project IDs, duplicate invoice numbers, missing required client details, invalid schedule dates, pending calendar deletions and unsynced local state.</p><button class="btn primary" onclick="runDatabaseHealthCheck()">Run health check</button></div><div class="card"><h3>PIN security</h3><p class="small">Renoweet OS locks when a new browser session starts. The PIN is stored on this device as a salted cryptographic hash, not plain text.</p><div class="actions"><button class="btn" onclick="lockRenoweet()">Lock now</button><button class="btn" onclick="changePin()">Change PIN</button></div></div><div class="card"><h3>Mobile / Android use</h3><p class="small">Renoweet validates the full XLSX ZIP package before loading, waits longer for Android/OneDrive materialisation, batches autosaves, and verifies every write before clearing the protected local copy. On Android, make the database XLSX available offline in the OneDrive app before connecting it.</p></div></div>`}
-function render(){let root=$('viewRoot');if(currentView==='dashboard')root.innerHTML=dashboardHTML();if(currentView==='projects')root.innerHTML=projectsHTML();if(currentView==='pipeline')root.innerHTML=pipelineHTML();if(currentView==='customers')root.innerHTML=customersHTML();if(currentView==='schedule')root.innerHTML=scheduleHTML();if(currentView==='deleted')root.innerHTML=deletedProjectHTML();if(currentView==='backup')root.innerHTML=backupHTML();if(currentView==='projects'){let f=$('projectFilter');f.oninput=()=>{$('projectList').innerHTML=projectRowsHTML(db.projects.filter(p=>JSON.stringify(p).toLowerCase().includes(f.value.toLowerCase())))}}}
+function render(){ensureProjectReferences();let root=$('viewRoot');if(currentView==='dashboard')root.innerHTML=dashboardHTML();if(currentView==='projects')root.innerHTML=projectsHTML();if(currentView==='pipeline')root.innerHTML=pipelineHTML();if(currentView==='customers')root.innerHTML=customersHTML();if(currentView==='schedule')root.innerHTML=scheduleHTML();if(currentView==='deleted')root.innerHTML=deletedProjectHTML();if(currentView==='backup')root.innerHTML=backupHTML();if(currentView==='projects'){let f=$('projectFilter');f.oninput=()=>{$('projectList').innerHTML=projectRowsHTML(db.projects.filter(p=>JSON.stringify(p).toLowerCase().includes(f.value.toLowerCase())))}}}
 
 function getP(){if(draftProject&&draftProject.id===currentProjectId)return draftProject;return db.projects.find(p=>p.id===currentProjectId)}
 const tabs=[['intake','Intake'],['scope','Scope'],['estimate','Estimate'],['quote','Quotation'],['materials','Materials'],['documents','Documents & Photos'],['payments','Payments'],['orders','Orders'],['schedule','Schedule'],['followups','Follow-up'],['acceptance','Acceptance'],['messages','Messages'],['invoice','Invoice'],['activity','Activity'],['checklist','Checklist'],['projectbackup','Backup']];
-function openProject(id,tab='intake'){draftProject=null;pendingPhotoFiles=[];formDirty=false;currentProjectId=id;currentTab=tab;let p=getP();if(!p)return;$('projectModal').classList.add('open');$('modalTitle').textContent=p.title||'New project';$('modalMeta').textContent=`${p.id} • ${p.stage}`;renderTabs()}
-function startNewProject(){draftProject=blankProject();pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${draftProject.id} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
+function openProject(id,tab='intake'){draftProject=null;pendingPhotoFiles=[];formDirty=false;currentProjectId=id;currentTab=tab;let p=getP();if(!p)return;$('projectModal').classList.add('open');$('modalTitle').textContent=p.title||'New project';$('modalMeta').textContent=`${projectReference(p)} • ${p.stage}`;renderTabs()}
+function startNewProject(){draftProject=blankProject();pendingPhotoFiles=[];formDirty=true;currentProjectId=draftProject.id;currentTab='intake';$('projectModal').classList.add('open');$('modalTitle').textContent='New project';$('modalMeta').textContent=`${projectReference(draftProject)} • locally protected draft`;renderTabs();saveProjectDraftRecoveryNow()}
 function closeProject(){if(formDirty&&!confirm('This project has locally protected changes. Discard this draft/edit and close?'))return;const closingId=currentProjectId;if(draftProject&&closingId===draftProject.id){draftProject=null;pendingPhotoFiles=[]}clearProjectDraftRecovery(closingId);formDirty=false;$('projectModal').classList.remove('open');currentProjectId=null;render()}
 function renderTabs(){let p=getP();$('projectTabs').innerHTML=tabs.map(([k,l])=>`<button class="${currentTab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`).join('');$('projectTabContent').innerHTML=tabHTML(p,currentTab);bindTab()}
 function switchTab(t){saveProjectFromForm(false);currentTab=t;renderTabs()}
 function tabHTML(p,t){
- if(t==='intake')return `<div class="formgrid"><div class="field"><label>Project title</label><input id="f_title" value="${esc(p.title)}"></div><div class="field"><label>Stage</label><select id="f_stage">${stages.map(s=>`<option ${p.stage===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="field"><label>Customer name *</label><input id="f_name" required value="${esc(p.customer.name)}"></div><div class="field"><label>Phone *</label><input id="f_phone" required inputmode="tel" value="${esc(p.customer.phone)}"></div><div class="field"><label>Email</label><input id="f_email" inputmode="email" value="${esc(p.customer.email)}"></div><div class="field"><label>Address</label><input id="f_address" value="${esc(p.customer.address)}"></div><div class="field"><label>Customer BTW-id</label><input id="f_vat_id" value="${esc(p.customer.vatId||'')}" placeholder="NL123456789B01"></div><div class="field full"><label>Customer description / request</label><textarea id="f_description">${esc(p.description)}</textarea></div><div class="field full"><label>Project photos</label><input id="photoInput" type="file" accept="image/*" capture="environment" multiple><div class="actions" style="margin-top:8px"><button class="btn" type="button" onclick="connectPhotosFolder()">Connect photos folder</button><span class="small">${photosFolderHandle?'✓ Renoweet OS Projects photos connected':'Saved on Save into “Renoweet OS Projects photos”.'}</span></div><div class="small">Each photo is renamed with this unique Project ID.</div><div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div></div><div class="field full"><label>Internal notes</label><textarea id="f_notes">${esc(p.notes)}</textarea></div></div><div class="ai"><b>Draft assistant</b><p>Create a starter scope and estimate from the customer description.</p><button class="btn primary" onclick="smartDraft()">Draft scope + estimate</button></div>`;
+ if(t==='intake')return `<div class="formgrid"><div class="field"><label>Project number</label><input readonly value="${esc(window.RenoweetProjectReferences?.reference(p)||(window.RenoweetProjectReferences&&!window.RenoweetProjectReferences.eligible(p,db)?'Existing project — original ID retained':'Assigned when quoted'))}"><div class="small">Assigned when the quotation is issued; leads and draft quotations use no project number.</div><details class="small"><summary>Internal project ID</summary>${esc(p.id)}</details></div><div class="field"><label>Project title</label><input id="f_title" value="${esc(p.title)}"></div><div class="field"><label>Stage</label><select id="f_stage">${stages.map(s=>`<option ${p.stage===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="field"><label>Customer name *</label><input id="f_name" required value="${esc(p.customer.name)}"></div><div class="field"><label>Phone *</label><input id="f_phone" required inputmode="tel" value="${esc(p.customer.phone)}"></div><div class="field"><label>Email</label><input id="f_email" inputmode="email" value="${esc(p.customer.email)}"></div><div class="field"><label>Address</label><input id="f_address" value="${esc(p.customer.address)}"></div><div class="field"><label>Customer BTW-id</label><input id="f_vat_id" value="${esc(p.customer.vatId||'')}" placeholder="NL123456789B01"></div><div class="field full"><label>Customer description / request</label><textarea id="f_description">${esc(p.description)}</textarea></div><div class="field full"><label>Project photos</label><input id="photoInput" type="file" accept="image/*" capture="environment" multiple><div class="actions" style="margin-top:8px"><button class="btn" type="button" onclick="connectPhotosFolder()">Connect photos folder</button><span class="small">${photosFolderHandle?'✓ Renoweet OS Projects photos connected':'Saved on Save into “Renoweet OS Projects photos”.'}</span></div><div class="small">Each photo is renamed with this unique Project ID.</div><div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div></div><div class="field full"><label>Internal notes</label><textarea id="f_notes">${esc(p.notes)}</textarea></div></div><div class="ai"><b>Draft assistant</b><p>Create a starter scope and estimate from the customer description.</p><button class="btn primary" onclick="smartDraft()">Draft scope + estimate</button></div>`;
  if(t==='scope')return `<div class="field"><label>Scope of work</label>${RenoweetText.editor('f_scope',p.scope,'250px')}</div>${RenoweetScopePhotos.editor(p)}<div class="ai"><b>Scope check</b><p>${(p.scope||'').length<80?'Scope is still short. Add measurements, exclusions and materials.':'Confirm measurements, exclusions and customer responsibilities before sending.'}</p></div>`;
  if(t==='estimate')return `<div class="tablewrap"><table class="lineitems ros-estimate-lines"><thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Rate</th><th>BTW</th><th>Total ex. BTW</th><th></th></tr></thead><tbody id="estRows">${p.estimate.map((x,i)=>{const cfg=OSVAT.lineConfig(x,p,'quote');return `<tr><td><input class="e_desc" value="${esc(x.desc)}"></td><td><input class="e_qty" type="number" step=".01" value="${x.qty}"></td><td><input class="e_unit" value="${esc(x.unit)}"></td><td><input class="e_rate" type="number" step=".01" value="${x.rate}"></td><td><select class="e_vat">${vatTreatmentOptions(cfg.treatment,cfg.rate)}</select></td><td>${money(x.qty*x.rate)}</td><td><button class="btn danger" onclick="removeEst(${i})">×</button></td></tr>`}).join('')}</tbody></table></div><div class="small" style="margin-top:8px">Choose the correct BTW treatment for each work line. The quotation, invoice and Bookkeeping handoff keep these line-level rates.</div><button class="btn" style="margin-top:10px" onclick="addEstimate()">+ Line</button>${totalsHTML(p)}`;
  if(t==='quote')return quoteHTML(p);
@@ -1296,6 +1307,7 @@ function tabHTML(p,t){
 }
 function totalsHTML(p){let t=projectTotals(p);return `<div class="totalbox"><div class="totalrow"><span>Werkzaamheden</span><b>${money(t.workSubtotal)}</b></div>${t.travel?`<div class="totalrow"><span>Reiskosten</span><b>${money(t.travel)}</b></div>`:''}<div class="totalrow"><span>Subtotaal excl. btw</span><b>${money(t.taxableSubtotal)}</b></div>${vatBreakdownRows(t)}${t.parking?`<div class="totalrow"><span>Voorgeschoten parkeerkosten*</span><b>${money(t.parking)}</b></div>`:''}<div class="totalrow"><span>Totaal</span><b>${money(t.total)}</b></div></div>`}
 function quoteHTML(p){
+ const printedProjectNumber=window.RenoweetProjectReferences?.get(p)||p.projectNumber||'';
  if(p.quote.advancePct==null||p.quote.advancePct==='')p.quote.advancePct=50;if(p.quote.installments==null)p.quote.installments=0;if((p.quote.paymentTerms||'').includes('14 dagen na factuurdatum'))p.quote.paymentTerms=buildPaymentTermsText(p.quote.advancePct,p.quote.installments);
  if(!p.quote.number)p.quote.number=nextQuote();
  if(!p.quote.date)p.quote.date=today();
@@ -1305,7 +1317,7 @@ function quoteHTML(p){
  <div class="ros-quote-preview">
   <section class="ros-quote-page" data-quote-page="1">
    <div class="ros-quote-content"><div style="display:flex;justify-content:space-between;gap:18mm;align-items:flex-start"><div class="ros-doc-brand"><div class="ros-doc-brandline"><img src="${document.querySelector('.pin-logo')?.src||''}" alt="Renoweet"><h2>${window.RenoweetCompany.html('companyName')}</h2></div><p>Renovatie • Timmerwerk • Technische oplossingen<br>${window.RenoweetCompany.html('address')}<br>KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')}<br>${window.RenoweetCompany.html('phone')} • ${window.RenoweetCompany.html('email')}<br><b>${window.RenoweetCompany.html('website')}</b></p></div><div style="text-align:right;min-width:60mm"><h1 style="margin:0 0 3mm;font-size:23pt">OFFERTE</h1><div style="font-size:10pt;line-height:1.5"><b>Offertenr.</b> ${esc(p.quote.number)}<br><b>Datum</b> ${fmtDate(p.quote.date)}<br><b>Geldig t/m</b> ${fmtDate(validDate)}</div></div></div>
-   <hr style="margin:6mm 0 5mm;border:0;border-top:1.5px solid #173a43"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14mm;font-size:10pt;line-height:1.4"><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Aan</div><b>${esc(p.customer.name||'')}</b><div>${esc(p.customer.address||'')}</div><div>${esc(p.customer.email||'')}</div><div>${esc(p.customer.phone||'')}</div></div><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Project</div><b>${esc(p.title||'Renovatieproject')}</b><div>Project ID: ${esc(p.id)}</div></div></div>
+   <hr style="margin:6mm 0 5mm;border:0;border-top:1.5px solid #173a43"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14mm;font-size:10pt;line-height:1.4"><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Aan</div><b>${esc(p.customer.name||'')}</b><div>${esc(p.customer.address||'')}</div><div>${esc(p.customer.email||'')}</div><div>${esc(p.customer.phone||'')}</div></div><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Project</div><b>${esc(p.title||'Renovatieproject')}</b><div>${/^P\d{2}-\d{3,}$/.test(printedProjectNumber)?'Project number: '+esc(printedProjectNumber):p.projectNumberPolicyVersion===1?'':'Project ID: '+esc(p.id)}</div></div></div>
    <h3 style="margin:7mm 0 3mm;font-size:13pt">Prijsaanbieding</h3><table class="ros-quote-table"><colgroup><col style="width:43%"><col style="width:12%"><col style="width:15%"><col style="width:14%"><col style="width:16%"></colgroup><thead><tr><th class="qd">Omschrijving</th><th class="qq">Aantal</th><th class="qr">Tarief</th><th class="qv">BTW</th><th class="qa">Bedrag</th></tr></thead><tbody>${rows}</tbody></table>
    <div class="ros-quote-summary"><div class="ros-quote-summary-row"><span>Werkzaamheden</span><strong>${money(t.workSubtotal)}</strong></div>${t.travel?`<div class="ros-quote-summary-row"><span>Reiskosten</span><strong>${money(t.travel)}</strong></div>`:''}<div class="ros-quote-summary-row"><span>Subtotaal excl. btw</span><strong>${money(t.taxableSubtotal)}</strong></div>${vatBreakdownRows(t,'ros-quote-summary-row')}${t.parking?`<div class="ros-quote-summary-row"><span>Parkeerkosten</span><strong>${money(t.parking)}</strong></div>`:''}<div class="ros-quote-summary-row grand"><span>Totaal</span><strong>${money(t.total)}</strong></div></div>${reverseChargeNote(t,p)}
    <div class="ros-quote-note"><b>Prijsaanbieding</b><br>Deze offerte is een prijsaanbieding op basis van de scope, uitgangspunten en voorwaarden op pagina 2. Wijzigingen of meerwerk worden vooraf besproken en afzonderlijk bevestigd.</div>
@@ -1321,7 +1333,7 @@ function quoteHTML(p){
    <div style="margin-top:6mm;border-top:1px solid #bbb;padding-top:3mm;font-size:8.5pt;line-height:1.4">${window.RenoweetCompany.html('companyName')} • ${window.RenoweetCompany.html('address')} • KVK ${window.RenoweetCompany.html('kvk')} • BTW ${window.RenoweetCompany.html('btw')} • ${window.RenoweetCompany.html('phone')} • ${window.RenoweetCompany.html('email')} • www.renoweet.nl</div>
    </div><div class="ros-quote-footer"><span>Renoweet • Offerte ${esc(p.quote.number)}</span><span>Pagina 2 / 2</span></div>
   </section>
- ${RenoweetScopePhotos.pages(p)}</div><div class="actions no-print" style="margin-top:12px"><button class="btn primary" onclick="smartSendQuote()">Send quotation</button><button class="btn" onclick="markQuoteSent()">Mark sent</button><button class="btn" onclick="printQuotationClean()">Print / PDF</button></div>`
+ ${RenoweetScopePhotos.pages(p)}</div><div class="actions no-print" style="margin-top:12px"><button class="btn primary" onclick="smartSendQuote()">Send quotation</button><button class="btn" onclick="markQuoteSent()">Mark sent</button><button class="btn" onclick="printQuotationClean()">Print / PDF</button></div><div class="small no-print">For a new numbered quotation, use Send quotation or Mark sent first. Draft previews and draft PDF downloads do not consume a project number.</div>`
 }
 
 function applyQuoteVatTreatment(){const p=getP();if(!p)return;updateProjectFromVisibleForm(p);const raw=$('q_vat_treatment')?.value||'',treatment=normalizeSalesVatTreatment(raw,p.quote?.vat??21),rate=raw==='REVERSE_CHARGE_NL_9'?9:raw==='REVERSE_CHARGE_NL_21'?21:vatReferenceRate(treatment,p.quote?.vat??21);p.quote.vatTreatment=treatment;p.quote.vat=rate;formDirty=true;renderTabs()}
@@ -1378,7 +1390,7 @@ function liveDocumentProject(p){
  return typeof db!=='undefined'?(db.projects||[]).find(project=>project.id===p?.id)||null:null;
 }
 async function nativeShareQuote(file,p){if(!navigator.share)return false;if(navigator.canShare&&!navigator.canShare({files:[file]}))return false;try{await navigator.share({title:`Offerte ${p.quote.number} - Renoweet`,text:quoteShareMessage(p),files:[file]});return true}catch(e){if(e?.name==='AbortError')return null;if(e?.name==='NotAllowedError')return false;throw e}}
-function markQuoteSentAfterShare(p){p=liveDocumentProject(p);if(!p)return;p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();if(getP()?.id===p.id)renderTabs();}
+function markQuoteSentAfterShare(p){p=liveDocumentProject(p);if(!p)return;if(typeof db!=='undefined')window.RenoweetProjectReferences?.commit(p,db);p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} prepared/sent to customer`,false);scheduleSave();if(getP()?.id===p.id)renderTabs();}
 function reserveDocumentSendWindow(label){
  let tab=null;try{tab=window.open('about:blank','_blank');if(tab){tab.opener=null;tab.document.title=`${label} voorbereiden`;tab.document.body.textContent=`De PDF wordt klaargemaakt. ${label} opent zodra het document gereed is.`;}}catch(e){}
  return tab;
@@ -1394,7 +1406,7 @@ function openPreparedDocument(url,tab,label,file,onOpen){
  if(!modal||!info||!actions)throw new Error(`De PDF is gedownload. Sta pop-ups toe en probeer ${label} opnieuw te openen.`);
  info.textContent=`De PDF is gedownload als ${file.name}. Open ${label} en voeg deze PDF toe. Het standaardbericht staat al klaar.`;
  actions.innerHTML=`<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Open ${esc(label)}</a><button class="btn" onclick="closeSendChoice()">Sluiten</button>`;
- let opened=false;actions.querySelector('a').onclick=()=>{if(!opened){opened=true;onOpen?.()}closeSendChoice()};modal.classList.add('open');return false;
+ let opened=false;actions.querySelector('a').onclick=event=>{try{if(!opened){onOpen?.();opened=true}closeSendChoice()}catch(e){event?.preventDefault?.();closeSendChoice();alert(e.message)}};modal.classList.add('open');return false;
 }
 function prepareQuoteForSharing(){
  const p=getP();if(!p)return null;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return null;
@@ -1404,7 +1416,7 @@ function documentShareSignature(p,kind){
  // Compare the fields printed on the document, not save metadata or object identity.
  const pick=(object,keys)=>Object.fromEntries(keys.map(key=>[key,object?.[key]??null]));
  const quoteKeys=['number','date','validDays','vat','vatRate','vatTreatment','travel','parking','advancePct','installments','paymentTerms','assumptions','exclusions'];
- const view={id:p.id,title:p.title||'',customer:pick(p.customer,['name','address','email','phone','vatId']),
+ const view={id:p.id,projectNumber:window.RenoweetProjectReferences?.get(p)||p.projectNumber||'',title:p.title||'',customer:pick(p.customer,['name','address','email','phone','vatId']),
   quote:pick(p.quote,kind==='quote'?quoteKeys:['vat','vatRate','vatTreatment','travel','parking']),
   estimate:kind==='invoice'&&p.invoice?.documentSnapshot?null:(p.estimate||[]).map(line=>pick(line,['desc','qty','unit','rate','vatTreatment','vatRate','vatReferenceRate','vatAmount']))};
  if(kind==='quote'){view.scope=p.scope||'';view.scopePhotos=(p.scopePhotos||[]).map(photo=>pick(photo,['dataUrl','name','caption']))}
@@ -1412,6 +1424,8 @@ function documentShareSignature(p,kind){
  return JSON.stringify(view,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,value[key]])):value);
 }
 async function documentFileForSharing(p,kind){
+ if(kind==='quote'&&p.projectNumberPolicyVersion===1&&!p.projectNumber&&!window.RenoweetProjectReferences)throw new Error('Project numbering is unavailable. Reload the Hub before sending this new quotation.');
+ if(kind==='quote'&&typeof db!=='undefined')window.RenoweetProjectReferences?.reserve(p,db,{year:window.renoweetDriveOS?.state?.year});
  const id=p.id,year=window.renoweetDriveOS?.state?.year,signature=documentShareSignature(p,kind);
  const unchanged=()=>{const current=getP();return current?.id===id&&window.renoweetDriveOS?.state?.year===year&&signature===documentShareSignature(current,kind)};
  await window.RenoweetCompany.ready;
@@ -1421,29 +1435,32 @@ async function documentFileForSharing(p,kind){
  // DOM layout is measured by the PDF renderer; a background tab may never receive animation frames.
  const file=await (kind==='quote'?makeRenoweetQuotePdfFile():makeRenoweetInvoicePdfFile());
  if(!unchanged())throw new Error('Het document is gewijzigd tijdens het maken van de PDF. Controleer het document en probeer opnieuw.');
+ if(kind==='quote'&&typeof db!=='undefined')window.RenoweetProjectReferences?.validateReservation(p,db);
  return file;
 }
 function whatsappDocumentUrl(phone,message){return isMobileDevice()?`https://wa.me/${phone}?text=${encodeURIComponent(message)}`:`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`}
-let documentSendBusy=false;
+let documentSendBusy=false,quoteNumberFallbackProject='';
+function openPreparedQuotation(url,tab,label,file,p){const opened=openPreparedDocument(url,tab,label,file,()=>markQuoteSentAfterShare(p));if(!opened)quoteNumberFallbackProject=p.id;return opened}
 function smartSendQuote(){const p=getP();if(!p)return;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;if(!p.quote.number)p.quote.number=nextQuote();if(!p.quote.date)p.quote.date=today();const email=(p.customer.email||'').trim(),phone=(p.customer.phone||'').trim();if(email&&phone){const m=document.getElementById('sendChoiceModal'),info=document.getElementById('sendChoiceInfo'),actions=document.getElementById('sendChoiceActions');info.innerHTML=`Client has both:<br><b>${esc(email)}</b><br><b>${esc(phone)}</b>`;actions.innerHTML=`<button class="btn primary" onclick="closeSendChoice();sendQuoteByEmail()">Email PDF</button><button class="btn primary" onclick="closeSendChoice();sendQuoteByWhatsApp()">WhatsApp PDF</button>`;m.classList.add('open');return}if(email){sendQuoteByEmail();return}if(phone){sendQuoteByWhatsApp();return}alert('This client has no email address or phone number saved. Add one in the Intake tab first.');}
 async function sendQuoteByEmail(){
- if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
- try{const p=prepareQuoteForSharing();if(!p)return false;const email=(p.customer.email||'').trim();if(!email){alert('No client email address is saved.');return false}
+ if(documentSendBusy)return false;let tab=null,numberingProject=null;documentSendBusy=true;
+ try{const p=prepareQuoteForSharing();if(!p)return false;numberingProject=p;const email=(p.customer.email||'').trim();if(!email){alert('No client email address is saved.');return false}
  if(!isMobileDevice())tab=reserveDocumentSendWindow('Gmail');const file=await documentFileForSharing(p,'quote');
  if(isMobileDevice()){const shared=await nativeShareQuote(file,p);if(shared===null)return false;if(shared){markQuoteSentAfterShare(p);return true}}
  downloadInvoiceFile(file);const subject=`Offerte ${p.quote.number} - Renoweet`,body=quoteShareMessage(p),url=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
- return openPreparedDocument(url,tab,'Gmail',file,()=>markQuoteSentAfterShare(p));
- }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
+ return openPreparedQuotation(url,tab,'Gmail',file,p);
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e));return false}finally{if(quoteNumberFallbackProject!==(numberingProject||getP())?.id)window.RenoweetProjectReferences?.release(numberingProject||getP());documentSendBusy=false}
 }
 async function sendQuoteByWhatsApp(){
- if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
- try{const p=prepareQuoteForSharing();if(!p)return false;const phone=normalizeWhatsAppNumber(p.customer.phone||'');if(!phone){alert('No client WhatsApp/phone number is saved.');return false}
+ if(documentSendBusy)return false;let tab=null,numberingProject=null;documentSendBusy=true;
+ try{const p=prepareQuoteForSharing();if(!p)return false;numberingProject=p;const phone=normalizeWhatsAppNumber(p.customer.phone||'');if(!phone){alert('No client WhatsApp/phone number is saved.');return false}
  tab=reserveDocumentSendWindow('WhatsApp');const file=await documentFileForSharing(p,'quote');downloadInvoiceFile(file);
- return openPreparedDocument(whatsappDocumentUrl(phone,quoteShareMessage(p)),tab,'WhatsApp',file,()=>markQuoteSentAfterShare(p));
- }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
+ return openPreparedQuotation(whatsappDocumentUrl(phone,quoteShareMessage(p)),tab,'WhatsApp',file,p);
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the quotation PDF: '+(e?.message||e));return false}finally{if(quoteNumberFallbackProject!==(numberingProject||getP())?.id)window.RenoweetProjectReferences?.release(numberingProject||getP());documentSendBusy=false}
 }
 
 function invoiceHTML(p){
+ const printedProjectNumber=window.RenoweetProjectReferences?.get(p)||p.projectNumber||'';
  if(!p.invoice)p.invoice={};
  if(!p.invoice.date)p.invoice.date=today();
  if(!p.invoice.dueDays||+p.invoice.dueDays===14)p.invoice.dueDays=3;
@@ -1462,7 +1479,7 @@ function invoiceHTML(p){
     <div class="ros-doc-rule"></div>
     <div class="ros-doc-party">
       <div><div class="ros-doc-kicker">AAN</div><strong>${esc(p.customer.name||'')}</strong><br>${esc(p.customer.address||'')}${p.customer.vatId?`<br><strong>BTW-id:</strong> ${esc(p.customer.vatId)}`:``}</div>
-      <div><div class="ros-doc-kicker">PROJECT</div><strong>${esc(p.title||'')}</strong><br>Project ID: ${esc(p.id||'')}</div>
+      <div><div class="ros-doc-kicker">PROJECT</div><strong>${esc(p.title||'')}</strong><br>${/^P\d{2}-\d{3,}$/.test(printedProjectNumber)?'Project number: '+esc(printedProjectNumber):p.projectNumberPolicyVersion===1?'':'Project ID: '+esc(p.id)}</div>
     </div>
     <div class="ros-doc-section-title">Factuuroverzicht</div>
     <table class="ros-doc-table"><colgroup><col><col><col><col><col></colgroup><thead><tr><th class="d">Omschrijving</th><th class="q">Aantal</th><th class="r">Tarief</th><th class="v">BTW</th><th class="a">Bedrag</th></tr></thead><tbody>${rows}${t.travel?`<tr><td class="d">Reiskosten</td><td class="q">1</td><td class="r">${money(t.travel)}</td><td class="v">${vatTreatmentLabel(t.travelFact.treatment,t.travelFact.rate)}</td><td class="a">${money(t.travel)}</td></tr>`:''}</tbody></table>
@@ -1540,6 +1557,7 @@ function isMobileDevice(){
 }
 
 function closeSendChoice(){
+ if(typeof quoteNumberFallbackProject!=='undefined'&&quoteNumberFallbackProject){window.RenoweetProjectReferences?.release(quoteNumberFallbackProject);quoteNumberFallbackProject=''}
  const m=document.getElementById("sendChoiceModal");
  if(m)m.classList.remove("open");
 }
@@ -1602,7 +1620,7 @@ async function nativeShareInvoice(file,p){
 }
 
 async function sendInvoiceByEmail(){
- if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
+ if(documentSendBusy)return false;let tab=null,numberingProject=null;documentSendBusy=true;
  try{const p=getP();if(!p)return false;saveProjectFromForm(false);if(!validateReverseChargeInvoice(p))return false;
  if(!p.invoice.number)p.invoice.number=nextInvoice(p.invoice.date);if(!p.invoice.date)p.invoice.date=today();
  const email=(p.customer.email||'').trim();if(!email){alert('No client email address is saved.');return false}renderTabs();
@@ -1610,16 +1628,16 @@ async function sendInvoiceByEmail(){
  if(isMobileDevice()){const shared=await nativeShareInvoice(file,p);if(shared===null)return false;if(shared){markInvoiceSharedAfterShare(p);return true}}
  downloadInvoiceFile(file);const subject=`Factuur ${p.invoice.number} - Renoweet`,url=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(invoiceShareMessage(p))}`;
  return openPreparedDocument(url,tab,'Gmail',file,()=>markInvoiceSharedAfterShare(p));
- }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the invoice PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the invoice PDF: '+(e?.message||e));return false}finally{if(quoteNumberFallbackProject!==(numberingProject||getP())?.id)window.RenoweetProjectReferences?.release(numberingProject||getP());documentSendBusy=false}
 }
 async function sendInvoiceByWhatsApp(){
- if(documentSendBusy)return false;let tab=null;documentSendBusy=true;
+ if(documentSendBusy)return false;let tab=null,numberingProject=null;documentSendBusy=true;
  try{const p=getP();if(!p)return false;saveProjectFromForm(false);if(!validateReverseChargeInvoice(p))return false;
  if(!p.invoice.number)p.invoice.number=nextInvoice(p.invoice.date);if(!p.invoice.date)p.invoice.date=today();
  const phone=normalizeWhatsAppNumber(p.customer.phone||'');if(!phone){alert('No client WhatsApp/phone number is saved.');return false}renderTabs();
  tab=reserveDocumentSendWindow('WhatsApp');const file=await documentFileForSharing(p,'invoice');downloadInvoiceFile(file);
  return openPreparedDocument(whatsappDocumentUrl(phone,invoiceShareMessage(p,true)),tab,'WhatsApp',file,()=>markInvoiceSharedAfterShare(p));
- }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the invoice PDF: '+(e?.message||e));return false}finally{documentSendBusy=false}
+ }catch(e){closeDocumentSendWindow(tab);console.error(e);alert('Could not create/send the invoice PDF: '+(e?.message||e));return false}finally{if(quoteNumberFallbackProject!==(numberingProject||getP())?.id)window.RenoweetProjectReferences?.release(numberingProject||getP());documentSendBusy=false}
 }
 
 
@@ -1704,12 +1722,13 @@ function renoweetNextInvoiceNumber(dateValue){
 }
 
 function nextInvoice(dateValue){return renoweetNextInvoiceNumber(dateValue||getP()?.invoice?.date||today())}
-function markQuoteSent(){let p=getP();saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;if(!p.quote.number)p.quote.number=nextQuote();p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} marked sent`,false);renderTabs();scheduleSave();toast('Quotation marked sent')}
+function markQuoteSent(){let p=getP();saveProjectFromForm(false);if(p.projectNumberPolicyVersion===1&&!p.projectNumber&&!window.RenoweetProjectReferences){alert('Project numbering is unavailable. Reload the Hub before marking this new quotation sent.');return}if(!validateReverseChargeDocument(p,'quote'))return;if(!p.quote.number)p.quote.number=nextQuote();window.RenoweetProjectReferences?.commit(p,db);p.quote.status='Sent';p.stage='Quoted';addActivity(p,'Quotation',`Quotation ${p.quote.number} marked sent`,false);renderTabs();scheduleSave();toast('Quotation marked sent')}
 function markInvoiceSent(){let p=getP();saveProjectFromForm(false);if(!validateReverseChargeInvoice(p))return;if(!p.invoice.number)p.invoice.number=nextInvoice();p.invoice.status='Sent';addActivity(p,'Invoice',`Invoice ${p.invoice.number} marked sent`,false);renderTabs();scheduleSave();toast('Invoice marked sent')}
 function deletedProjectRow(p){
  return {
   "Deleted at":new Date().toISOString(),
   "Project ID":p.id||"",
+  "Project number":window.RenoweetProjectReferences?.reference(p)||"",
   "Title":p.title||"",
   "Customer":p.customer?.name||"",
   "Phone":p.customer?.phone||"",
@@ -1835,7 +1854,7 @@ function planDayLabel(ds){let d=new Date(ds+'T12:00:00');return d.toLocaleDateSt
 function normalizeTimeInput(v){v=String(v||'').trim();let m=v.match(/^(\d{1,2}):(\d{2})/);if(!m)return '';return String(Math.min(23,+m[1])).padStart(2,'0')+':'+m[2]}
 function scheduleTimeLabel(p){let s=normalizeTimeInput(p.schedule.time),e=normalizeTimeInput(p.schedule.endTime);return s?(s+(e?' – '+e:'')):'Time not set'}
 function scheduleTouchesDate(p,ds){let a=p.schedule.start||'',b=p.schedule.end||a;return !!a&&ds>=a&&ds<=b}
-function planJobCard(p){return `<div class="plan-job" onclick="openProject('${p.id}','schedule')"><b>${esc(normalizeTimeInput(p.schedule.time)||'--:--')} • ${esc(p.title||'Untitled')}</b><small>${esc(p.customer.name||'')}${p.customer.address?'<br>'+esc(p.customer.address):''}</small><div class="plan-sync ${p.schedule.calendarEventId?'synced':'local'}">${p.schedule.calendarEventId?'✓ Calendar':'○ OS only'}</div></div>`}
+function planJobCard(p){return `<div class="plan-job" onclick="openProject('${p.id}','schedule')"><b>${esc(normalizeTimeInput(p.schedule.time)||'--:--')} • ${esc(p.title||'Untitled')}</b><small>${window.RenoweetProjectReferences?.reference(p)?esc(projectReference(p))+' · ':''}${esc(p.customer.name||'')}${p.customer.address?'<br>'+esc(p.customer.address):''}</small><div class="plan-sync ${p.schedule.calendarEventId?'synced':'local'}">${p.schedule.calendarEventId?'✓ Calendar':'○ OS only'}</div></div>`}
 function validateSchedule(p){
  const s=p.schedule||{};if(!s.start)return 'Start date is required.';if(!s.end)s.end=s.start;if(s.end<s.start)return 'End date cannot be before start date.';
  if(!normalizeTimeInput(s.time))return 'Start time is required.';if(!normalizeTimeInput(s.endTime))return 'End time is required.';
@@ -1990,6 +2009,7 @@ function sendToBookkeeping(){
    "Customer VAT ID":p.customer.vatId||"",
    "Project":p.title||"",
    "Project ID":p.id||"",
+  "Project number":window.RenoweetProjectReferences?.reference(p)||"",
    "Project stage":p.stage||"",
    "Project created":p.created||"",
    "Project updated":p.updated||"",
@@ -2074,12 +2094,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 <!-- Renoweet Drive storage layer -->
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="./renoweet-drive-core-v3.0.js"></script>
+<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.58"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./renoweet-os-drive-adapter-v3.6.js"></script>
+<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.58"></script>
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
-<script src="./renoweet-os-project-bridge-v1.js"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.56"></script>
+<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.58"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.58"></script>
 </body>
 </html>

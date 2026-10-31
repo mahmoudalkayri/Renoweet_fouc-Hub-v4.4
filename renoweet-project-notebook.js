@@ -159,7 +159,7 @@
   function renderOsProjects(){
     const list=$('#osProjectList');if(!list)return;
     if(!state.osProjects.length){list.innerHTML=`<div class="os-empty">${esc(t('noOsProjects'))}</div>`;return;}
-    list.innerHTML=state.osProjects.map(p=>{const linked=linkedNotebookForOs(p);return `<article class="os-project-card" data-os-project-id="${esc(p.id)}"><div><div class="os-project-badges"><span class="status-badge">${esc(t('osLead'))}</span>${linked?`<span class="status-badge os-linked-badge">${esc(t('osLinked'))}</span>`:''}</div><h3>${esc(p.title||t('projectTitlePlaceholder'))}</h3><p>${esc(p.customer?.name||'—')} · ${esc(p.customer?.address||'—')}</p><small>${esc(p.id)}</small></div><button class="btn ${linked?'btn-outline':'btn-primary'} open-os-notebook" type="button">${esc(t(linked?'openNotebook':'startNotebook'))}</button></article>`}).join('');
+    list.innerHTML=state.osProjects.map(p=>{const linked=linkedNotebookForOs(p);return `<article class="os-project-card" data-os-project-id="${esc(p.id)}"><div><div class="os-project-badges"><span class="status-badge">${esc(t('osLead'))}</span>${linked?`<span class="status-badge os-linked-badge">${esc(t('osLinked'))}</span>`:''}</div><h3>${esc(p.title||t('projectTitlePlaceholder'))}</h3><p>${esc(p.customer?.name||'—')} · ${esc(p.customer?.address||'—')}</p><small>${esc(window.RenoweetProjectReferences?.get(p)||p.projectNumber||p.id)}</small></div><button class="btn ${linked?'btn-outline':'btn-primary'} open-os-notebook" type="button">${esc(t(linked?'openNotebook':'startNotebook'))}</button></article>`}).join('');
   }
   async function refreshOsProjects(silent=false){
     clearTimeout(state.osRefreshTimer);
@@ -176,7 +176,7 @@
       for(const p of state.projects){
         const os=result.allProjects.find(item=>item.id===p.osProjectId);if(!os)continue;
         const seed=window.RenoweetOSProjectBridge.notebookSeedFromOs(os);
-        for(const key of ['title','clientName','clientEmail','clientPhone','address','status'])p[key]=seed[key];
+        for(const key of ['title','clientName','clientEmail','clientPhone','address','status','osProjectReference'])p[key]=seed[key];
         p.osFetchedAt=result.fetchedAt;await state.store.saveProject(p);
       }
       renderProjects();renderOsProjects();$('#osFetchStatus').textContent=`${t('fetchedOs')} · ${result.year} · ${new Date(result.fetchedAt).toLocaleString(state.lang==='nl'?'nl-NL':'en-GB')}`;toast(t('fetchedOs'));
@@ -185,10 +185,10 @@
   }
   function renderProjects(){
     const query=$('#projectSearch').value.trim().toLowerCase(), filter=$('#statusFilter').value;
-    const projects=state.projects.filter(p=>(!filter||p.status===filter)&&(!query||[p.title,p.clientName,p.address].join(' ').toLowerCase().includes(query)));
+    const projects=state.projects.filter(p=>(!filter||p.status===filter)&&(!query||[p.title,p.clientName,p.address,p.osProjectReference].join(' ').toLowerCase().includes(query)));
     const list=$('#projectList');
     if(!projects.length){ list.innerHTML=`<div class="empty-state"><h2>${esc(t('noProjects'))}</h2><p>${esc(t('noProjectsCopy'))}</p><button class="btn btn-primary" id="emptyNewProjectBtn" type="button">${esc(t('newProject'))}</button></div>`; return; }
-    list.innerHTML=projects.map(p=>`<article class="project-card" data-status="${esc(p.status)}" data-project-id="${esc(p.id)}"><div class="project-card-bar"></div><div class="project-card-body"><div class="project-card-badges"><span class="status-badge">${esc(t(STATUS_LABELS[p.status]||'statusLead'))}</span>${p.osProjectId?`<span class="status-badge os-linked-badge">${esc(t('osLinked'))}</span>`:''}</div><h2>${esc(p.title||t('projectTitlePlaceholder'))}</h2><div class="address">${esc(p.address||'—')}</div><div class="project-meta"><span>${esc(t('clientName'))}<strong>${esc(p.clientName||'—')}</strong></span><span>${esc(t('updated'))}<strong>${esc(formatDate(p.updatedAt))}</strong></span></div></div><div class="project-card-actions"><button class="btn btn-primary open-project" type="button">${esc(t('open'))}</button><button class="btn btn-outline duplicate-project" type="button" title="${esc(t('duplicate'))}">⧉</button><button class="btn btn-danger delete-project" type="button" title="${esc(t('delete'))}">×</button></div></article>`).join('');
+    list.innerHTML=projects.map(p=>`<article class="project-card" data-status="${esc(p.status)}" data-project-id="${esc(p.id)}"><div class="project-card-bar"></div><div class="project-card-body"><div class="project-card-badges"><span class="status-badge">${esc(t(STATUS_LABELS[p.status]||'statusLead'))}</span>${p.osProjectId?`<span class="status-badge os-linked-badge">${esc(t('osLinked'))}</span>`:''}</div><h2>${esc(p.title||t('projectTitlePlaceholder'))}</h2>${p.osProjectReference?`<small>${esc(p.osProjectReference)}</small>`:''}<div class="address">${esc(p.address||'—')}</div><div class="project-meta"><span>${esc(t('clientName'))}<strong>${esc(p.clientName||'—')}</strong></span><span>${esc(t('updated'))}<strong>${esc(formatDate(p.updatedAt))}</strong></span></div></div><div class="project-card-actions"><button class="btn btn-primary open-project" type="button">${esc(t('open'))}</button><button class="btn btn-outline duplicate-project" type="button" title="${esc(t('duplicate'))}">⧉</button><button class="btn btn-danger delete-project" type="button" title="${esc(t('delete'))}">×</button></div></article>`).join('');
   }
 
   async function openProject(id){ const p=state.projects.find(x=>x.id===id); if(!p)return; state.current=structuredClone(p); state.photos=[]; showView('editorView'); bindProjectFields(); renderEditorDynamic(); restoreSignatures(); $('#toolbarProjectTitle').textContent=state.current.title; $('#footerProject').textContent=[state.current.clientName,state.current.address].filter(Boolean).join(' · '); setSync('',t('local')); try{state.photos=await state.store.listPhotos(id);renderPhotos();}catch{toast(t('localError'));} }
@@ -211,7 +211,7 @@
       const idx=state.projects.findIndex(p=>p.id===state.current.id);if(idx>=0)state.projects[idx]=structuredClone(state.current);else state.projects.unshift(structuredClone(state.current));
       let osOk=true;
       if(state.current.osProjectId&&window.RenoweetOSProjectBridge?.syncFromNotebook){
-        try{const result=await window.RenoweetOSProjectBridge.syncFromNotebook(state.current);state.current.osProjectId=result.osProjectId;state.current.osLinkStatus='linked';state.current.osLastSyncedAt=new Date().toISOString();saved=await state.store.saveProject(state.current);state.current={...state.current,...saved};}
+        try{const result=await window.RenoweetOSProjectBridge.syncFromNotebook(state.current);state.current.osProjectId=result.osProjectId;state.current.osProjectReference=result.project?.projectNumber||state.current.osProjectReference||'';state.current.osLinkStatus='linked';state.current.osLastSyncedAt=new Date().toISOString();saved=await state.store.saveProject(state.current);state.current={...state.current,...saved};}
         catch(error){console.warn('Project Notebook OS sync pending.',error);state.current.osLinkStatus='pending';osOk=false;}
       }
       const currentIndex=state.projects.findIndex(p=>p.id===state.current.id);if(currentIndex>=0)state.projects[currentIndex]=structuredClone(state.current);
@@ -278,6 +278,7 @@
     $('#notebookPrintForm')?.remove();
     if(!state.current)return;
     const original=$('#report'),copy=original.cloneNode(true);copy.id='notebookPrintForm';
+    const projectRef=window.RenoweetProjectReferences?.reference(state.current)||state.current.osProjectReference||'';if(projectRef){const label=document.createElement('p');label.className='nb-project-reference';label.textContent=`Project: ${projectRef}`;copy.prepend(label)}
     const fields=[...original.querySelectorAll('input,textarea,select')],clones=[...copy.querySelectorAll('input,textarea,select')];
     fields.forEach((field,index)=>{
       const clone=clones[index],value=document.createElement('div');value.className='nb-print-value';
@@ -307,7 +308,7 @@
   }
 
   async function linkProjectToOs(p){
-    try{const result=await window.RenoweetOSProjectBridge.createFromNotebook(p);p.osProjectId=result.osProjectId;p.osLinkStatus='linked';p.osLinkedAt=new Date().toISOString();return true;}
+    try{const result=await window.RenoweetOSProjectBridge.createFromNotebook(p);p.osProjectId=result.osProjectId;p.osProjectReference=result.project?.projectNumber||p.osProjectReference||'';p.osLinkStatus='linked';p.osLinkedAt=new Date().toISOString();return true;}
     catch(error){console.error(error);p.osLinkStatus='pending';return false;}
   }
   const normalized=value=>String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
@@ -359,7 +360,7 @@
     const closer=e.target.closest('[data-close-dialog]');if(closer){$('#'+closer.dataset.closeDialog).close();return;}
     const card=e.target.closest('.project-card');
     if(card&&e.target.closest('.open-project')){openProject(card.dataset.projectId);return;}
-    if(card&&e.target.closest('.duplicate-project')){const original=state.projects.find(p=>p.id===card.dataset.projectId);const copy=structuredClone(original);copy.id=uid();copy.osProjectId=window.RenoweetOSProjectBridge?.createOsProjectId?.()||'';copy.title=`${copy.title} — ${t('duplicate')}`;copy.createdAt=copy.updatedAt=new Date().toISOString();copy.signatures={clientSignature:'',contractorSignature:''};const linked=await linkProjectToOs(copy);await state.store.saveProject(copy);state.projects.unshift(copy);renderProjects();await refreshOsProjects(true);toast(t(linked?'projectDuplicated':'projectLinkPending'));return;}
+    if(card&&e.target.closest('.duplicate-project')){const original=state.projects.find(p=>p.id===card.dataset.projectId);const copy=structuredClone(original);copy.id=uid();copy.osProjectId=window.RenoweetOSProjectBridge?.createOsProjectId?.()||'';copy.osProjectReference='';copy.title=`${copy.title} — ${t('duplicate')}`;copy.createdAt=copy.updatedAt=new Date().toISOString();copy.signatures={clientSignature:'',contractorSignature:''};const linked=await linkProjectToOs(copy);await state.store.saveProject(copy);state.projects.unshift(copy);renderProjects();await refreshOsProjects(true);toast(t(linked?'projectDuplicated':'projectLinkPending'));return;}
     if(card&&e.target.closest('.delete-project')){if(!confirm(t('deleteConfirm')))return;await state.store.deleteProject(card.dataset.projectId);state.projects=state.projects.filter(p=>p.id!==card.dataset.projectId);renderProjects();renderOsProjects();toast(t('projectDeleted'));return;}
     if(e.target.closest('#addScopeBtn')){state.current.scopes.push({id:uid(),title:'',description:'',status:'confirm',note:''});renderScopes();scheduleSave();return;}
     const scopeCard=e.target.closest('.scope-card');if(scopeCard&&e.target.closest('.remove-scope')){state.current.scopes.splice(Number(scopeCard.dataset.scopeIndex),1);renderScopes();renderOpenItems();scheduleSave();return;}

@@ -2,8 +2,8 @@
 'use strict';
 let state={year:RenoweetDrive.currentYear(),activeYear:RenoweetDrive.currentYear(),readOnly:false,sectionRevision:0,baseline:null,connected:false,saving:false,timer:null,retryTimer:null,retryAttempts:0,syncPending:false};
 const status=(title,detail='')=>{try{dbState(!!state.connected,title,detail)}catch(e){const el=document.getElementById('dbStatus');if(el)el.textContent=title+(detail?' • '+detail:'')}};
-const localSnapshot=()=>({projects:RenoweetDrive.clone(db.projects||[]),bookkeeping:RenoweetDrive.clone(db.bookkeeping||[]),deleted:RenoweetDrive.clone(db.deleted||[])});
-function applyRemote(x,rerender=true,dirty=false){db={projects:RenoweetDrive.clone(x.projects||[]),bookkeeping:RenoweetDrive.clone(x.bookkeeping||[]),deleted:RenoweetDrive.clone(x.deleted||[])};try{resetProjectShadows()}catch(e){};if(rerender)try{render()}catch(e){};try{cacheBrowserState(!!dirty)}catch(e){}}
+const localSnapshot=()=>{window.RenoweetProjectReferences?.ensure(db,{year:state.year});return ({projectNumberCounters:RenoweetDrive.clone(db.projectNumberCounters||{}),projectNumberRegistry:RenoweetDrive.clone(db.projectNumberRegistry||{}),projects:RenoweetDrive.clone(db.projects||[]),bookkeeping:RenoweetDrive.clone(db.bookkeeping||[]),deleted:RenoweetDrive.clone(db.deleted||[])});};
+function applyRemote(x,rerender=true,dirty=false){db={projectNumberCounters:RenoweetDrive.clone(x.projectNumberCounters||{}),projectNumberRegistry:RenoweetDrive.clone(x.projectNumberRegistry||{}),projects:RenoweetDrive.clone(x.projects||[]),bookkeeping:RenoweetDrive.clone(x.bookkeeping||[]),deleted:RenoweetDrive.clone(x.deleted||[])};window.RenoweetProjectReferences?.ensure(db,{year:state.year});try{resetProjectShadows()}catch(e){};if(rerender)try{render()}catch(e){};try{cacheBrowserState(!!dirty)}catch(e){}}
 // Read the open editor only when its fields actually changed. Re-stamping an
 // unchanged draft after verification would manufacture another pending save.
 function captureVisibleChanges(){
@@ -92,7 +92,8 @@ async function connectDrive(interactive=true){
   const identity=await RenoweetDrive.inspectDatabaseFiles(state.year),ignored=identity.outside.length?` • ${identity.outside.length} same-name file(s) outside live year folders ignored`:'';
   status(state.readOnly?`Historical ${state.year} • READ ONLY`:(hadDirty?'Local changes restored • syncing':'Google Drive connected ✓'),`Renoweet-${state.year}.json • file ${remote.file.id} • OS revision ${state.sectionRevision} • checksum verified${ignored}`);
   await refreshYearSelector();historicalBanner();const b=document.getElementById('saveNowBtn');if(b)b.disabled=state.readOnly;
-  if(!state.readOnly&&hadDirty&&hasLocal)await saveDrive(false);
+  const referencesPending=JSON.stringify(db.projectNumberRegistry||{})!==JSON.stringify(state.baseline?.projectNumberRegistry||{})||JSON.stringify(db.projectNumberCounters||{})!==JSON.stringify(state.baseline?.projectNumberCounters||{});
+  if(!state.readOnly&&((hadDirty&&hasLocal)||referencesPending))await saveDrive(false);
   return true
  }catch(e){console.error(e);state.connected=false;status(e.name==='RenoweetDuplicateDatabaseError'?'Duplicate live databases detected':'Drive not connected',e.message);if(interactive)alert(e.message);return false}
 }

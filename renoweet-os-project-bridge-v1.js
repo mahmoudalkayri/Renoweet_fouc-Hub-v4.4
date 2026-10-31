@@ -150,6 +150,7 @@
     const requestedStart = notebookProject.desiredStart || '';
     return {
       id,
+      projectNumberPolicyVersion:1,
       created: String(notebookProject.createdAt || today()).slice(0, 10),
       updated: timestamp,
       stage: projectStage(notebookProject.status),
@@ -238,6 +239,7 @@
     const snapshot = project?.siteSurvey?.snapshot && typeof project.siteSurvey.snapshot === 'object' ? clone(project.siteSurvey.snapshot) : {};
     const seed = {
       osProjectId: project?.id || '',
+      osProjectReference: window.RenoweetProjectReferences?.reference(project) || project?.projectNumber || '',
       title: project?.title || '',
       clientName: project?.customer?.name || '',
       clientEmail: project?.customer?.email || '',
@@ -347,6 +349,7 @@
   let fetchedState = null;
   function openProjects(state) {
     if (!state) return [];
+    window.RenoweetProjectReferences?.ensure(state.db);
     return (state.db.projects || []).filter(project => isEligibleOpenProject(project, state.db)).map(clone).sort((a, b) => String(b.updated || b.created || '').localeCompare(String(a.updated || a.created || '')));
   }
   async function listOpenProjects() {
@@ -394,6 +397,8 @@
             record.db.projects.unshift(clone(project));
             added = true;
           }
+          window.RenoweetProjectReferences?.ensure(record.db,{remote:baseState?.db});
+          const assigned=record.db.projects.find(p=>p.id===project.id);if(assigned?.projectNumber)project.projectNumber=assigned.projectNumber;
           record.savedAt = now();
           record.dirty = true;
           record.databaseName = databaseName || record.databaseName || baseState?.databaseName || '';
@@ -423,8 +428,9 @@
     const live = fetchedState?.db.projects.find(item => item.id === notebookProject.osProjectId);
     if (live && (!existing || String(live.updated||'') >= String(existing.updated||''))) existing = live;
     const project = applyNotebookToOsProject(existing, notebookProject);
-    if (stageIfNew && !existing) await stageProject(project);
     const local = await mergeIntoOsCache(project, state);
+    notebookProject.osProjectReference=project.projectNumber||notebookProject.osProjectReference||'';
+    if (stageIfNew && !existing) await stageProject(project);
     channel?.postMessage({type: existing ? 'project-updated' : 'project-created', project: clone(project)});
     return {ok: true, osProjectId: project.id, added: local.added, updated: local.updated, status: 'local-os-linked', project: clone(project)};
   }
