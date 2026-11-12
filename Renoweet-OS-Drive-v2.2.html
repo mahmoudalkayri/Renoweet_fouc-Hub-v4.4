@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Renoweet OS</title>
-<script src="./renoweet-project-references.js?v=4.4.4.60"></script>
+<script src="./renoweet-project-references.js?v=4.4.4.61"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -51,7 +51,7 @@ textarea{min-height:92px;resize:vertical}input:focus,textarea:focus,select:focus
 .modal.open{display:flex}.modalbox{width:min(1040px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}
 .modalhead{display:flex;justify-content:space-between;gap:12px;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--line)}.modalhead h2{margin:0}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin:14px -2px;padding:2px 2px 7px;scrollbar-width:thin}.tabs button{flex:0 0 auto;border:1px solid var(--line);background:#0d1525;color:var(--muted);padding:9px 11px;border-radius:10px}.tabs button.active{background:var(--panel2);color:var(--text)}
-.lineitems{width:100%;border-collapse:collapse;min-width:700px}.lineitems input{min-width:90px}.ros-estimate-lines{min-width:980px}.ros-estimate-lines .e_vat{min-width:180px}
+.lineitems{width:100%;border-collapse:collapse;min-width:700px}.lineitems input{min-width:90px}.ros-estimate-lines{min-width:1080px}.estimate-group-tools{margin-bottom:12px}.estimate-group-tools input{width:min(280px,100%)}.estimate-group-tools .actions{margin-top:8px}.estimate-group-cell{min-width:110px}.estimate-group-cell label{display:flex;align-items:center;gap:8px;font-weight:500}.estimate-group-cell .e_group_select{width:18px;min-width:18px;height:18px;flex:none;accent-color:var(--accent)}.estimate-group-cell span{overflow-wrap:anywhere}.ros-estimate-lines .e_vat{min-width:180px}
 .totalbox{margin-left:auto;width:min(360px,100%);margin-top:12px}.totalrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line)}
 .ai{border:1px solid #345b38;background:#0f2312;padding:13px;border-radius:12px;margin-top:12px}.ai b{color:#9be49d}.ai p{color:#c8d5c8;font-size:13px}
 .kanban{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:12px;overflow:auto;-webkit-overflow-scrolling:touch}.kanban-col{background:#0d1423;border:1px solid var(--line);border-radius:12px;padding:10px;min-height:240px}
@@ -176,7 +176,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .ros-quote-table{width:100%!important;min-width:0!important;max-width:100%!important;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:10.5pt;background:#fff;color:#142d35;margin:0 auto;box-sizing:border-box}
 .ros-quote-table th{background:#eaf0ef!important;color:#142d35!important;border-top:1px solid #9eafb2;border-bottom:1px solid #9eafb2;padding:2.4mm 2mm;font-weight:700;box-sizing:border-box;min-width:0!important;overflow:hidden}
 .ros-quote-table td{background:#fff!important;color:#142d35!important;border-bottom:1px solid #d7dfe0;padding:2.5mm 2mm;vertical-align:top;box-sizing:border-box;overflow-wrap:anywhere;min-width:0!important;overflow:hidden}
-.ros-quote-table .qd{text-align:left}.ros-quote-table .qq,.ros-quote-table .qv{text-align:center}.ros-quote-table .qv{font-size:8.8pt}.ros-quote-table .qr{text-align:right;white-space:nowrap}.ros-quote-table .qa{text-align:right;white-space:nowrap}
+.ros-quote-table .ros-quote-group th{text-align:left;background:#f3f6f5!important;border-top:1px solid #b8c8c9;border-bottom:1px solid #d7dfe0;font-size:10pt;overflow-wrap:anywhere;padding:2mm}.ros-quote-table .qd{text-align:left}.ros-quote-table .qq,.ros-quote-table .qv{text-align:center}.ros-quote-table .qv{font-size:8.8pt}.ros-quote-table .qr{text-align:right;white-space:nowrap}.ros-quote-table .qa{text-align:right;white-space:nowrap}
 .ros-quote-summary{width:82mm;max-width:48%;margin:5mm 0 0 auto;font-size:10.5pt;color:#142d35}
 .ros-quote-summary-row{display:flex;justify-content:space-between;gap:8mm;padding:1.7mm 0;border-bottom:1px dotted #aeb9bb}.ros-quote-summary-row strong{white-space:nowrap}.ros-quote-summary-row.grand{font-size:12pt;border-top:1.5px solid #173a43;border-bottom:1.5px solid #173a43;margin-top:1mm;padding:2.3mm 0}
 .ros-quote-note{margin-top:5mm;padding:3.5mm;background:#f3f7f6;border-radius:2mm;font-size:9.5pt;line-height:1.4}
@@ -295,7 +295,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script src="./company-details.js"></script>
 <link rel="stylesheet" href="./styles-rich-text.css">
 <script src="./renoweet-rich-text.js"></script>
-<script src="./renoweet-print-layout.js?v=4.4.4.60"></script>
+<script src="./renoweet-print-layout.js?v=4.4.4.61"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -373,8 +373,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.60"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.60"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.61"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.61"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -1031,7 +1031,7 @@ function parseWorkbook(){
   quote:{number:r['Quote Number']||'',date:r['Quote Date']||today(),validDays:+r['Quote Valid Days']||14,vat:(r['Quote VAT']===0||String(r['Quote VAT'])==='0'?0:(+r['Quote VAT']||21)),vatTreatment:normalizeSalesVatTreatment(r['Quote VAT Treatment'],(r['Quote VAT']===0||String(r['Quote VAT'])==='0'?0:(+r['Quote VAT']||21))),status:r['Quote Status']||'Draft',parking:+r['Quote Parking']||0,travel:+r['Quote Travel']||0,exclusions:r['Quote Exclusions']||'Niet inbegrepen tenzij expliciet vermeld:\n- Vergunningen, constructieberekeningen en werkzaamheden van derden.\n- Verborgen gebreken, asbest of niet-zichtbare leidingen/constructies.\n- Herstelwerk buiten de omschreven scope.',paymentTerms:r['Quote Payment Terms']||'Na akkoord op deze offerte is een aanbetaling verschuldigd ter voorbereiding en uitvoering van de werkzaamheden volgens planning. Het resterende bedrag wordt betaald volgens de afgesproken termijn(en), met de eindbetaling bij oplevering. Betalingstermijnen en vervaldata zijn conform de offerte en gemaakte afspraken.',advancePct:+r['Quote Advance %']||50,installments:+r['Quote Installments']||0,assumptions:r['Quote Assumptions']||'Uitvoering op basis van zichtbare situatie en beschikbare informatie tijdens inspectie. Definitieve maten, materiaalkeuzes en bereikbaarheid worden vóór start bevestigd.'},
   invoiceDocuments:(()=>{try{return JSON.parse(r['Invoice Documents JSON']||'[]')}catch{return []}})(),
   invoice:{...(()=>{try{return JSON.parse(r['Invoice Settings JSON']||'{}')}catch{return {}}})(),number:r['Invoice Number']||'',date:r['Invoice Date']||today(),dueDays:(+r['Invoice Due Days']&&+r['Invoice Due Days']!==14)?+r['Invoice Due Days']:3,status:r['Invoice Status']||'Draft',vatTreatment:r['Invoice VAT Treatment']||'',vatRate:(r['Invoice VAT Rate']===''||r['Invoice VAT Rate']==null?null:+r['Invoice VAT Rate'])},
-  estimate:est.filter(x=>x['Project ID']===r['Project ID']).map(x=>({id:x['Line ID']||lineid(),desc:x.Description||'',qty:+x.Qty||0,unit:x.Unit||'',rate:+x.Rate||0,vatTreatment:x['VAT Treatment']||'',vatRate:x['VAT Rate']===''||x['VAT Rate']==null?null:+x['VAT Rate'],vatReferenceRate:x['VAT Reference Rate']===''||x['VAT Reference Rate']==null?null:+x['VAT Reference Rate']})),
+  estimate:est.filter(x=>x['Project ID']===r['Project ID']).map(x=>({id:x['Line ID']||lineid(),desc:x.Description||'',...(estimateGroupName(x.Group)?{group:estimateGroupName(x.Group)}:{}),qty:+x.Qty||0,unit:x.Unit||'',rate:+x.Rate||0,vatTreatment:x['VAT Treatment']||'',vatRate:x['VAT Rate']===''||x['VAT Rate']==null?null:+x['VAT Rate'],vatReferenceRate:x['VAT Reference Rate']===''||x['VAT Reference Rate']==null?null:+x['VAT Reference Rate']})),
   materials:mats.filter(x=>x['Project ID']===r['Project ID']).map(x=>({id:x['Line ID']||lineid(),desc:x.Material||'',qty:x.Qty||'',supplier:x.Supplier||'',cost:+x.Cost||0})),
   checklist:checks.filter(x=>x['Project ID']===r['Project ID']).sort((a,b)=>(+a['Item Order']||0)-(+b['Item Order']||0)).map(x=>({order:+x['Item Order']||0,text:x.Item||'',done:String(x.Done).toLowerCase()==='true'||x.Done===true}))
  }));
@@ -1048,7 +1048,7 @@ function replaceDatabaseSheets(){
  let projectRows=db.projects.map(p=>({"Project ID":p.id,"Project number":p.projectNumber||"","Project number policy":p.projectNumberPolicyVersion||"",Created:p.created,Updated:p.updated,"Field Updated JSON":JSON.stringify(p.fieldUpdated||{}),Stage:p.stage,Title:p.title,"Customer Name":p.customer.name,Phone:p.customer.phone,Email:p.customer.email,Address:p.customer.address,"Customer VAT ID":p.customer.vatId||"",Description:p.description,Scope:p.scope,"Scope Photos JSON":JSON.stringify(p.scopePhotos||[]),Notes:p.notes,"Schedule Start":p.schedule.start,"Schedule End":p.schedule.end,"Schedule Time":p.schedule.time,"Schedule End Time":p.schedule.endTime||"","Schedule Notes":p.schedule.notes,"Share With Client":!!p.schedule.shareClient,"Calendar Invite Email":p.schedule.inviteEmail||"","Calendar Invite Status":p.schedule.inviteStatus||"","Google Calendar Shared With":p.schedule.calendarSharedWith||"","Google Calendar Share Signature":p.schedule.calendarShareSignature||"","Google Calendar Event ID":p.schedule.calendarEventId||"","Google Calendar Link":p.schedule.calendarHtmlLink||"","Google Calendar Synced At":p.schedule.calendarSyncedAt||"","Quote Number":p.quote.number,"Quote Date":p.quote.date,"Quote Valid Days":p.quote.validDays,"Quote VAT":p.quote.vat,"Quote VAT Treatment":projectVatConfig(p,'quote').treatment,"Quote Status":p.quote.status,"Quote Parking":+p.quote.parking||0,"Quote Travel":+p.quote.travel||0,"Quote Exclusions":p.quote.exclusions||"","Quote Payment Terms":p.quote.paymentTerms||"","Quote Advance %":+p.quote.advancePct||50,"Quote Installments":+p.quote.installments||0,"Quote Assumptions":p.quote.assumptions||"","Invoice Number":p.invoice.number,"Invoice Date":p.invoice.date,"Invoice Due Days":p.invoice.dueDays,"Invoice Status":p.invoice.status,"Invoice Settings JSON":JSON.stringify(p.invoice||{}),"Invoice Documents JSON":JSON.stringify(p.invoiceDocuments||[]),"Invoice VAT Treatment":p.invoice.vatTreatment||"","Invoice VAT Rate":p.invoice.vatRate??"","Acceptance Status":p.acceptance?.status||"Pending","Acceptance Date":p.acceptance?.date||"","Acceptance Notes":p.acceptance?.notes||""}));
  let estRows=[],matRows=[],checkRows=[],docRows=[],paymentRows=[],orderRows=[],activityRows=[],followRows=[];
  db.projects.forEach(p=>{
-  (p.estimate||[]).forEach((x,i)=>{const cfg=OSVAT.lineConfig(x,p,'quote');estRows.push({"Project ID":p.id,"Line ID":x.id||lineid(),Description:x.desc,Qty:+x.qty||0,Unit:x.unit,Rate:+x.rate||0,"VAT Treatment":cfg.treatment,"VAT Rate":['REVERSE_CHARGE_NL','NL_ZERO'].includes(cfg.treatment)?0:cfg.rate,"VAT Reference Rate":cfg.treatment==='REVERSE_CHARGE_NL'?cfg.rate:''})});
+  (p.estimate||[]).forEach((x,i)=>{const cfg=OSVAT.lineConfig(x,p,'quote');estRows.push({"Project ID":p.id,"Line ID":x.id||lineid(),Description:x.desc,Group:estimateGroupName(x.group),Qty:+x.qty||0,Unit:x.unit,Rate:+x.rate||0,"VAT Treatment":cfg.treatment,"VAT Rate":['REVERSE_CHARGE_NL','NL_ZERO'].includes(cfg.treatment)?0:cfg.rate,"VAT Reference Rate":cfg.treatment==='REVERSE_CHARGE_NL'?cfg.rate:''})});
   (p.materials||[]).forEach((x,i)=>matRows.push({"Project ID":p.id,"Line ID":x.id||lineid(),Material:x.desc,Qty:x.qty,Supplier:x.supplier,Cost:+x.cost||0}));
   (p.checklist||[]).forEach((x,i)=>checkRows.push({"Project ID":p.id,"Item Order":i+1,Item:x.text,Done:!!x.done}));
   (p.documents||[]).forEach(x=>docRows.push({"Project ID":p.id,"Item ID":x.id||lineid(),Date:x.date||'',Type:x.type||'Document',Title:x.title||'',URL:x.url||'',Notes:x.notes||''}));
@@ -1060,7 +1060,7 @@ function replaceDatabaseSheets(){
  workbook.Sheets['Projects']=sheetFromRows(projectHeaders,projectRows);
  workbook.Sheets['Project Number Counters']=sheetFromRows(['Year','Last number'],Object.entries(db.projectNumberCounters||{}).map(([Year,n])=>({Year,'Last number':n})));if(!workbook.SheetNames.includes('Project Number Counters'))workbook.SheetNames.push('Project Number Counters');
  workbook.Sheets['Project Numbers']=sheetFromRows(['Project ID','Project number'],Object.entries(db.projectNumberRegistry||{}).map(([id,ref])=>({'Project ID':id,'Project number':ref})));if(!workbook.SheetNames.includes('Project Numbers'))workbook.SheetNames.push('Project Numbers');
- workbook.Sheets['Estimate']=sheetFromRows(["Project ID","Line ID","Description","Qty","Unit","Rate","VAT Treatment","VAT Rate","VAT Reference Rate"],estRows);
+ workbook.Sheets['Estimate']=sheetFromRows(["Project ID","Line ID","Description","Group","Qty","Unit","Rate","VAT Treatment","VAT Rate","VAT Reference Rate"],estRows);
  workbook.Sheets['Materials']=sheetFromRows(["Project ID","Line ID","Material","Qty","Supplier","Cost"],matRows);
  workbook.Sheets['Checklist']=sheetFromRows(["Project ID","Item Order","Item","Done"],checkRows);
  workbook.Sheets['Documents']=sheetFromRows(["Project ID","Item ID","Date","Type","Title","URL","Notes"],docRows);
@@ -1380,7 +1380,7 @@ function switchTab(t){saveProjectFromForm(false);currentTab=t;renderTabs()}
 function tabHTML(p,t){
  if(t==='intake')return `<div class="formgrid"><div class="field"><label>Project number</label><input readonly value="${esc(window.RenoweetProjectReferences?.reference(p)||(window.RenoweetProjectReferences&&!window.RenoweetProjectReferences.eligible(p,db)?'Existing project — original ID retained':'Assigned when quoted'))}"><div class="small">Assigned when the quotation is issued; leads and draft quotations use no project number.</div><details class="small"><summary>Internal project ID</summary>${esc(p.id)}</details></div><div class="field"><label>Project title</label><input id="f_title" value="${esc(p.title)}"></div><div class="field"><label>Stage</label><select id="f_stage">${stages.map(s=>`<option ${p.stage===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="field"><label>Customer name *</label><input id="f_name" required value="${esc(p.customer.name)}"></div><div class="field"><label>Phone *</label><input id="f_phone" required inputmode="tel" value="${esc(p.customer.phone)}"></div><div class="field"><label>Email</label><input id="f_email" inputmode="email" value="${esc(p.customer.email)}"></div><div class="field"><label>Address</label><input id="f_address" value="${esc(p.customer.address)}"></div><div class="field"><label>Customer BTW-id</label><input id="f_vat_id" value="${esc(p.customer.vatId||'')}" placeholder="NL123456789B01"></div><div class="field full"><label>Customer description / request</label><textarea id="f_description">${esc(p.description)}</textarea></div><div class="field full"><label>Project photos</label><input id="photoInput" type="file" accept="image/*" capture="environment" multiple><div class="actions" style="margin-top:8px"><button class="btn" type="button" onclick="connectPhotosFolder()">Connect photos folder</button><span class="small">${photosFolderHandle?'✓ Renoweet OS Projects photos connected':'Saved on Save into “Renoweet OS Projects photos”.'}</span></div><div class="small">Each photo is renamed with this unique Project ID.</div><div id="photoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div></div><div class="field full"><label>Internal notes</label><textarea id="f_notes">${esc(p.notes)}</textarea></div></div><div class="ai"><b>Draft assistant</b><p>Create a starter scope and estimate from the customer description.</p><button class="btn primary" onclick="smartDraft()">Draft scope + estimate</button></div>`;
  if(t==='scope')return `<div class="field"><label>Scope of work</label>${RenoweetText.editor('f_scope',p.scope,'250px')}</div>${RenoweetScopePhotos.editor(p)}<div class="ai"><b>Scope check</b><p>${(p.scope||'').length<80?'Scope is still short. Add measurements, exclusions and materials.':'Confirm measurements, exclusions and customer responsibilities before sending.'}</p></div>`;
- if(t==='estimate')return `<div class="tablewrap"><table class="lineitems ros-estimate-lines"><thead><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Rate</th><th>BTW</th><th>Total ex. BTW</th><th></th></tr></thead><tbody id="estRows">${p.estimate.map((x,i)=>{const cfg=OSVAT.lineConfig(x,p,'quote');return `<tr><td><input class="e_desc" value="${esc(x.desc)}"></td><td><input class="e_qty" type="number" step=".01" value="${x.qty}"></td><td><input class="e_unit" value="${esc(x.unit)}"></td><td><input class="e_rate" type="number" step=".01" value="${x.rate}"></td><td><select class="e_vat">${vatTreatmentOptions(cfg.treatment,cfg.rate)}</select></td><td>${money(x.qty*x.rate)}</td><td><button class="btn danger" onclick="removeEst(${i})">×</button></td></tr>`}).join('')}</tbody></table></div><div class="small" style="margin-top:8px">Choose the correct BTW treatment for each work line. The quotation, invoice and Bookkeeping handoff keep these line-level rates.</div><button class="btn" style="margin-top:10px" onclick="addEstimate()">+ Line</button>${totalsHTML(p)}`;
+ if(t==='estimate')return `${estimateGroupControls(p)}<div class="tablewrap"><table class="lineitems ros-estimate-lines"><thead><tr><th>Group</th><th>Description</th><th>Qty</th><th>Unit</th><th>Rate</th><th>BTW</th><th>Total ex. BTW</th><th></th></tr></thead><tbody id="estRows">${p.estimate.map((x,i)=>{const cfg=OSVAT.lineConfig(x,p,'quote');return `<tr><td class="estimate-group-cell"><label><input class="e_group_select" type="checkbox" data-estimate-group-control data-line-index="${i}" aria-label="Select line ${i+1} for grouping"><span>${esc(estimateGroupName(x.group)||'Ungrouped')}</span></label></td><td><input class="e_desc" value="${esc(x.desc)}"></td><td><input class="e_qty" type="number" step=".01" value="${x.qty}"></td><td><input class="e_unit" value="${esc(x.unit)}"></td><td><input class="e_rate" type="number" step=".01" value="${x.rate}"></td><td><select class="e_vat">${vatTreatmentOptions(cfg.treatment,cfg.rate)}</select></td><td>${money(x.qty*x.rate)}</td><td><button class="btn danger" onclick="removeEst(${i})">×</button></td></tr>`}).join('')}</tbody></table></div><div class="small" style="margin-top:8px">Choose the correct BTW treatment for each work line. The quotation, invoice and Bookkeeping handoff keep these line-level rates.</div><button class="btn" style="margin-top:10px" onclick="addEstimate()">+ Line</button>${totalsHTML(p)}`;
  if(t==='quote')return quoteHTML(p);
  if(t==='materials')return `<div class="tablewrap"><table class="lineitems"><thead><tr><th>Material</th><th>Qty</th><th>Supplier</th><th>Cost</th><th></th></tr></thead><tbody id="matRows">${p.materials.map((x,i)=>`<tr><td><input class="m_desc" value="${esc(x.desc)}"></td><td><input class="m_qty" value="${esc(x.qty)}"></td><td><input class="m_supplier" value="${esc(x.supplier)}"></td><td><input class="m_cost" type="number" step=".01" value="${x.cost}"></td><td><button class="btn danger" onclick="removeMat(${i})">×</button></td></tr>`).join('')}</tbody></table></div><button class="btn" style="margin-top:10px" onclick="addMaterial()">+ Material</button>`;
  if(t==='documents')return documentsHTML(p);
@@ -1396,13 +1396,47 @@ function tabHTML(p,t){
  if(t==='checklist')return `<div class="checklist">${p.checklist.map((x,i)=>`<label><input type="checkbox" class="c_done" data-i="${i}" ${x.done?'checked':''}><span>${esc(x.text)}</span></label>`).join('')}</div><div class="actions" style="margin-top:12px"><button class="btn" onclick="addChecklist()">+ Item</button><button class="btn primary" onclick="completeProject()">Mark completed</button></div>`;
 }
 function totalsHTML(p){let t=projectTotals(p);return `<div class="totalbox"><div class="totalrow"><span>Werkzaamheden</span><b>${money(t.workSubtotal)}</b></div>${t.travel?`<div class="totalrow"><span>Reiskosten</span><b>${money(t.travel)}</b></div>`:''}<div class="totalrow"><span>Subtotaal excl. btw</span><b>${money(t.taxableSubtotal)}</b></div>${vatBreakdownRows(t)}${t.parking?`<div class="totalrow"><span>Voorgeschoten parkeerkosten*</span><b>${money(t.parking)}</b></div>`:''}<div class="totalrow"><span>Totaal</span><b>${money(t.total)}</b></div></div>`}
+function estimateGroupName(value){return String(value??'').trim().replace(/\s+/g,' ').slice(0,100)}
+function estimateGroupControls(p){
+ const names=[...new Set((p.estimate||[]).map(x=>estimateGroupName(x.group)).filter(Boolean))];
+ return `<div class="card estimate-group-tools"><b>Estimate groups <span class="small">· optional</span></b><div class="small">Select lines in the Group column, then add or reuse a heading. Headings appear on the quotation without changing the prices or BTW.</div><div class="actions"><input id="estimateGroupName" data-estimate-group-control list="estimateGroupNames" maxlength="100" placeholder="e.g. Begane grond" aria-label="Estimate group name"><datalist id="estimateGroupNames">${names.map(name=>`<option value="${esc(name)}"></option>`).join('')}</datalist><button type="button" class="btn" onclick="applyEstimateGroup()">Group selected lines</button><button type="button" class="btn" onclick="applyEstimateGroup(true)">Ungroup selected</button></div></div>`;
+}
+function applyEstimateGroup(clear=false){
+ const p=getP();if(!p||currentTab!=='estimate'||window.renoweetDriveOS?.state?.readOnly)return;
+ const selected=[...document.querySelectorAll('#estRows .e_group_select:checked')].map(el=>Number(el.dataset.lineIndex));
+ if(!selected.length){toast('Select at least one estimate line');return}
+ let name=clear?'':estimateGroupName($('estimateGroupName')?.value);
+ if(!clear&&!name){toast('Enter a group name');$('estimateGroupName')?.focus();return}
+ readEstimate(p);
+ if(name)name=(p.estimate||[]).map(x=>estimateGroupName(x.group)).find(g=>g.toLowerCase()===name.toLowerCase())||name;
+ for(const index of selected){const line=p.estimate[index];if(!line)continue;if(name)line.group=name;else delete line.group}
+ formDirty=true;saveProjectDraftRecoveryNow();scheduleSave();renderTabs();
+}
+function quoteGroupDescription(value,name){
+ const text=String(value??''),colon=text.indexOf(':'),body=colon>=0?text.slice(colon+1).trimStart():'';
+ return name&&body&&estimateGroupName(text.slice(0,colon)).toLowerCase()===name.toLowerCase()?body:text;
+}
+function quoteEstimateRows(p){
+ const sections=[],groups=new Map();
+ for(const line of p.estimate||[]){
+  const name=estimateGroupName(line.group),key=name.toLowerCase();
+  if(!name){sections.push({name:'',lines:[line]});continue}
+  if(!groups.has(key)){const section={name,lines:[]};groups.set(key,section);sections.push(section)}
+  groups.get(key).lines.push(line);
+ }
+ return sections.map(({name,lines})=>(name?`<tr class="ros-quote-group"><th colspan="5">${esc(name)}</th></tr>`:'')+lines.map(x=>{
+  const cfg=OSVAT.lineConfig(x,p,'quote');
+  return `<tr${name?'':' data-print-ungrouped'}><td class="qd">${RenoweetText.inline(quoteGroupDescription(x.desc,name))}</td><td class="qq">${x.qty} ${esc(x.unit)}</td><td class="qr">${money(x.rate)}</td><td class="qv">${vatTreatmentLabel(cfg.treatment,cfg.rate)}</td><td class="qa">${money(x.qty*x.rate)}</td></tr>`;
+ }).join('')).join('');
+}
+
 function quoteHTML(p){
  const printedProjectNumber=window.RenoweetProjectReferences?.get(p)||p.projectNumber||'';
  if(p.quote.advancePct==null||p.quote.advancePct==='')p.quote.advancePct=50;if(p.quote.installments==null)p.quote.installments=0;if((p.quote.paymentTerms||'').includes('14 dagen na factuurdatum'))p.quote.paymentTerms=buildPaymentTermsText(p.quote.advancePct,p.quote.installments);
  if(!p.quote.number)p.quote.number=nextQuote();
  if(!p.quote.date)p.quote.date=today();
  let t=projectTotals(p), valid=new Date(p.quote.date+'T12:00:00');valid.setDate(valid.getDate()+(+p.quote.validDays||14));let validDate=valid.toISOString().slice(0,10);
- const rows=(p.estimate||[]).map(x=>{const cfg=OSVAT.lineConfig(x,p,'quote');return `<tr><td class="qd">${RenoweetText.inline(x.desc)}</td><td class="qq">${x.qty} ${esc(x.unit)}</td><td class="qr">${money(x.rate)}</td><td class="qv">${vatTreatmentLabel(cfg.treatment,cfg.rate)}</td><td class="qa">${money(x.qty*x.rate)}</td></tr>`}).join('');
+ const rows=quoteEstimateRows(p);
  return `<div class="card no-print" style="margin-bottom:12px"><div class="formgrid"><div class="field"><label>Offertenummer</label><input id="q_number" value="${esc(p.quote.number)}"></div><div class="field"><label>Offertedatum</label><input id="q_date" type="date" value="${p.quote.date}"></div><div class="field"><label>Geldig (dagen)</label><input id="q_valid" type="number" min="1" value="${+p.quote.validDays||14}"></div><div class="field"><label>Standaard-BTW voor nieuwe regels / reiskosten</label><select id="q_vat_treatment" onchange="applyQuoteVatTreatment()">${vatTreatmentOptions(t.defaultTreatment,t.defaultRate)}</select></div><div class="field"><label>Parkeren voorgeschoten voor klant (€)</label><input id="q_parking" type="number" min="0" step="0.01" value="${+p.quote.parking||0}"></div><div class="field"><label>Reiskosten (€)</label><input id="q_travel" type="number" min="0" step="0.01" value="${+p.quote.travel||0}"></div><div class="field full"><label>Uitgangspunten</label>${RenoweetText.editor('q_assumptions',p.quote.assumptions||'')}</div><div class="field full"><label>Uitsluitingen</label>${RenoweetText.editor('q_exclusions',p.quote.exclusions||'')}</div><div class="field"><label>Aanbetaling na akkoord (%)</label><input id="q_advance_pct" type="number" min="0" max="100" step="1" value="${Number(p.quote.advancePct)||0}" onchange="refreshPaymentTermsTemplate()"></div><div class="field"><label>Tussenbetalingen vóór eindbetaling</label><input id="q_installments" type="number" min="0" max="10" step="1" value="${+p.quote.installments||0}" onchange="refreshPaymentTermsTemplate()"></div><div class="field full"><label>Betalingsvoorwaarden</label>${RenoweetText.editor('q_payment_terms',p.quote.paymentTerms||'')}<div class="small">Aanbetaling is verschuldigd zodra de offerte is goedgekeurd. Pas de tekst hieronder aan wanneer bedragen/mijlpalen projectspecifiek zijn.</div></div></div><div class="small" style="margin-top:8px">Kies de BTW per werkregel in het tabblad Estimate. De standaard hierboven geldt voor nieuwe/oudere regels zonder eigen keuze en voor reiskosten. Parkeerkosten worden apart zonder BTW opgenomen.</div></div>
  <div class="ros-quote-preview">
   <section class="ros-quote-page" data-quote-page="1">
@@ -1410,7 +1444,7 @@ function quoteHTML(p){
    <hr style="margin:6mm 0 5mm;border:0;border-top:1.5px solid #173a43"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14mm;font-size:10pt;line-height:1.4"><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Aan</div><b>${esc(p.customer.name||'')}</b><div>${esc(p.customer.address||'')}</div><div>${esc(p.customer.email||'')}</div><div>${esc(p.customer.phone||'')}</div></div><div><div style="font-size:8.5pt;text-transform:uppercase;letter-spacing:.08em;color:#61777d">Project</div><b>${esc(p.title||'Renovatieproject')}</b><div>${/^P\d{2}-\d{3,}$/.test(printedProjectNumber)?'Project number: '+esc(printedProjectNumber):p.projectNumberPolicyVersion===1?'':'Project ID: '+esc(p.id)}</div></div></div>
    <h3 style="margin:7mm 0 3mm;font-size:13pt">Prijsaanbieding</h3><table class="ros-quote-table"><colgroup><col style="width:43%"><col style="width:12%"><col style="width:15%"><col style="width:14%"><col style="width:16%"></colgroup><thead><tr><th class="qd">Omschrijving</th><th class="qq">Aantal</th><th class="qr">Tarief</th><th class="qv">BTW</th><th class="qa">Bedrag</th></tr></thead><tbody>${rows}</tbody></table>
    <div class="ros-quote-summary"><div class="ros-quote-summary-row"><span>Werkzaamheden</span><strong>${money(t.workSubtotal)}</strong></div>${t.travel?`<div class="ros-quote-summary-row"><span>Reiskosten</span><strong>${money(t.travel)}</strong></div>`:''}<div class="ros-quote-summary-row"><span>Subtotaal excl. btw</span><strong>${money(t.taxableSubtotal)}</strong></div>${vatBreakdownRows(t,'ros-quote-summary-row')}${t.parking?`<div class="ros-quote-summary-row"><span>Parkeerkosten</span><strong>${money(t.parking)}</strong></div>`:''}<div class="ros-quote-summary-row grand"><span>Totaal</span><strong>${money(t.total)}</strong></div></div>${reverseChargeNote(t,p)}
-   <div class="ros-quote-note"><b>Prijsaanbieding</b><br>Deze offerte is een prijsaanbieding op basis van de scope, uitgangspunten en voorwaarden op pagina 2. Wijzigingen of meerwerk worden vooraf besproken en afzonderlijk bevestigd.</div>
+   <div class="ros-quote-note"><b>Prijsaanbieding</b><br>Deze offerte is een prijsaanbieding op basis van de scope, uitgangspunten en voorwaarden in dit document. Wijzigingen of meerwerk worden vooraf besproken en afzonderlijk bevestigd.</div>
    </div><div class="ros-quote-footer"><span>Renoweet • Slim en Duurzaam. Voor elke klus.</span><span>Pagina 1 / 2</span></div>
   </section>
   <section class="ros-quote-page" data-quote-page="2">
@@ -1450,7 +1484,7 @@ async function makeRenoweetQuotePdfFile(){
  return renoweetDocumentPdf('.ros-quote-preview','.ros-quote-page',`Offerte-${(p.quote?.number||'offerte').trim()}.pdf`);
 }
 async function printQuotationClean(){
- try{const p=getP();if(!p)return;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;renderTabs();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const file=await makeRenoweetQuotePdfFile();downloadInvoiceFile(file);toast('Quotation PDF downloaded. Open the PDF to print.');}catch(e){console.error(e);alert('Could not create the quotation PDF: '+(e?.message||e));}
+ try{const p=getP();if(!p)return;saveProjectFromForm(false);if(!validateReverseChargeDocument(p,'quote'))return;renderTabs();const file=await makeRenoweetQuotePdfFile();downloadInvoiceFile(file);toast('Quotation PDF downloaded. Open the PDF to print.');}catch(e){console.error(e);alert('Could not create the quotation PDF: '+(e?.message||e));}
 }
 
 function quoteShareMessage(p){
@@ -1508,7 +1542,7 @@ function documentShareSignature(p,kind){
  const quoteKeys=['number','date','validDays','vat','vatRate','vatTreatment','travel','parking','advancePct','installments','paymentTerms','assumptions','exclusions'];
  const view={id:p.id,projectNumber:window.RenoweetProjectReferences?.get(p)||p.projectNumber||'',title:p.title||'',customer:pick(p.customer,['name','address','email','phone','vatId']),
   quote:pick(p.quote,kind==='quote'?quoteKeys:['vat','vatRate','vatTreatment','travel','parking']),
-  estimate:kind==='invoice'&&p.invoice?.documentSnapshot?null:(p.estimate||[]).map(line=>pick(line,['desc','qty','unit','rate','vatTreatment','vatRate','vatReferenceRate','vatAmount']))};
+  estimate:kind==='invoice'&&p.invoice?.documentSnapshot?null:(p.estimate||[]).map(line=>pick(line,['desc','qty','unit','rate','vatTreatment','vatRate','vatReferenceRate','vatAmount',...(kind==='quote'?['group']:[])]))};
  if(kind==='quote'){view.scope=p.scope||'';view.scopePhotos=(p.scopePhotos||[]).map(photo=>pick(photo,['dataUrl','name','caption']))}
  else {view.invoice=pick(p.invoice,['number','date','dueDays','kind','partialAmount','amountBasis','allocationMode','lineAllocations','partialDescription','finalDescriptions','paid','paymentDate','paymentMethod','documentSnapshot']);view.isPaid=invoiceIsPaid(p);view.instalments=(p.invoiceDocuments||[]).map(item=>({number:item.number,kind:item.kind,cancelled:item.status==='Cancelled',document:item.document}))}
  return JSON.stringify(view,(_key,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,value[key]])):value);
@@ -1762,8 +1796,19 @@ function markAcceptedNow(){let p=getP();if(!p)return;p.acceptance={...(p.accepta
 
 function msgCard(t,m){return `<div class="card"><h3>${t}</h3><textarea style="min-height:150px">${esc(m)}</textarea><button class="btn" onclick="copyText(this.previousElementSibling.value)">Copy</button></div>`}
 
-function bindTab(){const body=$('projectTabContent');if(body){body.querySelectorAll('input,textarea,select').forEach(el=>{el.addEventListener('input',()=>{formDirty=true;queueProjectDraftRecovery()},{once:false});el.addEventListener('change',()=>{formDirty=true;queueProjectDraftRecovery()},{once:false})})}let inp=$('photoInput');if(inp)inp.onchange=e=>{formDirty=true;pendingPhotoFiles=[...e.target.files];queueProjectDraftRecovery();let b=$('photoPreview');b.innerHTML='';pendingPhotoFiles.slice(0,8).forEach(f=>{let i=document.createElement('img');i.src=URL.createObjectURL(f);i.style.cssText='width:92px;height:72px;object-fit:cover;border-radius:9px;border:1px solid var(--line)';b.appendChild(i)});if(pendingPhotoFiles.length){let n=document.createElement('div');n.className='small';n.style.width='100%';n.textContent=`${pendingPhotoFiles.length} photo(s) ready — saved when you press Save.`;b.appendChild(n)}}}
-function readEstimate(p){let rs=document.querySelectorAll('#estRows tr');if(rs.length)p.estimate=[...rs].map((r,i)=>({id:p.estimate[i]?.id||lineid(),desc:r.querySelector('.e_desc').value,qty:+r.querySelector('.e_qty').value||0,unit:r.querySelector('.e_unit').value,rate:+r.querySelector('.e_rate').value||0,...estimateVatFields(r.querySelector('.e_vat')?.value||'',p)}))}
+function bindTab(){const body=$('projectTabContent');if(body){body.querySelectorAll('input,textarea,select').forEach(el=>{if(el.dataset?.estimateGroupControl!==undefined)return;el.addEventListener('input',()=>{formDirty=true;queueProjectDraftRecovery()},{once:false});el.addEventListener('change',()=>{formDirty=true;queueProjectDraftRecovery()},{once:false})})}let inp=$('photoInput');if(inp)inp.onchange=e=>{formDirty=true;pendingPhotoFiles=[...e.target.files];queueProjectDraftRecovery();let b=$('photoPreview');b.innerHTML='';pendingPhotoFiles.slice(0,8).forEach(f=>{let i=document.createElement('img');i.src=URL.createObjectURL(f);i.style.cssText='width:92px;height:72px;object-fit:cover;border-radius:9px;border:1px solid var(--line)';b.appendChild(i)});if(pendingPhotoFiles.length){let n=document.createElement('div');n.className='small';n.style.width='100%';n.textContent=`${pendingPhotoFiles.length} photo(s) ready — saved when you press Save.`;b.appendChild(n)}}}
+function readEstimate(p){
+ const rows=document.querySelectorAll('#estRows tr');if(!rows.length)return;
+ p.estimate=[...rows].map((r,i)=>{
+  const previous=p.estimate[i],desc=r.querySelector('.e_desc').value,qty=+r.querySelector('.e_qty').value||0,unit=r.querySelector('.e_unit').value,rate=+r.querySelector('.e_rate').value||0,raw=r.querySelector('.e_vat')?.value||'';
+  if(previous?.id){
+   const cfg=OSVAT.lineConfig(previous,p,'quote'),displayed=cfg.treatment==='REVERSE_CHARGE_NL'?`REVERSE_CHARGE_NL_${cfg.rate}`:cfg.treatment;
+   if(desc===String(previous.desc??'')&&qty===(+previous.qty||0)&&unit===String(previous.unit??'')&&rate===(+previous.rate||0)&&raw===displayed)return previous;
+  }
+  const group=estimateGroupName(previous?.group);
+  return {id:previous?.id||lineid(),...(group?{group}:{}),desc,qty,unit,rate,...estimateVatFields(raw,p)};
+ });
+}
 function readMaterials(p){let rs=document.querySelectorAll('#matRows tr');if(rs.length)p.materials=[...rs].map((r,i)=>({id:p.materials[i]?.id||lineid(),desc:r.querySelector('.m_desc').value,qty:r.querySelector('.m_qty').value,supplier:r.querySelector('.m_supplier').value,cost:+r.querySelector('.m_cost').value||0}))}
 function normalizePhoneForStorage(raw){let t=String(raw||'').trim();if(!t)return '';let d=t.replace(/\D/g,'');if(d.startsWith('0031'))d='31'+d.slice(4);if(d.startsWith('316')&&d.length===11)return `+31 6 ${d.slice(3,7)} ${d.slice(7)}`;if(d.startsWith('06')&&d.length===10)return `06 ${d.slice(2,6)} ${d.slice(6)}`;return t.replace(/\s+/g,' ')}
 function customerContactSignature(customer){return JSON.stringify([String(customer?.name||'').trim().toLowerCase(),normalizeWhatsAppNumber(customer?.phone),String(customer?.email||'').trim().toLowerCase(),String(customer?.vatId||'').trim().toLowerCase()])}
@@ -2186,12 +2231,12 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 <!-- Renoweet Drive storage layer -->
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.60"></script>
+<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.61"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.60"></script>
+<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.61"></script>
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
-<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.60"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.60"></script>
+<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.61"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.61"></script>
 </body>
 </html>

@@ -1,10 +1,36 @@
 /* Shared A4 pagination for OS quotations/invoices and Bookkeeping invoices. */
 (function(){
   const WIDTH=178, HEIGHT=267;
+  const afterLayout=()=>new Promise(resolve=>{
+    const timer=setTimeout(resolve,120);
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(()=>{clearTimeout(timer);resolve()}));
+  });
+  async function settleAssets(root){
+    const images=[...root.querySelectorAll('img')],listeners=[];
+    let timer;
+    const wait=images.map(async img=>{
+      img.loading='eager';
+      if(!img.complete)await new Promise(resolve=>{
+        const done=()=>{img.removeEventListener('load',done);img.removeEventListener('error',done);resolve()};
+        listeners.push(done);img.addEventListener('load',done);img.addEventListener('error',done);
+        if(img.complete)done();
+      });
+      if(img.naturalWidth&&typeof img.decode==='function')await img.decode().catch(()=>{});
+    });
+    // Reading layout asks the browser for the fonts used by this actual snapshot.
+    root.getBoundingClientRect();
+    try{
+      await Promise.race([
+        Promise.all([...wait,document.fonts?.ready]),
+        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('The quotation or invoice images/fonts did not finish loading. Check the connection and try again.')),8000)})
+      ]);
+    }finally{clearTimeout(timer);listeners.forEach(done=>done())}
+    await afterLayout();
+  }
   async function createPdf({source,contentSelector,label,fileName,bookkeeping=false}){
     if(!source)throw new Error('Printable preview not found.');
     if(typeof html2canvas!=='function'||!window.jspdf?.jsPDF)throw new Error('PDF libraries are unavailable. Reload the app and try again.');
-    const contents=[...source.querySelectorAll(contentSelector)];
+    const contents=[...source.querySelectorAll(contentSelector)].map(content=>content.cloneNode(true));
     if(!contents.length)throw new Error('Printable document content not found.');
     const stage=document.createElement('div');
     stage.className=bookkeeping?'ros-bk-pdf-stage ros-pdf-stage':'ros-pdf-stage';
@@ -18,10 +44,10 @@
       page.style.cssText='display:block!important;position:relative!important;width:178mm!important;min-width:178mm!important;max-width:178mm!important;height:267mm!important;min-height:267mm!important;max-height:267mm!important;box-sizing:border-box!important;padding:0!important;margin:0!important;border:0!important;background:#fff!important;color:#142d35!important;font-family:Arial,Helvetica,sans-serif!important;overflow:hidden!important;';
       stage.appendChild(page);pages.push(page);return page;
     }
-    let page=newPage();
-    function fits(){
-      const boundary=page.getBoundingClientRect();
-      return page.scrollHeight<=page.clientHeight+1 && page.scrollWidth<=page.clientWidth+1 && [...page.children].every(el=>el.getBoundingClientRect().bottom<=boundary.bottom+1);
+    let page,reserve=0;
+    function fits(target=page,space=reserve){
+      const boundary=target.getBoundingClientRect();
+      return target.scrollHeight<=target.clientHeight+1 && target.scrollWidth<=target.clientWidth+1 && [...target.children].every(el=>el.getBoundingClientRect().bottom<=boundary.bottom-space+1);
     }
     function append(node){
       let copy=node.cloneNode(true);page.appendChild(copy);
@@ -68,7 +94,8 @@
       }while(index<words.length);
     }
     function addTable(table){
-      let active;
+      let active,group=null;
+      const printedGroups=new Set();
       function start(){
         const t=table.cloneNode(false);
         const cols=table.querySelector('colgroup'),head=table.querySelector('thead');
@@ -77,28 +104,41 @@
         const body=document.createElement('tbody');t.appendChild(body);page.appendChild(t);
         if(!fits()){t.remove();page=newPage();page.appendChild(t);}
         if(!fits())throw new Error('A table header is too tall for an A4 page.');
-        active={t,body};
+        active={t,body,group:null};
+      }
+      function place(row){
+        const heading=group&&active.group!==group?group.cloneNode(true):null;
+        if(heading){
+          if(printedGroups.has(group))heading.cells[0].append(' (vervolg)');
+          active.body.appendChild(heading);
+        }
+        active.body.appendChild(row);
+        return {
+          commit(){active.group=group;if(group)printedGroups.add(group)},
+          remove(){row.remove();heading?.remove()}
+        };
       }
       start();
       for(const row of table.querySelectorAll('tbody tr')){
-        let current=row.cloneNode(true);active.body.appendChild(current);
-        if(fits())continue;
-        current.remove();
+        if(row.classList.contains('ros-quote-group')){group=row;continue;}
+        if(row.hasAttribute('data-print-ungrouped'))group=null;
+        let current=row.cloneNode(true),trial=place(current);
+        if(fits()){trial.commit();continue;}
+        trial.remove();
         if(!active.body.children.length)active.t.remove();
         if(page.children.length)page=newPage();
-        start();active.body.appendChild(current);
-        if(fits())continue;
-        current.remove();
-        // An unusually long description can itself span pages. Show the amount
-        // only on its first segment, so the printed total is not duplicated.
-        const cells=[...row.cells],words=textParts(cells[0]?.textContent||'');
-        if(!words.length)throw new Error('An invoice row is too tall to print.');
+        start();trial=place(current);
+        if(fits()){trial.commit();continue;}
+        trial.remove();
+        // An unusually long description can span pages. Charge the line once.
+        const words=textParts(row.cells[0]?.textContent||'');
+        if(!words.length)throw new Error('A price line is too tall to print.');
         let at=0,first=true;
         while(at<words.length){
           current=row.cloneNode(true);
           current.cells[0].textContent='';
           if(!first)[...current.cells].slice(1).forEach(cell=>cell.textContent='');
-          active.body.appendChild(current);
+          trial=place(current);
           let count=0;
           while(at<words.length){
             const prev=current.cells[0].textContent;
@@ -106,8 +146,8 @@
             if(!fits()){current.cells[0].textContent=prev;break;}
             at++;count++;
           }
-          if(!count)throw new Error('An invoice description cannot fit on an A4 page.');
-          first=false;
+          if(!count)throw new Error('A price line description cannot fit on an A4 page.');
+          trial.commit();first=false;
           if(at<words.length){page=newPage();start();}
         }
       }
@@ -190,7 +230,8 @@
         }
       }
     }
-    try{
+    function paginate(){
+      stage.replaceChildren();pages.length=0;page=newPage();
       for(const content of contents){
         const nodes=[...content.children];
         for(let i=0;i<nodes.length;i++){
@@ -222,15 +263,26 @@
       }
       if(!pages.some(p=>p.children.length))throw new Error('Printable document was empty.');
       if(!pages[pages.length-1].children.length){pages.pop();stage.lastElementChild.remove();}
-      await Promise.all([...stage.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve;})));
-      if(document.fonts?.ready)await document.fonts.ready;
-      await new Promise(resolve=>{const timer=setTimeout(resolve,120);requestAnimationFrame(()=>requestAnimationFrame(()=>{clearTimeout(timer);resolve()}))});
+    }
+    try{
+      // Warm the actual offscreen markup before making any page-break decisions.
+      // This matters when Send has just rebuilt the preview, especially with photos.
+      page=newPage();page.append(...contents);
+      await settleAssets(stage);
+      let overflow=-1;
+      for(const slack of [6,14,26]){
+        reserve=slack;paginate();
+        await settleAssets(stage);
+        overflow=pages.findIndex(candidate=>!fits(candidate,0));
+        if(overflow<0)break;
+      }
+      if(overflow>=0){const i=overflow;throw new Error(`Page ${i+1} overflows the printable area after reflow. PDF was not created.`);}
       const {jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
       for(let i=0;i<pages.length;i++){
         page=pages[i];
-        if(!fits())throw new Error(`Page ${i+1} overflows the printable area. PDF was not created.`);
+        if(!fits(page,0))throw new Error(`Page ${i+1} overflows the printable area. PDF was not created.`);
         if(i)pdf.addPage('a4','portrait');
-        const canvas=await html2canvas(page,{scale:2,backgroundColor:'#ffffff',useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,width:page.clientWidth,height:page.clientHeight,windowWidth:page.clientWidth,windowHeight:page.clientHeight});
+        const canvas=await html2canvas(page,{scale:2,backgroundColor:'#ffffff',useCORS:true,allowTaint:false,logging:false,scrollX:0,scrollY:0,width:page.clientWidth,height:page.clientHeight,windowWidth:window.innerWidth||page.clientWidth,windowHeight:window.innerHeight||page.clientHeight});
         pdf.addImage(canvas.toDataURL('image/png'),'PNG',16,14,WIDTH,HEIGHT,undefined,'FAST');
         pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(95,105,110);
         pdf.text('Renoweet • Slim en Duurzaam. Voor elke klus.',16,291.5);

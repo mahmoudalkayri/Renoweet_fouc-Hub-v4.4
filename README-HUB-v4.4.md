@@ -1,3 +1,17 @@
+# Quotation PDF and estimate groups — 12 November 2026 · v4.4.4.61
+
+Send quotation and Print/PDF now lay out the document after its offscreen logo, photos, and fonts have settled. If the first page layout shifts, the renderer paginates again before capturing. Canvas rendering uses the same viewport as measurement while keeping fixed A4 page dimensions. It still refuses to return a clipped document if content cannot fit.
+
+In **Estimate**, select work lines in the **Group** column, enter a heading such as **Begane grond**, and click **Group selected lines**. Reuse an existing name from the suggestions, or select lines and click **Ungroup selected**. Lines can be mixed with ungrouped work. The quotation prints each group heading once and repeats it with “(vervolg)” when the group continues on the next page. Matching prefixes, such as “Begane grond:”, are omitted from those printed descriptions while the stored descriptions are kept.
+
+Groups are presentation labels on the estimate lines and are saved with the project and XLSX backups. Grouping does not change amounts, BTW, payment allocations, line IDs, or stored estimate order. Existing estimates do not need to be converted; ungrouped lines keep their normal appearance.
+
+Validation: 29 regression suites and six DOM interaction suites passed. The quotation check covers the actual Send and Print/PDF paths with a long quote, delayed images and simulated late reflow, group continuation, prices and BTW, and both XLSX export routes. Live browser PDF rendering was unavailable in this environment.
+
+Repeat the quotation interaction test with `DOM_TEST_MODULE=/path/to/happy-dom/lib/index.js XLSX_TEST_MODULE=/path/to/xlsx.full.min.js npm run test:quotation`.
+
+---
+
 # Saved-project exit warning fix — 31 October 2026 · v4.4.4.60
 
 A queued 250 ms emergency-draft timer could fire while Save was waiting for storage or Drive verification, reactivating the unsaved flag after the project was saved. Save now cancels that timer; verified Drive saves clear the editor flag only when the visible project matches the verified record. Hiding a clean editor no longer creates another dirty draft. A stale flag with no active editor no longer triggers the browser's Leave app warning.
