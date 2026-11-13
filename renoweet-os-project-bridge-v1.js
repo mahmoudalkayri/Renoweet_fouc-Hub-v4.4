@@ -310,7 +310,7 @@
       });
       await transactionDone(transaction);
       if (!record?.db || !Array.isArray(record.db.projects)) return null;
-      return {source: 'os-local-cache', savedAt: record.savedAt || '', dirty: !!record.dirty, databaseName: record.databaseName || databaseName, db: clone(record.db)};
+      return {source: 'os-local-cache', savedAt: record.savedAt || '', dirty: !!record.dirty, databaseName: record.databaseName || databaseName, year: Number(record.year)||null, readOnly:!!record.readOnly, db: clone(record.db)};
     } catch (error) {
       console.warn('Renoweet OS local cache could not be read by Project Notebook.', error);
       return null;
@@ -476,6 +476,8 @@
     listOpenProjects,
     fetchOpenProjects,
     readOsState,
+    readLocalOsCache,
+    notifyStateChanged:()=>channel?.postMessage({type:'os-cache-saved'}),
     createOsProjectId: osProjectId,
     pendingProjects,
     clearPending,

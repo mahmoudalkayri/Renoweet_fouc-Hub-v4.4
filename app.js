@@ -17,6 +17,7 @@ const defaults={
   {name:"CV / Profile",icon:"CV",url:"https://mahmoudalkayri.github.io/Profile/",target:"focus_profile"},
   {name:"Renoweet OS",icon:"OS",url:"./Renoweet-OS-Drive-v2.2.html",target:"focus_os"},
   {name:"Project Notebook",icon:"PN",url:"./Renoweet-Project-Notebook.html",target:"focus_project_notebook"},
+  {name:"Progress Reports",icon:"PR",url:"./Renoweet-Progress-Reports.html",target:"focus_progress_reports"},
   {name:"Bookkeeping v4.4.4",icon:"€",url:"./Renoweet-Bookkeeping-Drive-v2.2.html",target:"focus_bookkeeping"},
   {name:"Renoweet BOD",icon:"B",url:"./Renoweet-BOD-Drive-v2.2.html",target:"focus_bod"}
  ],
@@ -39,7 +40,15 @@ const defaults={
 };
 let data=loadData(),reminderIndex=0,reminderTimer,deferredPrompt=null,activeEdit=null,localChangeVersion=0,databaseReady=false,databaseRevision=0,saveTimer=null,saveInFlight=null;
 function clone(o){return JSON.parse(JSON.stringify(o))}
-function mergeData(value){const merged=value&&typeof value==="object"&&!Array.isArray(value)?{...clone(defaults),...value}:clone(defaults),required=defaults.links.find(link=>link.url==="./Renoweet-Project-Notebook.html"),links=Array.isArray(merged.links)?merged.links:[];if(!links.some(link=>link?.url===required.url)){const osIndex=links.findIndex(link=>link?.url==="./Renoweet-OS-Drive-v2.2.html");links.splice(osIndex>=0?osIndex+1:links.length,0,clone(required))}merged.links=links;return merged}
+function mergeData(value){
+ const merged=value&&typeof value==="object"&&!Array.isArray(value)?{...clone(defaults),...value}:clone(defaults),links=Array.isArray(merged.links)?merged.links:[];
+ for(const url of ["./Renoweet-Project-Notebook.html","./Renoweet-Progress-Reports.html"]){
+  if(links.some(link=>link?.url===url))continue;
+  const after=links.findIndex(link=>link?.url===(url.includes("Progress")?"./Renoweet-Project-Notebook.html":"./Renoweet-OS-Drive-v2.2.html"));
+  links.splice(after>=0?after+1:links.length,0,clone(defaults.links.find(link=>link.url===url)));
+ }
+ merged.links=links;return merged
+}
 function loadData(){try{return mergeData(JSON.parse(localStorage.getItem(STORAGE_KEY)))}catch{return clone(defaults)}}
 function writeLocal(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return true}catch{return false}}
 function setStorageStatus(text,state){const badge=document.getElementById("storageBadge");if(!badge)return;badge.textContent=text;badge.dataset.state=state}

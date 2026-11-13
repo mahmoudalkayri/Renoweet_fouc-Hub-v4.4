@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <title>Renoweet OS</title>
-<script src="./renoweet-project-references.js?v=4.4.4.61"></script>
+<script src="./renoweet-project-references.js?v=4.4.4.62"></script>
+<script src="./renoweet-estimate-outline.js?v=4.4.4.62"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -176,7 +177,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .ros-quote-table{width:100%!important;min-width:0!important;max-width:100%!important;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:10.5pt;background:#fff;color:#142d35;margin:0 auto;box-sizing:border-box}
 .ros-quote-table th{background:#eaf0ef!important;color:#142d35!important;border-top:1px solid #9eafb2;border-bottom:1px solid #9eafb2;padding:2.4mm 2mm;font-weight:700;box-sizing:border-box;min-width:0!important;overflow:hidden}
 .ros-quote-table td{background:#fff!important;color:#142d35!important;border-bottom:1px solid #d7dfe0;padding:2.5mm 2mm;vertical-align:top;box-sizing:border-box;overflow-wrap:anywhere;min-width:0!important;overflow:hidden}
-.ros-quote-table .ros-quote-group th{text-align:left;background:#f3f6f5!important;border-top:1px solid #b8c8c9;border-bottom:1px solid #d7dfe0;font-size:10pt;overflow-wrap:anywhere;padding:2mm}.ros-quote-table .qd{text-align:left}.ros-quote-table .qq,.ros-quote-table .qv{text-align:center}.ros-quote-table .qv{font-size:8.8pt}.ros-quote-table .qr{text-align:right;white-space:nowrap}.ros-quote-table .qa{text-align:right;white-space:nowrap}
+.ros-quote-table .ros-quote-group th{text-align:left;background:#f3f6f5!important;border-top:1px solid #b8c8c9;border-bottom:1px solid #d7dfe0;font-size:10pt;overflow-wrap:anywhere;padding:2mm}.ros-quote-table .qd{text-align:left}.ros-quote-table .quote-item-number{font-weight:700;color:#46636a;white-space:nowrap}.ros-quote-table .qq,.ros-quote-table .qv{text-align:center}.ros-quote-table .qv{font-size:8.8pt}.ros-quote-table .qr{text-align:right;white-space:nowrap}.ros-quote-table .qa{text-align:right;white-space:nowrap}
 .ros-quote-summary{width:82mm;max-width:48%;margin:5mm 0 0 auto;font-size:10.5pt;color:#142d35}
 .ros-quote-summary-row{display:flex;justify-content:space-between;gap:8mm;padding:1.7mm 0;border-bottom:1px dotted #aeb9bb}.ros-quote-summary-row strong{white-space:nowrap}.ros-quote-summary-row.grand{font-size:12pt;border-top:1.5px solid #173a43;border-bottom:1.5px solid #173a43;margin-top:1mm;padding:2.3mm 0}
 .ros-quote-note{margin-top:5mm;padding:3.5mm;background:#f3f7f6;border-radius:2mm;font-size:9.5pt;line-height:1.4}
@@ -295,7 +296,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 <script src="./company-details.js"></script>
 <link rel="stylesheet" href="./styles-rich-text.css">
 <script src="./renoweet-rich-text.js"></script>
-<script src="./renoweet-print-layout.js?v=4.4.4.61"></script>
+<script src="./renoweet-print-layout.js?v=4.4.4.62"></script>
 </head>
 <body>
 <div class="pin-lock" id="pinLock">
@@ -326,7 +327,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
  <main class="content">
   <div class="topbar">
    <div><h1 id="pageTitle">Dashboard</h1><div class="sub" id="pageSub">From first contact to invoice, review and referral.</div></div>
-   <div class="actions"><button class="btn" type="button" onclick="window.open('./Renoweet-Project-Notebook.html','focus_project_notebook')">Project Notebook</button><button class="btn" id="quickSearchBtn">Search</button><button class="btn primary" id="newProjectBtn">+ New project</button></div>
+   <div class="actions"><button class="btn" type="button" onclick="window.open('./Renoweet-Project-Notebook.html','focus_project_notebook')">Project Notebook</button><button class="btn" type="button" onclick="window.open('./Renoweet-Progress-Reports.html','focus_progress_reports')">Progress Reports</button><button class="btn" id="quickSearchBtn">Search</button><button class="btn primary" id="newProjectBtn">+ New project</button></div>
   </div>
   <div class="statusbar">
    <span class="dot" id="dbDot"></span><b id="dbStatus">Not connected</b><span class="small" id="dbDetail">Choose your Renoweet OS XLSX from OneDrive.</span>
@@ -373,8 +374,8 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 
 <div class="toast" id="toast">Saved</div>
 
-<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.61"></script>
-<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.61"></script>
+<script src="./renoweet-os-vat-engine-v1.js?v=4.4.4.62"></script>
+<script src="./renoweet-partial-invoice-engine.js?v=4.4.4.62"></script>
 <script>
 
 const PIN_HASH_KEY="renoweet_os_pin_hash_v1";
@@ -416,6 +417,7 @@ function showPinLock(mode="unlock"){
 function hidePinLock(){
  const lock=document.getElementById("pinLock");if(lock)lock.classList.add("hidden");
  sessionStorage.setItem(PIN_SESSION_KEY,"1");
+ if(typeof openLinkedOsProject==='function')openLinkedOsProject();
 }
 async function handlePinAction(){
  const inp=document.getElementById("pinInput");
@@ -618,9 +620,11 @@ async function cacheBrowserState(dirty=true){
   localCacheDirty=!!dirty;
   if(!localCacheDirty)lastSyncedDb=structuredClone(db);
   let d=await openLocalCacheDb(),tx=d.transaction(LOCAL_CACHE_STORE,'readwrite');
-  const record={db:structuredClone(db),syncedDb:lastSyncedDb?structuredClone(lastSyncedDb):null,savedAt:new Date().toISOString(),dirty:localCacheDirty,databaseName:activeDbName||''};
+  const driveState=window.renoweetDriveOS?.state;
+  const record={db:structuredClone(db),syncedDb:lastSyncedDb?structuredClone(lastSyncedDb):null,savedAt:new Date().toISOString(),dirty:localCacheDirty,databaseName:activeDbName||'',year:driveState?.year||null,readOnly:!!driveState?.readOnly};
   tx.objectStore(LOCAL_CACHE_STORE).put(record,databaseCacheKey());
   await new Promise((res,rej)=>{tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});
+  try{window.RenoweetOSProjectBridge?.notifyStateChanged()}catch{}
   return true
  }catch(e){console.warn('Could not cache Renoweet data locally.',e);return false}
 }
@@ -1351,7 +1355,7 @@ async function permanentlyDeleteProject(index){
 }
 
 function backupHTML(){return `${syncStatusHTML()}<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))"><div class="card"><h3>OneDrive XLSX database</h3><p class="small">Each XLSX filename is a separate quarterly database. Example: Q1 Jan - Mar.xlsx and Q2 Apr - Jun.xlsx never merge with each other. Reset clears only this device's saved file handle; that database's cache is kept.</p><div class="actions"><button class="btn primary" onclick="connectWorkbook()">Connect XLSX</button><button class="btn" onclick="resetXlsxConnection()">Reset connection</button></div></div><div class="card"><h3>Restore one project</h3><p class="small">Import a Renoweet project recovery JSON. The original Project ID is preserved and duplicates are blocked.</p><input id="projectRecoveryInput" type="file" accept=".json,application/json" hidden onchange="restoreProjectRecoveryFile(this.files?.[0]);this.value=''"><button class="btn primary" onclick="document.getElementById('projectRecoveryInput').click()">Restore project file</button></div><div class="card"><h3>Save behavior</h3><p class="small">Changes autosave to the connected XLSX. If another device has unsynced edits, Renoweet merges matching record IDs and keeps the newest value when the same field changed on both devices.</p><button class="btn" onclick="saveWorkbook(true)">Save now</button></div><div class="card"><h3>Quarterly rotating safety backups</h3><p class="small">Connect a OneDrive folder once. Renoweet keeps only 3 automatic backups for the currently connected XLSX filename and overwrites the oldest slot before risky operations. Manual backups remain separate.</p><div class="actions"><button class="btn primary" onclick="connectBackupFolder()">Connect backup folder</button><button class="btn" onclick="createTimestampedBackup()">Manual backup</button></div><p class="small" style="margin-top:8px">Example: Q2 Apr - Jun_BACKUP_1.xlsx to BACKUP_3.xlsx.</p></div><div class="card"><h3>Database health</h3><p class="small">Checks duplicate project IDs, duplicate invoice numbers, missing required client details, invalid schedule dates, pending calendar deletions and unsynced local state.</p><button class="btn primary" onclick="runDatabaseHealthCheck()">Run health check</button></div><div class="card"><h3>PIN security</h3><p class="small">Renoweet OS locks when a new browser session starts. The PIN is stored on this device as a salted cryptographic hash, not plain text.</p><div class="actions"><button class="btn" onclick="lockRenoweet()">Lock now</button><button class="btn" onclick="changePin()">Change PIN</button></div></div><div class="card"><h3>Mobile / Android use</h3><p class="small">Renoweet validates the full XLSX ZIP package before loading, waits longer for Android/OneDrive materialisation, batches autosaves, and verifies every write before clearing the protected local copy. On Android, make the database XLSX available offline in the OneDrive app before connecting it.</p></div></div>`}
-function render(){ensureProjectReferences();let root=$('viewRoot');if(currentView==='dashboard')root.innerHTML=dashboardHTML();if(currentView==='projects')root.innerHTML=projectsHTML();if(currentView==='pipeline')root.innerHTML=pipelineHTML();if(currentView==='customers')root.innerHTML=customersHTML();if(currentView==='schedule')root.innerHTML=scheduleHTML();if(currentView==='deleted')root.innerHTML=deletedProjectHTML();if(currentView==='backup')root.innerHTML=backupHTML();if(currentView==='projects'){let f=$('projectFilter');f.oninput=()=>{$('projectList').innerHTML=projectRowsHTML(db.projects.filter(p=>JSON.stringify(p).toLowerCase().includes(f.value.toLowerCase())))}}}
+function render(){ensureProjectReferences();let root=$('viewRoot');if(currentView==='dashboard')root.innerHTML=dashboardHTML();if(currentView==='projects')root.innerHTML=projectsHTML();if(currentView==='pipeline')root.innerHTML=pipelineHTML();if(currentView==='customers')root.innerHTML=customersHTML();if(currentView==='schedule')root.innerHTML=scheduleHTML();if(currentView==='deleted')root.innerHTML=deletedProjectHTML();if(currentView==='backup')root.innerHTML=backupHTML();if(currentView==='projects'){let f=$('projectFilter');f.oninput=()=>{$('projectList').innerHTML=projectRowsHTML(db.projects.filter(p=>JSON.stringify(p).toLowerCase().includes(f.value.toLowerCase())))}}if(typeof openLinkedOsProject==='function')openLinkedOsProject()}
 
 function getP(){if(draftProject&&draftProject.id===currentProjectId)return draftProject;return db.projects.find(p=>p.id===currentProjectId)}
 const tabs=[['intake','Intake'],['scope','Scope'],['estimate','Estimate'],['quote','Quotation'],['materials','Materials'],['documents','Documents & Photos'],['payments','Payments'],['orders','Orders'],['schedule','Schedule'],['followups','Follow-up'],['acceptance','Acceptance'],['messages','Messages'],['invoice','Invoice'],['activity','Activity'],['checklist','Checklist'],['projectbackup','Backup']];
@@ -1412,21 +1416,12 @@ function applyEstimateGroup(clear=false){
  for(const index of selected){const line=p.estimate[index];if(!line)continue;if(name)line.group=name;else delete line.group}
  formDirty=true;saveProjectDraftRecoveryNow();scheduleSave();renderTabs();
 }
-function quoteGroupDescription(value,name){
- const text=String(value??''),colon=text.indexOf(':'),body=colon>=0?text.slice(colon+1).trimStart():'';
- return name&&body&&estimateGroupName(text.slice(0,colon)).toLowerCase()===name.toLowerCase()?body:text;
-}
 function quoteEstimateRows(p){
- const sections=[],groups=new Map();
- for(const line of p.estimate||[]){
-  const name=estimateGroupName(line.group),key=name.toLowerCase();
-  if(!name){sections.push({name:'',lines:[line]});continue}
-  if(!groups.has(key)){const section={name,lines:[]};groups.set(key,section);sections.push(section)}
-  groups.get(key).lines.push(line);
- }
- return sections.map(({name,lines})=>(name?`<tr class="ros-quote-group"><th colspan="5">${esc(name)}</th></tr>`:'')+lines.map(x=>{
-  const cfg=OSVAT.lineConfig(x,p,'quote');
-  return `<tr${name?'':' data-print-ungrouped'}><td class="qd">${RenoweetText.inline(quoteGroupDescription(x.desc,name))}</td><td class="qq">${x.qty} ${esc(x.unit)}</td><td class="qr">${money(x.rate)}</td><td class="qv">${vatTreatmentLabel(cfg.treatment,cfg.rate)}</td><td class="qa">${money(x.qty*x.rate)}</td></tr>`;
+ const lines=p.estimate||[],outline=window.RenoweetEstimateOutline;
+ const sections=outline?outline.sections(lines):lines.map(line=>({name:'',number:'',items:[{line}]}));
+ return sections.map(({name,number,items})=>(name?`<tr class="ros-quote-group"><th colspan="5">${esc(number)}. ${esc(name)}</th></tr>`:'')+items.map(({line:x,code})=>{
+  const cfg=OSVAT.lineConfig(x,p,'quote'),description=outline?outline.description(x.desc,name):x.desc;
+  return `<tr${name?'':' data-print-ungrouped'}><td class="qd">${number?`<span class="quote-item-number">${esc(code)}</span> `:''}${RenoweetText.inline(description)}</td><td class="qq">${x.qty} ${esc(x.unit)}</td><td class="qr">${money(x.rate)}</td><td class="qv">${vatTreatmentLabel(cfg.treatment,cfg.rate)}</td><td class="qa">${money(x.qty*x.rate)}</td></tr>`;
  }).join('')).join('');
 }
 
@@ -2179,6 +2174,16 @@ function closeSearch(){$('searchModal').classList.remove('open')}
 function renderSearch(q){q=q.toLowerCase();$('searchResults').innerHTML=projectRowsHTML(db.projects.filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q)))}
 
 
+let linkedProjectOpened=false;
+function openLinkedOsProject(){
+ const search=window.location?.search;if(!search)return false;
+ const query=new URLSearchParams(search),id=query.get('project');
+ if(!id||linkedProjectOpened||currentProjectId||!db.projects.some(p=>p.id===id)||!window.renoweetDriveOS)return false;
+ if(!localStorage.getItem(PIN_HASH_KEY)||sessionStorage.getItem(PIN_SESSION_KEY)!=='1')return false;
+ const tab=query.get('tab')==='invoice'?'invoice':'intake';
+ try{openProject(id,tab);linkedProjectOpened=true;return true}catch(error){console.warn('The linked project is not ready to open.',error);return false}
+}
+
 const pinActionBtn=document.getElementById("pinActionBtn");
 const pinInput=document.getElementById("pinInput");
 if(pinActionBtn)pinActionBtn.onclick=handlePinAction;
@@ -2231,12 +2236,13 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 
 <!-- Renoweet Drive storage layer -->
 <script src="https://accounts.google.com/gsi/client"></script>
-<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.61"></script>
+<script src="./renoweet-drive-core-v3.0.js?v=4.4.4.62"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.61"></script>
+<script src="./renoweet-os-drive-adapter-v3.6.js?v=4.4.4.62"></script>
 <script src="./renoweet-os-enhancements-v4.3.js"></script>
 <script src="./renoweet-scope-photos.js"></script>
-<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.61"></script>
-<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.61"></script>
+<script src="./renoweet-os-project-bridge-v1.js?v=4.4.4.62"></script>
+<script src="./renoweet-partial-invoices-ui.js?v=4.4.4.62"></script>
+<script>openLinkedOsProject();</script>
 </body>
 </html>

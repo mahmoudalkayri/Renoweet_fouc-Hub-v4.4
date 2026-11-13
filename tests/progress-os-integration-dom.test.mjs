@@ -1,0 +1,72 @@
+// DOM_TEST_MODULE=/path/to/happy-dom/lib/index.js IDB_TEST_MODULE=/path/to/fake-indexeddb/build/esm/index.js node tests/progress-os-integration-dom.test.mjs
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {webcrypto} from 'node:crypto';
+const {Window}=await import(process.env.DOM_TEST_MODULE||'happy-dom'),{IDBFactory}=await import(process.env.IDB_TEST_MODULE||'fake-indexeddb');
+const root=new URL('../',import.meta.url),read=name=>fs.readFileSync(new URL(name,root),'utf8'),copy=x=>structuredClone(x);
+const idb=new IDBFactory(),settings={enableJavaScriptEvaluation:true,suppressInsecureJavaScriptEnvironmentWarning:true,disableCSSFileLoading:true,disableJavaScriptFileLoading:true};
+const app=new Window({url:'https://renoweet.test/Renoweet-Progress-Reports.html',settings}),doc=app.document;
+Object.defineProperty(app,'indexedDB',{value:idb});Object.defineProperty(app,'crypto',{value:webcrypto});app.TextEncoder=TextEncoder;app.structuredClone=copy;
+const html=read('Renoweet-Progress-Reports.html'),inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
+doc.write(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,tag=>/type="(?:application\/json|application\/octet-stream|text\/plain)"/.test(tag)?tag:''));
+const run=code=>vm.runInContext(code,app);
+for(const file of ['renoweet-project-references.js','renoweet-os-project-bridge-v1.js','renoweet-os-vat-engine-v1.js','renoweet-estimate-outline.js','renoweet-progress-os.js'])run(read(file));
+const OS=app.RenoweetProgressOS;
+await assert.rejects(OS.read(),/Unlock/);
+const salt='test-salt',pin='1234',hash=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+pin))).toString('hex');
+app.localStorage.setItem('renoweet_os_pin_hash_v1',hash);app.localStorage.setItem('renoweet_os_pin_salt_v1',salt);
+function put(dbName,store,key,record){
+ return new Promise((resolve,reject)=>{const req=idb.open(dbName,1);req.onupgradeneeded=()=>req.result.createObjectStore(store);req.onerror=()=>reject(req.error);req.onsuccess=()=>{const db=req.result,t=db.transaction(store,'readwrite');t.objectStore(store).put(record,key);t.oncomplete=()=>{db.close();resolve()};t.onerror=()=>reject(t.error)}});
+}
+const year=2026,base={id:'os-1',projectNumber:'P26-045',stage:'In progress',title:'House renovation',updated:'2026-11-13T10:00:00Z',customer:{name:'Test client',address:'Test site 1',phone:'0612345678'},quote:{number:'OFF-2026-45',date:'2026-11-10',vat:21,travel:35,parking:20},estimate:[{id:'floor',desc:'Begane grond: Floor',group:'Begane grond',qty:1,rate:100,vatRate:9},{id:'doors',desc:'Begane grond: Doors',group:'Begane grond',qty:1,rate:300,vatTreatment:'REVERSE_CHARGE_NL',vatRate:0,vatReferenceRate:21}]};
+let source=[base,...Array.from({length:3},(_,i)=>({...copy(base),id:'os-'+(i+2),projectNumber:'',title:'Active job '+(i+2)})),{...copy(base),id:'closed',stage:'Completed',title:'Closed OS job'},{...copy(base),id:'lead',stage:'Lead',title:'Unquoted lead'}];
+let remote=copy(source),token=false,loads=0,authorizes=0,cachedDrive=null;
+app.RenoweetDrive={currentYear:()=>year,hasAccessToken:()=>token,authorize:async()=>{authorizes++;token=true},loadExistingYear:async y=>{assert.equal(y,year);loads++;return {data:{os:{projects:copy(remote)}}}},getCachedYear:async()=>cachedDrive};
+const local=(projects=source,extra={})=>put('renoweet-os-local-cache-v1','state','renoweet-db::UNASSIGNED',{db:{projects:copy(projects),bookkeeping:[],deleted:[]},year,savedAt:'2026-11-13T11:00:00Z',dirty:false,...extra});
+await local();
+for(const code of inline)run(code);
+const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
+async function until(predicate,label){for(let i=0;i<150;i++){if(predicate())return;await tick()}assert.fail(label)}
+const el=sel=>{const n=doc.querySelector(sel);assert(n,'Missing '+sel);return n};
+const submit=()=>el('#progressUnlock').dispatchEvent(new app.Event('submit',{bubbles:true,cancelable:true}));
+assert(!doc.body.textContent.includes('House renovation'),'OS names stay hidden before unlocking.');
+el('#progressUnlock input').value='9999';submit();await until(()=>el('#progressPinError').textContent==='Incorrect PIN.','Wrong PIN rejected');
+el('#progressUnlock input').value=pin;submit();
+await until(()=>app.ProgressApp&&doc.querySelectorAll('[data-action="open-os-project"]').length===4,'All four active projects rendered');
+const P=app.ProgressApp,C=app.ProgressCore,A=P.actions;
+assert(!doc.querySelector('#progressOsPanel').textContent.includes('Closed OS job'));assert(!doc.querySelector('#progressOsPanel').textContent.includes('Unquoted lead'));assert.equal(loads,0,'Opening uses the browser copy without an OAuth prompt.');
+await A['open-os-project']({dataset:{id:'os-1'}});
+let s=P.getState(),p=s.projects[0];assert.equal(p.osLink.id,'os-1');assert.equal(p.meta.projectId,'P26-045');assert.equal(p.meta.quoteNumber,'OFF-2026-45');
+assert.deepEqual(p.activities.map(a=>[a.code,a.description,a.net,a.vat]),[['1.1','Begane grond — Floor',100,9],['1.2','Begane grond — Doors',300,0]]);
+assert.equal(C.totals(p).gross,409,'Progress totals describe work lines, not the OS invoice total.');assert.equal(p.terms.length,0);
+const change=(selector,value)=>{const n=el(selector);n.value=value;n.dispatchEvent(new app.Event('input',{bubbles:true}))};
+change('[data-activity="'+p.activities[0].id+'"][data-key="progress"]','100');
+change('[data-activity="'+p.activities[1].id+'"][data-key="progress"]','20');
+assert.equal(C.progress(P.getState().projects[0]).percent,40);
+A.issue();await A['confirm-issue']();let saved=copy(P.getState().projects[0].reports[0]);assert.equal(saved.progress,40);assert.equal(saved.title,'Progress 1');assert(doc.querySelector('.report-page'));A['close-preview']();
+let clipboard='',opened='';Object.defineProperty(app.navigator,'clipboard',{configurable:true,value:{writeText:async x=>{clipboard=x}}});app.open=url=>{opened=url};
+await A['copy-report-progress']({dataset:{id:saved.id}});assert.equal(clipboard,'40.0%');A['open-os-invoice']();assert.equal(opened,'./Renoweet-OS-Drive-v2.2.html?project=os-1&tab=invoice');
+// Refresh updates only the draft when explicitly requested; IDs, photos, notes and the saved report remain stable.
+remote=copy(source);remote[0].estimate=[{...remote[0].estimate[0],rate:200},{id:'paint',desc:'Painting',qty:1,rate:200,vatRate:21}];
+await A['fetch-os']();assert.equal(authorizes,1);assert.equal(loads,1);assert.equal(P.getState().projects[0].activities[0].net,100);
+A['review-os-update']();await A['apply-os-update']();
+p=P.getState().projects[0];assert.equal(p.activities[0].id,saved.activities[0].id);assert.equal(p.activities[0].progress,100);assert.equal(p.activities[0].net,200);assert(p.activities.find(a=>a.osLineId==='doors').removedFromOs);
+assert.equal(C.progress(p).percent,50,'Removed OS lines cannot skew the next progress figure.');assert.deepEqual(p.reports[0],saved);
+assert.equal(C.snapshot(p,s.company).activities.length,2);assert.equal(C.snapshot(p,s.company).progress,50);
+A.issue();await A['confirm-issue']();assert.equal(P.getState().projects[0].reports[1].progress,50);A['close-preview']();
+await local(source.map(q=>q.id==='os-1'?{...q,stage:'Completed'}:q),{dirty:true});
+await A['os-directory']();assert(!doc.querySelector('[data-action="open-os-project"][data-id="os-1"]'));assert(doc.querySelector('[data-action="switch"][data-id="'+p.id+'"]'));assert(doc.querySelector('#progressOsPanel').textContent.includes('2 saved reports'));
+for(const id of ['os-2','os-3','os-4'])await A['open-os-project']({dataset:{id}});
+assert.equal(P.getState().projects.length,4,'No three-project cap for active and historical OS workspaces.');
+await A['open-os-project']({dataset:{id:'os-2'}});assert.equal(P.getState().projects.length,4,'Reopening never creates a duplicate workspace.');
+await P.flushSave();assert.equal((await P.dbRead()).projects[0].reports.length,2,'Report history actually persists to IndexedDB.');
+const backup=P.getState();assert.equal(C.validateState(backup).projects.length,4);
+await local(source,{year:2025,readOnly:true});
+cachedDrive={value:{meta:{year},os:{projects:copy(remote)}},savedAt:'2026-11-13T12:00:00Z'};
+assert.equal((await OS.read()).source,'Saved Drive copy','Historical browser views cannot replace current OS projects.');
+await local(source,{dirty:true});assert.match((await OS.read({live:true})).source,/local changes pending/);
+// Actual OS deep-link handling honours the PIN and chooses only the invoice tab.
+const oshtml=read('Renoweet-OS-Drive-v2.2.html'),start=oshtml.indexOf('let linkedProjectOpened=false;'),end=oshtml.indexOf('const pinActionBtn=',start),calls=[];
+let unlocked=false;const context={window:{location:{search:'?project=os-1&tab=invoice'},renoweetDriveOS:{}},localStorage:{getItem:()=>hash},sessionStorage:{getItem:()=>unlocked?'1':null},PIN_HASH_KEY:'pin',PIN_SESSION_KEY:'unlocked',db:{projects:[base]},currentProjectId:null,URLSearchParams,openProject:(...args)=>calls.push(args),console};
+vm.createContext(context);vm.runInContext(oshtml.slice(start,end),context);assert.equal(context.openLinkedOsProject(),false);unlocked=true;assert.equal(context.openLinkedOsProject(),true);assert.deepEqual(calls,[['os-1','invoice']]);assert.equal(context.openLinkedOsProject(),false);
+assert.deepEqual(source[0],base,'Progress never modifies the OS project or invoice data.');
+console.log('Progress Reports integration passed: OS PIN, current active projects, grouped estimate references and VAT, live refresh and dirty-cache priority, weighted progress, saved report snapshots and persistence, updated draft matching, archived history, no duplicate projects, copy percentage, and OS invoice deep link.');
+await app.happyDOM.close();

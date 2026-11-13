@@ -19,4 +19,8 @@ assert.deepEqual((await get.json()).data,payload);
 const page=await worker.fetch(new Request("https://focus.test/"),{DB});
 assert.equal(page.status,200);
 assert.match(await page.text(),/Renoweet Focus Hub/);
-console.log("Focus Hub Worker API checks passed.");
+for(const [asset,pattern] of [['Renoweet-Progress-Reports.html',/In-progress projects/],['renoweet-progress-os.js',/RenoweetProgressOS/],['renoweet-estimate-outline.js',/RenoweetEstimateOutline/]]){
+ const response=await worker.fetch(new Request('https://focus.test/'+asset),{DB});
+ assert.equal(response.status,200);assert.match(await response.text(),pattern);
+}
+console.log("Focus Hub Worker API and Progress Reports asset checks passed.");

@@ -1,3 +1,19 @@
+# Progress Reports and quotation item references — 13 November 2026 · v4.4.4.62
+
+Open **Progress Reports** from the Hub or the shortcut in OS. The page unlocks with your existing OS PIN and lists every project marked **In progress** in the current OS data. It starts from the browser's saved OS copy; **Refresh from Drive** checks the current year's verified Drive file. Local changes still waiting to sync take priority and are labelled as such.
+
+1. Choose an OS project. Its client details and estimate lines are copied into the reporting workspace. Update progress, notes, photos and any reporting milestones.
+2. Choose **Save new report** to keep a dated snapshot. Open **Report history** to find earlier reports, reprint them or copy their exact saved percentages. The report workspace remains available when the OS project is completed.
+3. Use **Copy draft %** or **Copy last saved %**, then **Open invoice tab in OS**. Review the agreed payment terms and earlier invoices before deciding the amount. The progress app does not issue invoices, change OS records, or infer payments.
+
+Progress defaults to work-value weighting excluding BTW. Draft milestones and weights remain editable. Travel, parking and negative adjustments are excluded from work activities; the report shows the value of the work it describes. **Update estimate from OS** refreshes the draft explicitly and matches existing work by OS line ID, retaining recorded progress, notes, photos and history. Removed work is flagged and excluded from new totals and progress. The quotation table uses the same item references as imported work: for example **1. Begane grond**, **1.1**, **1.2**. The references sit in the description column and do not change estimate data or amounts.
+
+Reports and photos are stored in this browser. **Export backup / Restore JSON** moves them to another device or restores them after browser data is cleared. Export a JSON backup from the standalone app to bring in older reports. The Hub's Drive backup does not contain progress reports. Report history is separate from OS's invoice history.
+
+Validation: 29 regression suites and seven DOM interaction suites passed. The progress check covers OS PIN protection, current-year filtering and refresh, four active jobs, report snapshots and IndexedDB storage, safe estimate refresh, copy percentage and the invoice link. Live browser visual verification was unavailable.
+
+---
+
 # Quotation PDF and estimate groups — 12 November 2026 · v4.4.4.61
 
 Send quotation and Print/PDF now lay out the document after its offscreen logo, photos, and fonts have settled. If the first page layout shifts, the renderer paginates again before capturing. Canvas rendering uses the same viewport as measurement while keeping fixed A4 page dimensions. It still refuses to return a clipped document if content cannot fit.
