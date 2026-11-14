@@ -291,5 +291,95 @@ async function inspectDatabaseFiles(year=currentYear()){
 }
 
 function configure(){const existing=clientId(),id=prompt('Google OAuth Web Client ID\n\nCreate this once in Google Cloud Console. It is not a secret and may be stored in this browser.',existing);if(id!==null)setClientId(id);return clientId()}function getCachedYear(year=currentYear()){return cacheGet('year:'+safeYear(year))}
-Object.assign(Core,{SCHEMA_VERSION,APP_VERSION,DEFAULT_GOOGLE_CLIENT_ID,DRIVE_SCOPE,blankCanonical,normalizeCanonical,verifyCanonical,sealCanonical,sha256Text,computeChecksum,countRecords,deviceId,clientId,setClientId,configure,authorize,hasAccessToken:()=>!!accessToken(),ensureTree,loadYear,loadExistingYear,listAvailableYears,inspectDatabaseFiles,planYearOrganization,organizeYear,saveSection,installRecoveryMerge,markQuarterClosed,reopenQuarter,updatePeriodInfo,downloadJSON,downloadXLSX,canonicalToWorkbook,createArchiveOnDrive,createJsonArchiveOnDrive,createFinalArchives,downloadCompleteBackup,loadManifest,listArchives,listRecovery,readDriveJsonById,getBytes,getCachedYear,currentYear,activeName,clone,quarterFromDate});window.RenoweetDrive=Core;
+// Separate immutable files: this store never calls saveSection or changes an accounting year.
+const PROGRESS_FOLDER='Progress Reports',PROGRESS_REVISIONS='Revisions',PROGRESS_IMAGES='Images';
+function authorizeProgress(){
+ if(accessToken())return Promise.resolve(accessToken());
+ return new Promise((resolve,reject)=>{
+  let timer;
+  const stop=(fn,value)=>{clearTimeout(timer);fn(value)};
+  try{
+   if(!gisReady())throw Error('Google authorization is still loading. Try connecting again.');
+   const client=google.accounts.oauth2.initTokenClient({client_id:clientId(),scope:DRIVE_SCOPE,
+    callback:r=>{if(!r?.access_token){stop(reject,Error(r?.error_description||r?.error||'Google authorization was not completed.'));return}setToken(r.access_token);stop(resolve,r.access_token)},
+    error_callback:()=>stop(reject,Error('Google authorization was closed or blocked. Open Connect / Sync now to try again.'))});
+   timer=setTimeout(()=>stop(reject,Error('Google sign-in did not respond in time. Try connecting again.')),90000);client.requestAccessToken({prompt:'consent'});
+  }catch(error){stop(reject,error)}
+ });
+}
+
+async function progressRequest(url,options={},parse='json'){
+ const access=accessToken();if(!access)throw Error('Connect Google Drive to sync Progress Reports.');
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000),headers=new Headers(options.headers||{});
+ headers.set('Authorization','Bearer '+access);
+ try{
+  const response=await fetch(url,{...options,headers,signal:controller.signal,cache:'no-store'});
+  if(response.status===401){setToken('');throw Error('Google Drive session expired. Reconnect to continue syncing reports.')}
+  if(!response.ok)throw Error(`Google Drive could not complete report sync (HTTP ${response.status}). Try again; the browser copy is kept.`);
+  return await response[parse]();
+ }catch(error){if(error.name==='AbortError')throw Error('The Drive request timed out. Try syncing again; the browser copy is kept.');throw error}
+ finally{clearTimeout(timer)}
+}
+async function progressList(query){
+ const result=[];let page='';
+ do{
+  const params=new URLSearchParams({spaces:'drive',pageSize:'1000',q:query,fields:'nextPageToken,files(id,name,mimeType,parents,appProperties,trashed)'});
+  if(page)params.set('pageToken',page);
+  const response=await progressRequest('https://www.googleapis.com/drive/v3/files?'+params);result.push(...(response.files||[]));page=response.nextPageToken||'';
+ }while(page);
+ return result;
+}
+function qFolder(name,parent){return `name='${escQ(name)}' and trashed=false and mimeType='application/vnd.google-apps.folder'${parent?` and '${escQ(parent)}' in parents`:''}`}
+async function progressCreate(meta,body){
+ const url='https://www.googleapis.com/drive/v3/files?fields=id,name,parents,appProperties';
+ if(body===undefined)return progressRequest(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(meta)});
+ const boundary='rw_progress_'+crypto.randomUUID().replace(/-/g,'');
+ const upload=new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,JSON.stringify(meta),`\r\n--${boundary}\r\nContent-Type: ${meta.mimeType}\r\n\r\n`,body,`\r\n--${boundary}--`]);
+ if(upload.size>5000000)throw Error('This sync file exceeds the upload limit. Export a JSON backup and clear older report photos after saving their PDFs.');
+ return progressRequest('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,parents,appProperties',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body:upload});
+}
+function progressRead(id){return progressRequest('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(id)+'?alt=media',{},'text')}
+async function uniqueProgressFolder(name,parent,create=true){
+ const folders=await progressList(qFolder(name,parent));
+ if(folders.length>1)throw Error(`More than one “${name}” folder exists in Drive. Sync stopped without overwriting any file.`);
+ if(folders[0]||!create)return folders[0]||null;
+ await progressCreate({name,mimeType:'application/vnd.google-apps.folder',...(parent?{parents:[parent]}:{})});
+ const result=await progressList(qFolder(name,parent));
+ if(result.length!==1)throw Error(`Could not verify a single “${name}” folder. Refresh and try again.`);
+ return result[0];
+}
+function progressStore(){
+ let context=null;
+ return {
+  async folder(knownId='',create=true){
+   const root=await uniqueProgressFolder(ROOT_FOLDER,null,create);
+   if(!root)throw Error('No Renoweet Data folder exists in this Google account.');
+   const folder=await uniqueProgressFolder(PROGRESS_FOLDER,root.id,create&&!knownId);
+   if(!folder||knownId&&folder.id!==knownId)throw Error('The original Progress Reports folder was not found. Use the same Google account, or restore the folder from Drive Trash.');
+   const revisions=await uniqueProgressFolder(PROGRESS_REVISIONS,folder.id,create);
+   if(!revisions)throw Error('No Progress Reports revisions exist in this Drive folder.');
+   context={id:folder.id,revisions:revisions.id,images:null};return {id:folder.id};
+  },
+  async list(folderId){if(context?.id!==folderId)throw Error('Report folder has not been verified.');return progressList(`trashed=false and '${escQ(context.revisions)}' in parents and name contains 'Progress-'`)},
+  read:progressRead,
+  async image(folderId,digest,text,hash){
+   if(context?.id!==folderId||!/^([a-f0-9]{64})$/.test(digest))throw Error('Invalid report image destination.');
+   if(!context.images)context.images=(await uniqueProgressFolder(PROGRESS_IMAGES,folderId)).id;
+   const name='Image-'+digest+'.txt',query=`name='${name}' and trashed=false and '${escQ(context.images)}' in parents`;
+   const matches=await progressList(query);
+   for(const match of matches)if(await hash(await progressRead(match.id))===digest)return match.id;
+   if(matches.length)throw Error('A report image with this checksum failed verification. Sync stopped without replacing it.');
+   const file=await progressCreate({name,mimeType:'text/plain',parents:[context.images]},text);
+   if(await hash(await progressRead(file.id))!==digest)throw Error('Drive did not verify the new report image.');
+   return file.id;
+  },
+  async write(folderId,name,text,parents){
+   if(context?.id!==folderId)throw Error('Report folder has not been verified.');
+   const appProperties=Object.fromEntries(parents.map((id,i)=>['p'+String(i).padStart(2,'0'),id]));
+   return progressCreate({name,mimeType:'application/json',parents:[context.revisions],appProperties},text);
+  }
+ };
+}
+
+Object.assign(Core,{SCHEMA_VERSION,APP_VERSION,DEFAULT_GOOGLE_CLIENT_ID,DRIVE_SCOPE,blankCanonical,normalizeCanonical,verifyCanonical,sealCanonical,sha256Text,computeChecksum,countRecords,deviceId,clientId,setClientId,configure,authorize,hasAccessToken:()=>!!accessToken(),ensureTree,progressStore,authorizeProgress,loadYear,loadExistingYear,listAvailableYears,inspectDatabaseFiles,planYearOrganization,organizeYear,saveSection,installRecoveryMerge,markQuarterClosed,reopenQuarter,updatePeriodInfo,downloadJSON,downloadXLSX,canonicalToWorkbook,createArchiveOnDrive,createJsonArchiveOnDrive,createFinalArchives,downloadCompleteBackup,loadManifest,listArchives,listRecovery,readDriveJsonById,getBytes,getCachedYear,currentYear,activeName,clone,quarterFromDate});window.RenoweetDrive=Core;
 })();

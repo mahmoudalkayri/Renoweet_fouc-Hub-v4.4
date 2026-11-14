@@ -1,3 +1,49 @@
+# Custom workweeks, WBS and milestones — 14 November 2026 · v4.4.4.65
+
+Each project can choose its own working weekdays in **Progress Reports → Schedule**. Tick any combination, from a one-day week to every day. Durations and relationship lags use those days. Existing baselines retain the workweek saved with them. If an old actual date falls outside the new workweek, the recorded date remains unchanged and the forecast flags it.
+
+Scheduling is optional. Leave it unset, or use **Pause schedule** to keep the plan and baselines while omitting them from new reports. Use **Resume schedule** to continue. A schedule can forecast without a baseline; compare only after saving or selecting one.
+
+- **WBS:** Add phases and subphases, then assign activities and milestones to them. WBS headings organize the project without adding cost or duration.
+- **Activity:** Work with a duration and recorded progress.
+- **Milestone:** A zero-duration event, such as handover. It can have dependencies and a recorded achievement date. It does not contribute to earned progress.
+- **Payment:** Add payment terms even without a schedule. In **Payments**, optionally link a schedule milestone and/or activities to an agreed amount. The report can show the forecast or achieved date. Readiness follows all linked conditions; the agreed due date, amount and paid status remain independent.
+
+WBS paths and milestone dates are frozen in new baseline and report snapshots. Calendars, schedules, milestones and links are included in browser storage, JSON backups and report Drive sync. The OS estimate, quotation and invoice records are not modified.
+
+Validation: 31 regression suites and seven interface suites passed, including custom workweeks, nested WBS, milestone dependencies, linked payments, reports with no baseline or schedule, and Drive persistence. Live browser rendering was unavailable.
+
+---
+
+# Progress Reports scheduling, baselines and forecasts — 14 November 2026 · v4.4.4.64
+
+Open a project in **Progress Reports → Schedule → Set up schedule**. Every active work activity gets an editable, unique schedule ID. Enter a project start, working calendar, and planned duration for each activity. Use **Earliest start** if work cannot begin before a particular date. Add relationships between activities using **FS** (finish to start), **SS** (start to start), **FF** (finish to finish), or **SF** (start to finish), with positive or negative working-day lag. Circular links are rejected. Dates calculate from the network; unlinked work can run in parallel.
+
+1. **Save original baseline** before work starts. The baseline freezes dates, durations, relationships and the current report weights. You can save a named revised baseline later and choose which one to compare. View the baseline to see all of its original dates and dependencies.
+2. Enter activity progress in **Activities**. In **Schedule**, set the status date (end of day), record actual starts and finishes, and override remaining workdays where you have better estimates. A blank status date uses the report date. A blank remaining duration uses planned days multiplied by the unfinished share and rounded up. Forecast dates honor finish and remaining-work constraints. For started tasks, actual starts are retained and the remaining work may be delayed by unmet dependencies.
+3. **Show timeline** compares the selected baseline and current forecast. The schedule shows planned vs. actual progress on the baseline scope, a forecast finish, and variance in calendar days. Planned progress is spread evenly over each baseline task’s working days. Scope changes are flagged, and new activities are excluded from the baseline progress comparison until you select a baseline that includes them.
+4. **Save new report** freezes the schedule forecast and comparison along with the rest of the report. Later date, progress and baseline changes do not rewrite past reports. Plans, baselines and report snapshots are kept in the browser and included in the existing Drive sync and JSON export.
+
+The planner works at whole-day granularity. Monday–Friday is the default, with an every-day option. Start and finish dates in the table are inclusive calendar dates; relationship logic uses workday boundaries. It does not model resource availability, holiday calendars, or P6 file interchange. Missing actual dates and out-of-sequence work are flagged instead of presented as confirmed. Review the forecast before sharing; it does not alter OS, quotes, or invoices.
+
+Validation: 31 regression suites and seven interface suites passed. The added checks cover all relationship types and lag, weekends, circular networks, actuals, revised baselines, archived report snapshots, and persistence with a simulated Drive connection. Live browser rendering was unavailable.
+
+---
+
+# Progress Reports Drive storage — 14 November 2026 · v4.4.4.63
+
+In **Progress Reports → Report storage → Connect / Sync now**, choose the same Google account you use with OS. Your report workspaces, drafts, settings, and attached photos are backed up separately under **Renoweet Data → Progress Reports**. Saved report PDFs are regenerated from their report snapshots; standalone PDFs you downloaded are still separate files.
+
+The browser saves first and works offline. While Drive is connected, edited reports sync after a short pause; when you open on another device, connect with the same account and sync. **Saved to Google Drive ✓** means the revision was read back and verified. If sync is pending, keep the browser copy and reconnect or use Sync now. Export JSON is still available as an independent backup.
+
+Drive revisions are added rather than overwritten. Images are reused across revisions. Separate edits from two devices can merge; if the same draft field changed, review the conflict and choose the draft you want while keeping saved reports from both copies. Different reports created simultaneously can share a report number and remain separate snapshots. A browser deletion or photo cleanup does not permanently delete a verified Drive backup; synced copies may return on the next sync. Keep the Revisions and Images folders together so older records remain recoverable.
+
+The OS and Bookkeeping files and their save paths are unchanged. Progress Reports still opens the invoice tab without creating an invoice or inferring payment amounts.
+
+Validation: 30 regression suites and seven interface suites passed, including simulated Drive API traffic, new-device restore, parallel saves, failed uploads, photo verification and preserving edits made during sync. A live Google account and browser were not used for verification.
+
+---
+
 # Progress Reports and quotation item references — 13 November 2026 · v4.4.4.62
 
 Open **Progress Reports** from the Hub or the shortcut in OS. The page unlocks with your existing OS PIN and lists every project marked **In progress** in the current OS data. It starts from the browser's saved OS copy; **Refresh from Drive** checks the current year's verified Drive file. Local changes still waiting to sync take priority and are labelled as such.
