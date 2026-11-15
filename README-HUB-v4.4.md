@@ -1,3 +1,21 @@
+# Material deliveries in the schedule — 15 November 2026 · v4.4.4.70
+
+In **Progress Reports → Schedule**, click **Materials** next to an activity. Create a delivery with its expected on-site date or choose an existing milestone. This creates a finish-to-start relationship in the existing schedule. Zero lag allows work to start on the delivery workday, positive lag adds project workdays, and negative lag allows work to start before delivery. If only the finishing work needs the materials, link the finishing activity separately.
+
+Reuse a delivery for several activities. Change its date once via **Open delivery** to update all linked forecasts, then record **Actual finish** on the milestone when materials reach the site. **Edit lag** changes the selected link. **Remove link** leaves the shared delivery available. Previously saved baselines and reports keep their dates. The feature does not create purchases or change BOQ values, invoices, or bookkeeping.
+
+Validation: 33 regression suites and seven interface suites passed, including shared delivery dates, signed lag on a custom workweek, duplicate prevention, frozen reports and baselines, and schedule persistence.
+
+---
+
+# Compact progress-report layout — 15 November 2026 · v4.4.4.69
+
+**Activity progress** shows the schedule ID beside each full BOQ description when an ID is assigned. The separate **Activity schedule** table no longer appears on PDFs. The schedule forecast summary stays, and the optional Gantt gives the timeline with short activity labels. The Schedule tab still shows the detailed dates and float. Previously downloaded PDFs stay as they were; re-exporting a saved report uses this layout with the original report data.
+
+Validation: 33 regression suites and seven interface suites passed. The report preview was checked with and without a Gantt and against saved report data. Live browser PDF rendering was unavailable.
+
+---
+
 # Schedule forecasts and progress reports — 15 November 2026 · v4.4.4.68
 
 In **Progress Reports → Schedule**, set the status date to the last day covered by your update. Record actual dates only for work already done. In **Activities**, enter physical progress. In **Schedule**, enter remaining workdays if you know them; otherwise the forecast estimates them and marks them as estimated. Use **Expected finish** for a date the forecast should not finish before, and **Agreed deadline** to measure lateness without rescheduling the work.

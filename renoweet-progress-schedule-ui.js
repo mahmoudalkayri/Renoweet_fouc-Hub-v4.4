@@ -18,6 +18,75 @@
    return `<details class="schedule-exceptions"${s.exceptions?.length?' open':''}><summary>Work calendar exceptions${s.exceptions?.length?' · '+s.exceptions.length:''}</summary><p class="muted">Add a holiday or site closure, or make one normally nonworking date available. A saved baseline keeps its own calendar.</p><div class="form-grid"><label class="field">Date<input type="date" id="scheduleExceptionDate"></label><label class="field">Date treatment<select id="scheduleExceptionType"><option value="off">Nonworking day</option><option value="work">Extra working day</option></select></label><label class="field">Reason<input id="scheduleExceptionLabel" maxlength="100" placeholder="e.g. Site closed"></label></div><div class="toolbar schedule-toolbar"><button data-action="add-schedule-exception">Save exception</button></div>
    ${(s.exceptions||[]).map(x=>`<div class="schedule-exception-row"><b>${e(x.date)}</b> · ${x.working?'Working':'Nonworking'}${x.label?' · '+e(x.label):''}<button class="small quiet" data-action="remove-schedule-exception" data-id="${e(x.id)}">Remove</button></div>`).join('')}</details>`;
   }
+  const materialLinks=(s,key)=>s.links.filter(l=>l.material===true&&l.to===key);
+  function materialButton(s,t){
+   const count=materialLinks(s,t.id).length;
+   return `<button class="small quiet schedule-materials-button" data-action="open-schedule-materials" data-id="${e(t.id)}" aria-label="Materials for ${e(t.code)}">Materials${count?' ('+count+')':''}</button>`;
+  }
+  function newMilestone(s,name,wbsId='',earliest=''){
+   const used=new Set(S.nodes(s).map(t=>t.code.toUpperCase()));let next=10,code;
+   do{code='M'+String(next).padStart(3,'0');next+=10}while(used.has(code));
+   const m={id:id(),code,name,wbsId,earliest,actualFinish:''};
+   s.milestones.push(m);return m;
+  }
+  function materialContext(key){
+   const [p,s]=current(),t=s.tasks.find(t=>t.id===key),a=p.activities.find(a=>a.id===key&&!a.removedFromOs);
+   if(s.enabled===false||!t||!a)throw Error('This activity is no longer on the active schedule.');
+   return {p,s,t,a};
+  }
+  function focusScheduleField(id,key){
+   const target=[...document.querySelectorAll('[data-schedule-task]')].find(el=>el.dataset.scheduleTask===id&&el.dataset.scheduleKey===key);
+   target?.scrollIntoView?.({block:'center',inline:'nearest'});target?.focus();
+  }
+  function showMaterials(key,editing=''){
+   const {p,s,t,a}=materialContext(key),links=materialLinks(s,key),link=editing?links.find(l=>l.id===editing):null;
+   if(editing&&!link)throw Error('This material link no longer exists.');
+   const dates=evaluate(p,s).forecast?.rows||[],existing=link?s.milestones.find(m=>m.id===link.from):null;
+   const list=links.map(l=>{
+    const m=s.milestones.find(m=>m.id===l.from);
+    if(!m)return '';
+    const finish=dates.find(r=>r.id===m.id)?.forecastFinish;
+    const received=m.actualFinish&&m.actualFinish<=(s.statusDate||p.draft.date||today());
+    const date=received?'Received '+m.actualFinish:finish?'Forecast '+finish:m.earliest?'Planned '+m.earliest:'No date set';
+    const offset=l.lag===0?'No lag':(l.lag>0?'+':'')+l.lag+' workday'+(Math.abs(l.lag)===1?'':'s');
+    return `<li class="schedule-material-row"><div><b>${e(m.code+' · '+m.name)}</b><br><small>${e(date+' · '+offset)}</small></div><div class="toolbar"><button class="small quiet" data-action="edit-schedule-material" data-id="${e(key)}" data-link="${e(l.id)}">Edit lag</button><button class="small quiet" data-action="go-to-schedule-delivery" data-id="${e(m.id)}">Open delivery</button><button class="small quiet" data-action="remove-schedule-material" data-id="${e(key)}" data-link="${e(l.id)}">Remove link</button></div></li>`;
+   }).join('');
+   const delivery=link?`<p><b>${e(existing?.name||'Delivery')}</b></p>`:`<label class="field">Delivery milestone<select id="scheduleMaterialSource" data-id="${e(key)}">${opt('','Create a delivery milestone','')}${s.milestones.map(m=>opt(m.id,m.code+' · '+m.name,'')).join('')}</select></label><div id="scheduleMaterialNew" class="form-grid"><label class="field">Material or delivery name<input id="scheduleMaterialName" maxlength="150" placeholder="e.g. Floor tiles arrive"></label><label class="field">Expected on site<input id="scheduleMaterialDate" type="date"></label></div>`;
+   modal('Materials · '+t.code,`<p class="muted">${e(a.description)}</p>${!link&&list?`<ul class="schedule-material-list">${list}</ul>`:''}
+    <h3>${link?'Edit workday lag':'Link a delivery'}</h3>
+    <p class="muted">With zero lag, work can start when materials are available on site. Positive lag waits extra project workdays. Negative lag allows an earlier start; use it only if some work can begin before delivery.</p>
+    ${delivery}<label class="field">Lag (project workdays)<input id="scheduleMaterialLag" type="number" min="-3650" max="3650" step="1" value="${e(link?.lag??0)}"></label>
+    ${link?'':`<p class="muted">If only the finishing work needs the delivery, link the finishing activity. ${s.logic==='override'?'Progress override can let work that has already started continue despite this link.':''}</p>`}
+    <div id="scheduleMaterialError" class="notice error" role="alert" hidden></div>`,`<button data-action="close-modal">Close</button><button class="primary" data-action="save-schedule-material" data-id="${e(key)}"${link?` data-link="${e(link.id)}"`:''}>${link?'Save lag':'Link delivery'}</button>`);
+  }
+  function saveMaterial(node){
+   const get=k=>document.getElementById(k),key=node.dataset.id,mode=node.dataset.link;
+   try{
+    const {p,s,t}=materialContext(key),lagBox=get('scheduleMaterialLag'),lag=Number(lagBox.value||0);
+    if(lagBox.validity?.badInput||!Number.isInteger(lag)||Math.abs(lag)>3650)throw Error('Enter a whole number of working days between -3650 and 3650.');
+    if(mode){
+     const link=materialLinks(s,key).find(l=>l.id===mode);
+     if(!link)throw Error('This material link no longer exists.');
+     link.lag=lag;
+    }else{
+     const source=get('scheduleMaterialSource').value;
+     let m=s.milestones.find(m=>m.id===source);
+     if(source&&!m)throw Error('Choose an available delivery milestone.');
+     if(!source){
+      const name=get('scheduleMaterialName').value.trim(),date=get('scheduleMaterialDate').value;
+      if(!name||!date)throw Error('Enter the delivery name and the date it is expected on site.');
+      m=newMilestone(s,name,t.wbsId||'',date);
+     }
+     const same=s.links.find(l=>l.from===m.id&&l.to===key&&l.type==='FS');
+     if(same?.material)throw Error('This delivery is already linked. Use Edit lag to change it.');
+     if(same){same.material=true;same.lag=lag}
+     else s.links.push({id:id(),from:m.id,to:key,type:'FS',lag,material:true});
+    }
+    S.networkCheck(p,s);save(p,s);showMaterials(key);notify(mode?'Material lag updated.':'Delivery linked.');
+   }catch(err){
+    const box=get('scheduleMaterialError');if(!box)throw err;box.textContent=err.message;box.hidden=false;
+   }
+  }
   function method(f){
    const m=f.method;if(!m)return '';
    const target=m.handover?m.handover.code+' · '+m.handover.name:'Project finish',end=m.handover?.finish||f.finish;
@@ -49,14 +118,21 @@
    <section class="card"><div class="card-head"><div><h2>Activities &amp; milestone dates</h2><p class="muted">Enter planned duration in working days. Dates are recalculated from the network. Expected finish is a forecast input: it holds the finish no earlier than that date. It does not change physical progress, remaining days or the baseline. Dates include the last working day.</p></div></div><div class="table-scroll"><table class="schedule-table"><thead><tr><th>Activity</th><th>Days</th><th>Earliest start</th><th>Actual start</th><th>Actual finish</th><th>Remaining days</th><th>Expected finish</th><th>Plan<br>start / finish</th><th>Baseline<br>start / finish</th><th>Forecast<br>start / finish</th><th>Finish vs baseline</th><th>Float<br>(workdays)</th></tr></thead><tbody>${tasks.map(t=>{
     const a=activities.find(a=>a.id===t.id),r=frows.get(t.id),event=t.kind==='milestone';
     const val=(k,type,extra='')=>`<input data-schedule-task="${e(t.id)}" data-schedule-key="${k}" aria-label="${e(t.code)} ${e(k)}" type="${type}" value="${e(t[k]??'')}" ${invalid.has(t.id+'|'+k)?'aria-invalid="true"':''} ${extra}>`;
-    return `<tr data-driving="${r?.driving?'true':'false'}"><td>${val('code','text','maxlength="30"')}<div class="schedule-description">${e(event?t.name:a.description)}</div><small>${event?(t.actualFinish?'Milestone · achieved':'Milestone · pending'):e(a.progress)+'% physical complete'}</small><span data-schedule-driver>${r?.driving?'Driving':''}</span><label class="field">WBS<select data-schedule-task="${e(t.id)}" data-schedule-key="wbsId">${phaseOptions(t.wbsId)}</select></label>${event?`<button class="small quiet" data-action="edit-schedule-milestone" data-id="${e(t.id)}">Edit name</button> <button class="small quiet" data-action="remove-schedule-milestone" data-id="${e(t.id)}">Remove</button>`:''}</td><td>${event?'0':val('days','number','min="1" max="3650" step="1"')}</td><td>${val('earliest','date')}</td><td>${event?'—':val('actualStart','date')}</td><td>${val('actualFinish','date',event?'title="Date achieved"':'')}</td><td>${event?'—':val('remaining','number','min="1" max="3650" step="1" placeholder="Estimate"')}${!event?`<small data-schedule-remaining>${r?.remainingSource==='estimated'?'Est. '+r.remaining+' d':r?.remainingSource==='entered'?'Entered':r?.remaining===0?'Complete':''}</small>`:''}</td><td>${val('expectedFinish','date')}</td><td>${pair(r?.plannedStart,r?.plannedFinish)}</td><td>${pair(r?.baselineStart,r?.baselineFinish)}</td><td>${pair(r?.forecastStart,r?.forecastFinish)}</td><td>${delta(r?.varianceDays,' days')}</td><td>${r?.floatDays==null?'—':e(r.floatDays)}</td></tr>`;
+    return `<tr data-driving="${r?.driving?'true':'false'}"><td>${val('code','text','maxlength="30"')}<div class="schedule-description">${e(event?t.name:a.description)}</div><small>${event?(t.actualFinish?'Milestone · achieved':'Milestone · pending'):e(a.progress)+'% physical complete'}</small><span data-schedule-driver>${r?.driving?'Driving':''}</span><label class="field">WBS<select data-schedule-task="${e(t.id)}" data-schedule-key="wbsId">${phaseOptions(t.wbsId)}</select></label>${event?`<button class="small quiet" data-action="edit-schedule-milestone" data-id="${e(t.id)}">Edit name</button> <button class="small quiet" data-action="remove-schedule-milestone" data-id="${e(t.id)}">Remove</button>`:materialButton(s,t)}</td><td>${event?'0':val('days','number','min="1" max="3650" step="1"')}</td><td>${val('earliest','date')}</td><td>${event?'—':val('actualStart','date')}</td><td>${val('actualFinish','date',event?'title="Date achieved"':'')}</td><td>${event?'—':val('remaining','number','min="1" max="3650" step="1" placeholder="Estimate"')}${!event?`<small data-schedule-remaining>${r?.remainingSource==='estimated'?'Est. '+r.remaining+' d':r?.remainingSource==='entered'?'Entered':r?.remaining===0?'Complete':''}</small>`:''}</td><td>${val('expectedFinish','date')}</td><td>${pair(r?.plannedStart,r?.plannedFinish)}</td><td>${pair(r?.baselineStart,r?.baselineFinish)}</td><td>${pair(r?.forecastStart,r?.forecastFinish)}</td><td>${delta(r?.varianceDays,' days')}</td><td>${r?.floatDays==null?'—':e(r.floatDays)}</td></tr>`;
    }).join('')}</tbody></table></div>${!tasks.length?'<p class="notice">Add work in Activities first.</p>':''}</section>
    <section class="card"><div class="card-head"><div><h2>Relationships</h2><p class="muted">FS: finish → start; SS: start → start; FF: finish → finish; SF: start → finish. Lag is in working days; negative lag allows overlap. A relationship sets an earliest bound for the successor event.</p></div></div><div class="form-grid"><label class="field">Predecessor<select id="scheduleFrom"><option value="">Select activity</option>${options}</select></label><label class="field">Successor<select id="scheduleTo"><option value="">Select activity</option>${options}</select></label><label class="field">Relationship<select id="scheduleRelation">${S.TYPES.map(t=>opt(t,t,'FS')).join('')}</select></label><label class="field">Lag (workdays)<input id="scheduleLag" type="number" value="0" min="-3650" max="3650" step="1"></label></div><div class="toolbar schedule-toolbar"><button data-action="add-schedule-link">Add relationship</button></div>
-   ${s.links.length?`<div class="table-scroll"><table><thead><tr><th>Predecessor</th><th>Successor</th><th>Type</th><th>Lag</th><th></th></tr></thead><tbody>${s.links.map(l=>`<tr><td>${e(byId.get(l.from)?.code||'Removed activity')}</td><td>${e(byId.get(l.to)?.code||'Removed activity')}</td><td>${e(l.type)}</td><td>${e(l.lag)}</td><td><button class="small" data-action="remove-schedule-link" data-id="${e(l.id)}">Remove</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No relationships yet. Unlinked activities may start together.</p>'}</section>${structure(p,s)}</div>`;
+   ${s.links.length?`<div class="table-scroll"><table><thead><tr><th>Predecessor</th><th>Successor</th><th>Type</th><th>Lag</th><th></th></tr></thead><tbody>${s.links.map(l=>`<tr><td>${e(byId.get(l.from)?.code||'Removed activity')}</td><td>${e(byId.get(l.to)?.code||'Removed activity')}</td><td>${e(l.type)}${l.material?' · Materials':''}</td><td>${e(l.lag)}</td><td><button class="small" data-action="remove-schedule-link" data-id="${e(l.id)}">Remove</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">No relationships yet. Unlinked activities may start together.</p>'}</section>${structure(p,s)}</div>`;
   }
   function current(){const p=project();if(!p)throw Error('Open a project first.');return [p,S.prepare(p,today())]}
   function save(p,s){S.validateSchedule(s);change(()=>{p.schedule=s},true)}
   function onField(node){
+   if(node.id==='scheduleMaterialSource'){
+    const fields=document.getElementById('scheduleMaterialNew'),box=document.getElementById('scheduleMaterialLag');
+    if(fields)fields.hidden=!!node.value;
+    const existing=project()?.schedule?.links.find(l=>l.from===node.value&&l.to===node.dataset.id&&l.type==='FS');
+    if(box)box.value=existing?.lag??0;
+    return true;
+   }
    if(node.dataset.ganttLinks!==undefined){node.closest('.schedule-timeline')?.classList.toggle('gantt-hide-links',!node.checked);return true}
    if(!node.dataset.scheduleKey&&!node.dataset.scheduleDay)return false;
    try{
@@ -120,6 +196,15 @@
    p.schedule.links.forEach((link,i)=>{if(labels[i]){labels[i].cells[0].textContent=codes.get(link.from)||'Removed activity';labels[i].cells[1].textContent=codes.get(link.to)||'Removed activity'}});
   }
   const actions={
+   'open-schedule-materials':node=>showMaterials(node.dataset.id),
+   'edit-schedule-material':node=>showMaterials(node.dataset.id,node.dataset.link),
+   'save-schedule-material':saveMaterial,
+   'go-to-schedule-delivery':node=>{closeModal();focusScheduleField(node.dataset.id,'earliest')},
+   'remove-schedule-material':node=>{
+    const key=node.dataset.id,{p,s}=materialContext(key),link=materialLinks(s,key).find(l=>l.id===node.dataset.link);
+    if(!link)throw Error('This material link no longer exists.');
+    s.links=s.links.filter(l=>l.id!==link.id);save(p,s);showMaterials(key);notify('Link removed. The delivery milestone is still in the schedule.');
+   },
    'add-schedule-exception':()=>{const [p,s]=current(),date=document.getElementById('scheduleExceptionDate').value,type=document.getElementById('scheduleExceptionType').value,label=document.getElementById('scheduleExceptionLabel').value.trim();
     if(!date)throw Error('Choose the exception date.');
     s.exceptions=[...(s.exceptions||[]).filter(x=>x.id!==date),{id:date,date,working:type==='work',label}].sort((a,b)=>a.date.localeCompare(b.date));save(p,s);
@@ -127,8 +212,7 @@
    'remove-schedule-exception':node=>{const [p,s]=current();s.exceptions=(s.exceptions||[]).filter(x=>x.id!==node.dataset.id);save(p,s)},
 
    'fix-schedule-actual':node=>{
-    const target=[...document.querySelectorAll('[data-schedule-task]')].find(el=>el.dataset.scheduleTask===node.dataset.id&&el.dataset.scheduleKey===node.dataset.field);
-    target?.scrollIntoView?.({block:'center',inline:'nearest'});target?.focus();
+    focusScheduleField(node.dataset.id,node.dataset.field);
    },
    'enable-schedule':()=>{const [p,s]=current();s.enabled=true;save(p,s)},
    'pause-schedule':()=>{const [p,s]=current();s.enabled=false;save(p,s);notify('Schedule paused. Plan and baselines were kept.')},
@@ -150,8 +234,7 @@
    },
    'add-schedule-milestone':()=>{const [p,s]=current(),name=document.getElementById('scheduleMilestoneName').value.trim();
     if(!name)throw Error('Enter a milestone name.');
-    const used=new Set(S.nodes(s).map(t=>t.code.toUpperCase()));let n=10,code;do{code='M'+String(n).padStart(3,'0');n+=10}while(used.has(code));
-    s.milestones.push({id:id(),code,name,wbsId:document.getElementById('scheduleMilestoneWbs').value,earliest:'',actualFinish:''});save(p,s);
+    newMilestone(s,name,document.getElementById('scheduleMilestoneWbs').value);save(p,s);
    },
    'edit-schedule-milestone':node=>{const [,s]=current(),m=s.milestones.find(t=>t.id===node.dataset.id);if(!m)return;
     modal('Edit milestone',`<label class="field">Milestone name<input id="scheduleEditMilestone" value="${e(m.name)}" maxlength="150"></label>`,`<button data-action="close-modal">Cancel</button><button class="primary" data-action="save-schedule-milestone" data-id="${e(m.id)}">Save</button>`);

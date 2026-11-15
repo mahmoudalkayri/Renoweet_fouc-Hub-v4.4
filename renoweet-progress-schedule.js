@@ -104,6 +104,7 @@
   for(const l of s.links){
    const key=l&&JSON.stringify([l.from,l.to,l.type]);
    if(!l||!str(l.id,100)||!l.id||linkIds.has(l.id)||!str(l.from,100)||!str(l.to,100)||l.from===l.to||!TYPES.includes(l.type)||!int(l.lag,-3650,3650)||linkKeys.has(key))throw Error('Invalid or duplicate schedule relationship in backup.');
+   if(l.material!==undefined&&(l.material!==true||l.type!=='FS'||!milestones.some(m=>m.id===l.from)))throw Error('An invalid material delivery is linked in the schedule.');
    linkIds.add(l.id);linkKeys.add(key);
   }
   const bases=new Set();
