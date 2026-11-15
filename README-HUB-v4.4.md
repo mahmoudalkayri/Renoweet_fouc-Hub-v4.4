@@ -1,3 +1,13 @@
+# Schedule review Gantt chart — 15 November 2026 · v4.4.4.66
+
+In **Progress Reports → Schedule**, the **Schedule review · Gantt chart** compares the selected baseline and current schedule. Grey shows the baseline, green shows actual dates recorded through the status date, and blue shows the remaining forecast. The work-complete percentage is shown separately; it is not inferred from the length of the actual bar. Dashed amber marks estimated spans where actual dates are missing. The chart includes a date grid, status date, milestone diamonds, WBS labels and dependency arrows. Arrows can be hidden for a cleaner view. The chart can still be used without a baseline.
+
+When saving a report, tick **Include Gantt chart in report** to add separate A4 chart pages. Use **Report details** to make this the default for the project; change the choice on each report before saving. Charts with more than 20 rows continue on a page with the same date scale. Dependency arrows appear on a printed page only when both endpoints are on that page. A saved report retains its own schedule, chart choice and dependency data.
+
+Validation: 32 regression suites and seven interface suites passed. Coverage includes recorded vs estimated actuals, dependencies, work remaining, with and without a baseline, opt-in and opt-out reporting, multipage chart pagination, history and Drive persistence. The generated chart was visually checked as SVG. Live browser PDF rendering was unavailable.
+
+---
+
 # Custom workweeks, WBS and milestones — 14 November 2026 · v4.4.4.65
 
 Each project can choose its own working weekdays in **Progress Reports → Schedule**. Tick any combination, from a one-day week to every day. Durations and relationship lags use those days. Existing baselines retain the workweek saved with them. If an old actual date falls outside the new workweek, the recorded date remains unchanged and the forecast flags it.

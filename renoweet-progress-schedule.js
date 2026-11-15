@@ -208,11 +208,11 @@
    const event=isMilestone(t),a=map.get(t.id),base=scope.get(t.id),aPlan=slots.get(t.id),f=forecast.get(t.id),end=t.actualFinish||finishDate(c,t,f);
    return {id:t.id,code:t.code,kind:event?'milestone':'activity',wbs:phases.get(t.wbsId)||'',description:String(event?t.name:a.description||'').slice(0,2500),days:t.days,progress:event?(t.actualFinish?100:0):fill(Number(a.progress)||0,0,100),remaining:f.remaining,
     plannedStart:c.start(aPlan.s),plannedFinish:finishDate(c,t,aPlan),baselineStart:base?.start||'',baselineFinish:base?.finish||'',
-    actualStart:event?t.actualFinish:t.actualStart,actualFinish:t.actualFinish,forecastStart:(event?t.actualFinish:t.actualStart)||c.start(f.s),forecastFinish:end,varianceDays:base?date(end)-date(base.finish):null};
+    actualStart:event?t.actualFinish:t.actualStart,actualFinish:t.actualFinish,remainingStart:f.resume==null?'':c.start(f.resume),forecastStart:(event?t.actualFinish:t.actualStart)||c.start(f.s),forecastFinish:end,varianceDays:base?date(end)-date(base.finish):null};
   });
   const finish=rows.map(r=>r.forecastFinish).sort().at(-1);
   return {version:1,statusDate,calendar:s.calendar,...(s.calendar==='custom'?{workdays:workdays(s.calendar,s.workdays)}:{}),plannedFinish:plan.finish,baseline:baseline?{id:baseline.id,name:baseline.name,finish:baseline.finish}:null,
-   target,actual,variance,coverage,finish,slipDays:baseline?date(finish)-date(baseline.finish):null,rows,warnings};
+   target,actual,variance,coverage,finish,slipDays:baseline?date(finish)-date(baseline.finish):null,rows,links:plan.used.map(({from,to,type,lag})=>({from,to,type,lag})),warnings};
  }
  function paymentMilestone(p,term){
   if(!term?.scheduleMilestoneId||!p.schedule)return null;
@@ -230,7 +230,9 @@
   if(!CAL.includes(s.calendar)||!Array.isArray(s.rows)||s.rows.length>250||!Array.isArray(s.warnings)||s.warnings.length>20||s.warnings.some(w=>!str(w,500)))throw Error('Invalid saved schedule forecast.');
   workdays(s.calendar,s.workdays);date(s.statusDate);date(s.plannedFinish);date(s.finish);
   if(s.baseline){if(!str(s.baseline.name,80)||!Number.isFinite(s.slipDays)||(![s.target,s.actual,s.variance,s.coverage].every(Number.isFinite)&&![s.target,s.actual,s.variance,s.coverage].every(x=>x===null))||[s.target,s.actual,s.coverage].some(n=>n<0||n>100)||Math.abs(s.variance)>100)throw Error('Invalid baseline comparison.');date(s.baseline.finish)}
-  for(const r of s.rows){if(!r||!str(r.code,30)||!str(r.description,2500)||!(r.kind==='milestone'?r.days===0:int(r.days,1,3650))||!int(r.remaining,0,3650)||!Number.isFinite(r.progress)||r.progress<0||r.progress>100)throw Error('Invalid saved schedule activity.');for(const k of ['plannedStart','plannedFinish','forecastStart','forecastFinish'])date(r[k]);for(const k of ['baselineStart','baselineFinish','actualStart','actualFinish'])if(r[k])date(r[k]);if(r.varianceDays!==null&&!Number.isFinite(r.varianceDays))throw Error('Invalid schedule variance.')}
+  const ids=new Set(s.rows.map(r=>r?.id));
+  if(s.links!==undefined&&(!Array.isArray(s.links)||s.links.length>1200||s.links.some(l=>!l||!ids.has(l.from)||!ids.has(l.to)||l.from===l.to||!TYPES.includes(l.type)||!int(l.lag,-3650,3650))))throw Error('Invalid schedule relationships in report.');
+  for(const r of s.rows){if(!r||!str(r.code,30)||!str(r.description,2500)||!(r.kind==='milestone'?r.days===0:int(r.days,1,3650))||!int(r.remaining,0,3650)||!Number.isFinite(r.progress)||r.progress<0||r.progress>100)throw Error('Invalid saved schedule activity.');for(const k of ['plannedStart','plannedFinish','forecastStart','forecastFinish'])date(r[k]);for(const k of ['baselineStart','baselineFinish','actualStart','actualFinish','remainingStart'])if(r[k])date(r[k]);if(r.varianceDays!==null&&!Number.isFinite(r.varianceDays))throw Error('Invalid schedule variance.')}
  }
  return {TYPES,CAL,WEEK,LABELS,workdays,calendarLabel,nodes,wbsRows,blank,prepare,validateSchedule,validateReport,networkCheck,makeBaseline,calculate,paymentMilestone};
 });

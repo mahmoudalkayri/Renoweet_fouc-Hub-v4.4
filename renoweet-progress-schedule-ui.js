@@ -11,13 +11,9 @@
   function pair(a,b){return `${dateText(a)}<br>${dateText(b)}`}
   const delta=(n,suffix)=>n===null||n===undefined?'—':`${n>0?'+':''}${Number(n).toFixed(suffix===' pp'?1:0)}${suffix}`;
   function timeline(f){
-   if(!f.rows.length)return '';
-   const at=d=>Date.parse(d+'T00:00:00Z')/86400000;
-   const all=f.rows.flatMap(r=>[r.forecastStart,r.forecastFinish,r.baselineStart,r.baselineFinish].filter(Boolean).map(at));
-   const first=Math.min(...all),last=Math.max(...all),span=last-first+1;
-   const bar=(a,b,cls)=>a&&b?`<i class="${cls}" style="left:${100*(at(a)-first)/span}%;width:${100*(at(b)-at(a)+1)/span}%"></i>`:'';
-   const dates=Array.from({length:5},(_,i)=>new Date((first+Math.round((span-1)*i/4))*86400000).toISOString().slice(0,10));
-   return `<details class="schedule-timeline"><summary>Show timeline</summary><div class="schedule-dates">${dates.map(d=>`<span>${e(d.slice(5))}</span>`).join('')}</div><div class="schedule-timeline-rows">${f.rows.map(r=>`<div class="schedule-bar-row" title="${e(r.description)}"><b>${e(r.code)}</b><div>${f.baseline?bar(r.baselineStart,r.baselineFinish,'baseline'):''}${bar(r.forecastStart,r.forecastFinish,'forecast')}</div></div>`).join('')}</div><p class="muted">Grey: selected baseline · Teal: forecast · Calendar dates shown</p></details>`;
+   const G=root.RenoweetProgressGantt;
+   if(!G||!f.rows.length)return '';
+   return `<details class="schedule-timeline" open><summary>Schedule review · Gantt chart</summary><p class="muted">${f.baseline?'Against '+e(f.baseline.name)+'.':'No baseline selected. This chart shows actuals and the remaining forecast.'} Scroll sideways for later dates. Actual bars show recorded date spans; use the percentages for work completed.</p>${G.legend(f)}<label class="check gantt-links-control"><input type="checkbox" data-gantt-links checked>Show dependency arrows</label><div class="gantt-scroll" tabindex="0" role="region" aria-label="Scrollable project schedule chart">${G.svg(f)}</div></details>`;
   }
   function structure(p,s){
    const groups=S.wbsRows(s),items=S.nodes(s).filter(t=>t.kind==='milestone'||p.activities.some(a=>a.id===t.id&&!a.removedFromOs)),options=(current='',except='')=>opt('','Project root / unassigned',current)+groups.filter(w=>w.id!==except).map(w=>opt(w.id,'  '.repeat(w.depth)+w.number+' '+w.name,current)).join('');
@@ -47,6 +43,7 @@
   function current(){const p=project();if(!p)throw Error('Open a project first.');return [p,S.prepare(p,today())]}
   function save(p,s){S.validateSchedule(s);change(()=>{p.schedule=s},true)}
   function onField(node){
+   if(node.dataset.ganttLinks!==undefined){node.closest('.schedule-timeline')?.classList.toggle('gantt-hide-links',!node.checked);return true}
    if(!node.dataset.scheduleKey&&!node.dataset.scheduleDay)return false;
    try{
     const [p,s]=current(),key=node.dataset.scheduleKey;let value=node.value;
@@ -73,7 +70,7 @@
    const next=temp.firstElementChild;
    if(!next)return;
    const a=old.querySelectorAll(':scope > section'),b=next.querySelectorAll(':scope > section');
-   const wasOpen=a[0]?.querySelector('.schedule-timeline')?.open;
+   const oldChart=a[0]?.querySelector('.schedule-timeline'),wasOpen=oldChart?.open,priorScroll=oldChart?.querySelector('.gantt-scroll'),hideLinks=oldChart?.classList.contains('gantt-hide-links');
    // Keep inputs and pending relationship selections in place while replacing calculated cells.
    const status=a[0]?.querySelectorAll('.schedule-kpis,.notice,.schedule-timeline,[data-schedule-asof]')||[];
    for(const n of status)n.remove();
@@ -82,7 +79,9 @@
     const row=b[2]?.querySelectorAll('tbody tr')[i];
     if(row&&r.cells[0].querySelector('small'))r.cells[0].querySelector('small').textContent=row.cells[0].querySelector('small').textContent;if(row)for(let j=6;j<10;j++)r.cells[j].innerHTML=row.cells[j].innerHTML;
    });
-   if(wasOpen&&a[0].querySelector('.schedule-timeline'))a[0].querySelector('.schedule-timeline').open=true;
+   const chart=a[0].querySelector('.schedule-timeline'),scroller=chart?.querySelector('.gantt-scroll');
+   if(chart&&oldChart){chart.open=wasOpen;chart.classList.toggle('gantt-hide-links',hideLinks);chart.querySelector('[data-gantt-links]').checked=!hideLinks}
+   if(scroller&&priorScroll){scroller.scrollLeft=priorScroll.scrollLeft;scroller.scrollTop=priorScroll.scrollTop}
    const baselineActions=a[1]?.querySelector('.schedule-toolbar'),updatedActions=b[1]?.querySelector('.schedule-toolbar');
    if(baselineActions&&updatedActions){
     const selector='[data-action="view-schedule-baseline"]',old=baselineActions.querySelector(selector),next=updatedActions.querySelector(selector);
