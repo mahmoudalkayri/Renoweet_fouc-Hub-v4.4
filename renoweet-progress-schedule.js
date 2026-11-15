@@ -23,11 +23,36 @@
   return [...days].sort((a,b)=>a-b);
  }
  function calendarLabel(kind,days){return workdays(kind,days).map(d=>LABELS[d-1]).join(', ')}
- function calendar(kind,days){
+ const LOGIC=['retain','override'];
+ function validateExceptions(list){
+  if(list===undefined)return;
+  if(!Array.isArray(list)||list.length>366)throw Error('A calendar supports up to 366 exception dates.');
+  const seen=new Set();
+  for(const e of list){
+   if(!e||typeof e.working!=='boolean'||e.id!==e.date||seen.has(e.date)||!str(e.label,100))throw Error('Invalid or duplicate calendar exception.');
+   date(e.date);seen.add(e.date);
+  }
+ }
+ function calendar(kind,days,exceptions=[]){
   const w=workdays(kind,days),per=w.length;
-  const work=n=>w.includes(((n-MONDAY)%7+7)%7+1);
-  const toIndex=n=>{const offset=n-MONDAY,week=Math.floor(offset/7),d=offset-week*7+1;return week*per+w.filter(x=>x<d).length};
-  const fromIndex=n=>{const week=Math.floor(n/per);return MONDAY+7*week+w[n-week*per]-1};
+  const regular=n=>w.includes(((n-MONDAY)%7+7)%7+1);
+  const normalIndex=n=>{const offset=n-MONDAY,week=Math.floor(offset/7),d=offset-week*7+1;return week*per+w.filter(x=>x<d).length};
+  const values=new Map(exceptions.map(e=>[date(e.date),e.working])),xs=[...values.keys()].sort((a,b)=>a-b),prefix=[0];
+  for(const day of xs)prefix.push(prefix.at(-1)+Number(values.get(day))-Number(regular(day)));
+  const work=n=>values.get(n)??regular(n);
+  const toIndex=n=>{
+   let lo=0,hi=xs.length;
+   while(lo<hi){const mid=(lo+hi)>>1;if(xs[mid]<n)lo=mid+1;else hi=mid}
+   return normalIndex(n)+prefix[lo];
+  };
+  const min=date('1900-01-01'),max=date('2200-12-31');
+  const fromIndex=n=>{
+   if(!xs.length){const week=Math.floor(n/per);return MONDAY+7*week+w[n-week*per]-1}
+   if(n<toIndex(min)||n>=toIndex(max+1))throw Error('The calculated date is outside the supported calendar.');
+   let lo=min,hi=max;
+   while(lo<hi){const mid=Math.floor((lo+hi)/2);if(toIndex(mid+1)>n)hi=mid;else lo=mid+1}
+   return lo;
+  };
   return {work,toIndex,fromIndex,start:n=>iso(fromIndex(n)),end:n=>iso(fromIndex(n-1)),checked:(s,label)=>{const n=date(s);if(!work(n))throw Error(label+' falls on a nonworking day.');return toIndex(n)}};
  }
  const isMilestone=t=>t.kind==='milestone';
@@ -44,7 +69,10 @@
  function validateSchedule(s){
   if(!s||s.version!==1||!CAL.includes(s.calendar)||!str(s.start,10)||!str(s.statusDate,10)||!Array.isArray(s.tasks)||s.tasks.length>300||!Array.isArray(s.links)||s.links.length>1200||!Array.isArray(s.baselines)||s.baselines.length>30||!str(s.baselineId,100))throw Error('Invalid project schedule in backup.');
   if(s.start)date(s.start);if(s.statusDate)date(s.statusDate);
-  workdays(s.calendar,s.workdays);
+  workdays(s.calendar,s.workdays);validateExceptions(s.exceptions);
+  if(s.logic!==undefined&&!LOGIC.includes(s.logic))throw Error('Choose a scheduling rule for work started out of sequence.');
+  if(s.handoverId!==undefined&&!str(s.handoverId,100))throw Error('Invalid handover milestone.');
+  if(s.deadline!==undefined){if(!str(s.deadline,10))throw Error('Invalid handover deadline.');if(s.deadline)date(s.deadline)}
   if(s.enabled!==undefined&&typeof s.enabled!=='boolean')throw Error('Invalid schedule status.');
   const wbs=s.wbs===undefined?[]:s.wbs,milestones=s.milestones===undefined?[]:s.milestones;
   if(!Array.isArray(wbs)||wbs.length>60||!Array.isArray(milestones)||milestones.length>100)throw Error('Invalid WBS or milestone list.');
@@ -69,6 +97,8 @@
    if(!m||!str(m.id,100)||!m.id||taskIds.has(m.id)||!str(m.code,30)||!m.code.trim()||codes.has(m.code.toUpperCase())||!str(m.name,150)||!m.name.trim()||!str(m.earliest,10)||!str(m.actualFinish,10))throw Error('Use a unique milestone ID and a name.');
    taskIds.add(m.id);codes.add(m.code.toUpperCase());if(m.earliest)date(m.earliest);if(m.actualFinish)date(m.actualFinish);
   }
+  if(s.handoverId&&!milestones.some(m=>m.id===s.handoverId))throw Error('Choose an existing handover milestone.');
+  for(const t of [...s.tasks,...milestones])if(t.expectedFinish!==undefined){if(!str(t.expectedFinish,10))throw Error('Invalid expected finish date.');if(t.expectedFinish)date(t.expectedFinish)}
   for(const t of [...s.tasks,...milestones])if(t.wbsId!==undefined&&(!str(t.wbsId,100)||(t.wbsId&&!groups.has(t.wbsId))))throw Error('A schedule item refers to a missing WBS section.');
   const linkIds=new Set(),linkKeys=new Set();
   for(const l of s.links){
@@ -85,7 +115,7 @@
     if(!r||!str(r.id,100)||ids.has(r.id)||!str(r.code,30)||!str(r.description,2500)||!(r.kind==='milestone'?r.days===0&&r.start===r.finish&&r.weight===0:int(r.days,1,3650))||!Number.isFinite(r.weight)||r.weight<0||r.weight>100||date(r.finish)<date(r.start))throw Error('Invalid baseline activity in backup.');
     ids.add(r.id);
    }
-   const bc=calendar(b.calendar,b.workdays);
+   validateExceptions(b.exceptions);const bc=calendar(b.calendar,b.workdays,b.exceptions);
    for(const r of b.rows)if(r.kind==='milestone'?!bc.work(date(r.start)):bc.checked(r.finish,r.code)+1-bc.checked(r.start,r.code)!==r.days)throw Error('Baseline duration does not match its calendar.');
    if(Math.abs(b.rows.reduce((sum,r)=>sum+r.weight,0)-(b.rows.some(r=>r.kind!=='milestone')?100:0))>.02)throw Error('Baseline weights must total 100%.');
    for(const l of b.links)if(!l||!ids.has(l.from)||!ids.has(l.to)||l.from===l.to||!TYPES.includes(l.type)||!int(l.lag,-3650,3650))throw Error('Invalid baseline relationship.');
@@ -94,7 +124,7 @@
   return s;
  }
  function blank(today){
-  date(today);return {version:1,calendar:'weekdays',start:today,statusDate:'',tasks:[],links:[],baselines:[],baselineId:'',wbs:[],milestones:[]};
+  date(today);return {version:1,calendar:'weekdays',start:today,statusDate:'',tasks:[],links:[],baselines:[],baselineId:'',wbs:[],milestones:[],exceptions:[],logic:'retain',handoverId:'',deadline:''};
  }
  const active=p=>(p.activities||[]).filter(a=>!a.removedFromOs);
  function prepare(p,today){
@@ -129,7 +159,7 @@
   const {sorted,incoming,used}=network(tasks,s.links);
   const missing=tasks.filter(t=>!isMilestone(t)&&!t.days);
   if(missing.length)throw Error('Enter a duration for '+missing.map(t=>t.code).slice(0,6).join(', ')+(missing.length>6?' and '+(missing.length-6)+' more':'')+'.');
-  const c=calendar(s.calendar,s.workdays),anchor=c.toIndex(date(s.start)),slots=new Map();
+  const c=calendar(s.calendar,s.workdays,s.exceptions),anchor=c.toIndex(date(s.start)),slots=new Map();
   for(const t of sorted){
    let start=Math.max(anchor,t.earliest?c.toIndex(date(t.earliest)):anchor);
    for(const l of incoming.get(t.id))start=Math.max(start,bound(l,slots.get(l.from))-(l.type[1]==='F'?t.days:0));
@@ -143,18 +173,85 @@
   let sum=work.reduce((n,t)=>n+Math.max(0,byId.get(t.id)||0),0);
   const equal=!sum;if(equal)sum=work.length||1;
   const phases=new Map(wbsRows(s).map(w=>[w.id,w.number+' '+w.name]));
-  return {id,name:String(name||'').trim().slice(0,80),createdAt:now,calendar:s.calendar,...(s.calendar==='custom'?{workdays:workdays(s.calendar,s.workdays)}:{}),start:plan.c.start(plan.anchor),finish:plan.finish,links:clone(plan.used),rows:plan.tasks.map(t=>{
+  return {id,name:String(name||'').trim().slice(0,80),createdAt:now,calendar:s.calendar,...(s.calendar==='custom'?{workdays:workdays(s.calendar,s.workdays)}:{}),start:plan.c.start(plan.anchor),finish:plan.finish,...(s.exceptions?.length?{exceptions:clone(s.exceptions)}:{}),links:clone(plan.used),rows:plan.tasks.map(t=>{
    const slot=plan.slots.get(t.id),event=isMilestone(t);return {id:t.id,code:t.code,description:String(event?t.name:plan.map.get(t.id).description||'').slice(0,2500),days:t.days,start:plan.c.start(slot.s),finish:finishDate(plan.c,t,slot),weight:event?0:(equal?1:Math.max(0,byId.get(t.id)||0))*100/sum,kind:event?'milestone':'activity',wbs:phases.get(t.wbsId)||''};
   })};
+ }
+ function actualDateIssues(p,s,status){
+  const byId=new Map(active(p).map(a=>[a.id,a])),issues=[];
+  for(const t of nodes(s)){
+   const event=isMilestone(t),a=byId.get(t.id);if(!event&&!a)continue;
+   const add=(field,message)=>issues.push({id:t.id,field,code:t.code,message});
+   if(t.actualStart&&t.actualStart>status)add('actualStart',t.code+' actual start '+t.actualStart+' is after the status date ('+status+').');
+   if(t.actualFinish&&t.actualFinish>status)add('actualFinish',t.code+' actual finish '+t.actualFinish+' is after the status date ('+status+').');
+   else if(t.actualFinish&&!event){
+    if(!t.actualStart||t.actualFinish<t.actualStart)add('actualFinish',t.code+' needs an actual start on or before its actual finish.');
+    else if(Number(a.progress)<100)add('actualFinish',t.code+' has an actual finish but progress is below 100%. Clear the actual finish if work is still in progress; use Expected finish for a future date.');
+   }
+  }
+  return issues;
+ }
+ // Input errors should not hide the reference dates used to find and correct them.
+ function review(p,s,fallbackDate){
+  const status=s.statusDate||fallbackDate;let error;
+  try{return {forecast:calculate(p,s,fallbackDate)}}catch(e){error=String(e.message).slice(0,1500)}
+  try{validateSchedule(s);date(status)}catch{return {error,issues:[]}}
+  const issues=actualDateIssues(p,s,status);
+  const baseline=s.baselines.find(b=>b.id===s.baselineId)||null,scope=new Map((baseline?.rows||[]).map(r=>[r.id,r]));
+  let plan;try{plan=planned(p,s)}catch{}
+  const byId=new Map(active(p).map(a=>[a.id,a])),rejected=new Set(issues.map(issue=>issue.id+'|'+issue.field));
+  const phases=new Map(wbsRows(s).map(w=>[w.id,w.number+' '+w.name]));
+  const rows=nodes(s).filter(t=>isMilestone(t)||byId.has(t.id)).map(t=>{
+   const event=isMilestone(t),base=scope.get(t.id),a=byId.get(t.id),slot=plan?.slots.get(t.id);
+   const actualFinish=rejected.has(t.id+'|actualFinish')?'':t.actualFinish;
+   const actualStart=event?actualFinish:rejected.has(t.id+'|actualStart')?'':t.actualStart;
+   return {id:t.id,code:t.code,kind:event?'milestone':'activity',description:String(event?t.name:a.description||'').slice(0,2500),wbs:phases.get(t.wbsId)||'',
+    days:t.days,progress:event?(actualFinish?100:0):fill(Number(a.progress)||0,0,100),
+    plannedStart:slot?plan.c.start(slot.s):'',plannedFinish:slot?finishDate(plan.c,t,slot):'',
+    baselineStart:base?.start||'',baselineFinish:base?.finish||'',actualStart,actualFinish,
+    forecastStart:'',forecastFinish:'',remainingStart:'',remaining:null,varianceDays:null};
+  });
+  if(!rows.some(r=>r.baselineStart||r.plannedStart||r.actualStart))return {error,issues};
+  return {error,issues,chart:{version:1,reviewOnly:true,error,statusDate:status,calendar:s.calendar,...(s.calendar==='custom'?{workdays:workdays(s.calendar,s.workdays)}:{}),
+   plannedFinish:plan?.finish||'',baseline:baseline?{id:baseline.id,name:baseline.name,finish:baseline.finish}:null,finish:'',rows,links:[],warnings:[],
+   ...(issues.length?{actualIssues:issues.slice(0,20).map(x=>x.message)}:{})}};
+ }
+ // Backward pass over the remaining-work constraints actually used by the
+ // forecast. Actual starts and finishes are fixed observations, not float variables.
+ function pathAnalysis(c,sorted,forecast,constraints,rows,handoverId){
+  const open=sorted.filter(t=>forecast.get(t.id).resume!=null),byId=new Map(rows.map(r=>[r.id,r]));
+  const last=rows.reduce((d,r)=>r.forecastFinish>d?r.forecastFinish:d,'');
+  const selected=byId.get(handoverId),targets=selected?[selected]:rows.filter(r=>r.forecastFinish===last);
+  const late=new Map(),drivers=new Set(),drivingLinks=new Set(),incoming=new Map(open.map(t=>[t.id,[]])),outgoing=new Map(open.map(t=>[t.id,[]]));
+  for(const edge of constraints){incoming.get(edge.to).push(edge);outgoing.get(edge.from).push(edge)}
+  for(const t of [...open].reverse()){
+   const f=forecast.get(t.id),d=date(last);
+   // A milestone is a point at the start of a working day; the end of
+   // a normal activity is after its final working day.
+   let end=isMilestone(t)?c.toIndex(d+1)-1:c.toIndex(d+1);
+   let start=end-f.remaining;
+   for(const edge of outgoing.get(t.id))start=Math.min(start,late.get(edge.to)-edge.offset);
+   late.set(t.id,start);
+  }
+  const upstream=targets.filter(r=>forecast.get(r.id).resume!=null).map(r=>r.id);
+  while(upstream.length){
+   const id=upstream.pop();if(drivers.has(id))continue;drivers.add(id);
+   for(const e of incoming.get(id)||[])if(forecast.get(e.from).resume+e.offset===forecast.get(id).resume){drivingLinks.add(e.id);upstream.push(e.from)}
+  }
+  for(const row of rows){
+   const f=forecast.get(row.id);row.floatDays=late.has(row.id)?late.get(row.id)-f.resume:null;row.driving=drivers.has(row.id);
+  }
+  return {finish:last,drivingLinks,driverIds:sorted.filter(t=>drivers.has(t.id)).map(t=>t.id),
+   handover:selected?{id:selected.id,code:selected.code,name:selected.description,finish:selected.forecastFinish,achieved:!!selected.actualFinish}:null};
  }
  function calculate(p,s,fallbackDate){
   validateSchedule(s);
   const plan=planned(p,s),{c,map,sorted,incoming,slots}=plan;
-  const statusDate=s.statusDate||fallbackDate,day=date(statusDate),cut=c.toIndex(day+1),forecast=new Map(),warnings=[];
+  const statusDate=s.statusDate||fallbackDate,day=date(statusDate),cut=c.toIndex(day+1),forecast=new Map(),warnings=[],constraints=[],logic=s.logic||'retain';
   if(day<date(plan.c.start(plan.anchor)))warnings.push('The status date is before the first planned working day.');
   const ignored=s.links.length-plan.used.length;
   if(ignored)warnings.push(ignored+' relationship(s) ignored because a linked activity is no longer on the active estimate.');
-  let assumedFinish=0,assumedStart=0,logicWarnings=0,onHold=0,nonWorkingActuals=0;
+  let assumedFinish=0,assumedStart=0,logicWarnings=0,onHold=0,nonWorkingActuals=0,estimated=0,expectedMisses=0;
   for(const t of sorted){
    const event=isMilestone(t),a=map.get(t.id),pct=event?(t.actualFinish?100:0):fill(Number(a.progress)||0,0,100);
    const first=t.actualStart?date(t.actualStart):null,last=t.actualFinish?date(t.actualFinish):null;
@@ -167,6 +264,8 @@
    if(started&&actualStart===null&&!event)assumedStart++;
    const assumed=event&&complete?actualFinish:actualStart??Math.min(slot.s,(actualFinish??cut)-1);
    const remaining=complete||event?0:(t.remaining??Math.max(1,Math.ceil(t.days*(100-pct)/100)));
+   const source=complete||event?'none':t.remaining==null?'estimated':'entered';
+   if(source==='estimated')estimated++;
    if(!complete&&!event&&a.status==='On hold')onHold++;
    let res;
    if(complete){
@@ -175,25 +274,39 @@
     if(incoming.get(t.id).some(l=>bound(l,forecast.get(l.from))>(l.type[1]==='F'?res.f:res.s)))logicWarnings++;
    }else{
     const earliest=t.earliest?c.toIndex(date(t.earliest)):plan.anchor;
-    let start=Math.max(cut,plan.anchor,earliest),outOfSequence=false;
+    const expected=t.expectedFinish?c.toIndex(date(t.expectedFinish))+(event?0:1):null;
+    const earliestResume=Math.max(cut,plan.anchor,earliest,expected==null?-Infinity:expected-remaining);
+    let start=earliestResume,outOfSequence=false;
     for(const l of incoming.get(t.id)){
-     const limit=bound(l,forecast.get(l.from));
-     if(l.type[1]==='F')start=Math.max(start,limit-remaining);
-     else if(!started||limit>assumed){if(started)outOfSequence=true;start=Math.max(start,limit)}
+     const pred=forecast.get(l.from),limit=bound(l,pred),finishConstraint=l.type[1]==='F';
+     const violated=started&&(finishConstraint?limit>earliestResume+remaining:limit>assumed);
+     if(violated)outOfSequence=true;
+     if(started&&logic==='override')continue;
+     if(finishConstraint||!started||violated){
+      const shift=finishConstraint?remaining:0;
+      start=Math.max(start,limit-shift);
+      if(pred.resume!=null&&(l.type[0]==='F'||!pred.started)){
+       constraints.push({id:l.id,from:l.from,to:l.to,offset:(l.type[0]==='F'?pred.remaining:0)+l.lag-shift});
+      }
+     }
     }
     if(outOfSequence)logicWarnings++;
-    res={s:started?assumed:start,f:start+remaining,remaining,resume:start};
+    if(t.expectedFinish&&finishDate(c,t,{f:start+remaining})>t.expectedFinish)expectedMisses++;
+    res={s:started?assumed:start,f:start+remaining,remaining,resume:start,started};
    }
+   res.remainingSource=source;
    forecast.set(t.id,res);
   }
   if(nonWorkingActuals)warnings.push(nonWorkingActuals+' actual date(s) fall outside the current working week. Their recorded dates were kept.');
   if(assumedStart||assumedFinish)warnings.push('Missing actual dates: '+assumedStart+' start(s), '+assumedFinish+' finish(es). The forecast uses estimated dates for these; enter actuals to confirm them.');
-  if(logicWarnings)warnings.push(logicWarnings+' activity/activities started or finished out of logical sequence. Actual dates were kept; unmet links affect remaining work.');
+  if(logicWarnings)warnings.push(logicWarnings+' activity/activities started or finished out of logical sequence. Actual dates were kept. '+(logic==='override'?'Started work uses Progress override.':'Remaining work follows retained dependencies.'));
+  if(estimated)warnings.push(estimated+' unfinished activity/activities use estimated remaining days derived from physical progress. Enter remaining days to improve the forecast.');
+  if(expectedMisses)warnings.push(expectedMisses+' expected finish date(s) are earlier than the calculated forecast. The forecast respects the remaining days, applicable links and work calendar.');
   if(onHold)warnings.push(onHold+' on-hold activity/activities are forecast using their current remaining days; set a later earliest start if needed.');
   const baseline=s.baselines.find(b=>b.id===s.baselineId)||null,scope=new Map((baseline?.rows||[]).map(r=>[r.id,r]));
   let target=null,actual=null,variance=null,coverage=null;
   if(baseline&&baseline.rows.some(r=>r.kind!=='milestone')){
-   const bc=calendar(baseline.calendar,baseline.workdays),elapsed=bc.toIndex(day+1);let planPct=0,actualPct=0,matched=0;
+   const bc=calendar(baseline.calendar,baseline.workdays,baseline.exceptions),elapsed=bc.toIndex(day+1);let planPct=0,actualPct=0,matched=0;
    for(const t of baseline.rows.filter(r=>r.kind!=='milestone')){
     const start=bc.checked(t.start,t.code+' baseline start');
     planPct+=fill((elapsed-start)/t.days,0,1)*t.weight;
@@ -208,11 +321,18 @@
    const event=isMilestone(t),a=map.get(t.id),base=scope.get(t.id),aPlan=slots.get(t.id),f=forecast.get(t.id),end=t.actualFinish||finishDate(c,t,f);
    return {id:t.id,code:t.code,kind:event?'milestone':'activity',wbs:phases.get(t.wbsId)||'',description:String(event?t.name:a.description||'').slice(0,2500),days:t.days,progress:event?(t.actualFinish?100:0):fill(Number(a.progress)||0,0,100),remaining:f.remaining,
     plannedStart:c.start(aPlan.s),plannedFinish:finishDate(c,t,aPlan),baselineStart:base?.start||'',baselineFinish:base?.finish||'',
-    actualStart:event?t.actualFinish:t.actualStart,actualFinish:t.actualFinish,remainingStart:f.resume==null?'':c.start(f.resume),forecastStart:(event?t.actualFinish:t.actualStart)||c.start(f.s),forecastFinish:end,varianceDays:base?date(end)-date(base.finish):null};
+    actualStart:event?t.actualFinish:t.actualStart,actualFinish:t.actualFinish,expectedFinish:t.expectedFinish||'',remainingSource:f.remainingSource,remainingStart:f.resume==null?'':c.start(f.resume),forecastStart:(event?t.actualFinish:t.actualStart)||c.start(f.s),forecastFinish:end,varianceDays:base?date(end)-date(base.finish):null};
   });
-  const finish=rows.map(r=>r.forecastFinish).sort().at(-1);
+  const analysis=pathAnalysis(c,sorted,forecast,constraints,rows,s.handoverId),finish=analysis.finish;
+  const deadline=s.deadline||'',targetFinish=analysis.handover?.finish||finish;
+  if(analysis.handover&&targetFinish<finish)warnings.push('Some work is forecast after the selected handover milestone. Check the handover predecessors.');
+  const drivers=analysis.driverIds.map(id=>rows.find(r=>r.id===id).code);
+  const calendarChanges=(s.exceptions||[]).filter(e=>e.date>=s.start&&e.date<=finish).sort((a,b)=>a.date.localeCompare(b.date));
+  const calendarExceptions=calendarChanges.length;
   return {version:1,statusDate,calendar:s.calendar,...(s.calendar==='custom'?{workdays:workdays(s.calendar,s.workdays)}:{}),plannedFinish:plan.finish,baseline:baseline?{id:baseline.id,name:baseline.name,finish:baseline.finish}:null,
-   target,actual,variance,coverage,finish,slipDays:baseline?date(finish)-date(baseline.finish):null,rows,links:plan.used.map(({from,to,type,lag})=>({from,to,type,lag})),warnings};
+   target,actual,variance,coverage,finish,slipDays:baseline?date(finish)-date(baseline.finish):null,
+   method:{logic,estimated,nonWorkingActuals,calendarExceptions,calendarChanges:clone(calendarChanges),drivers,handover:analysis.handover,deadline,deadlineVariance:deadline?date(targetFinish)-date(deadline):null},
+   rows,links:plan.used.map(({id,from,to,type,lag})=>({from,to,type,lag,...(analysis.drivingLinks.has(id)?{driving:true}:{})})),warnings};
  }
  function paymentMilestone(p,term){
   if(!term?.scheduleMilestoneId||!p.schedule)return null;
@@ -226,13 +346,33 @@
  }
  function validateReport(s){
   if(!s||s.version!==1)throw Error('Invalid schedule report snapshot.');
-  if(s.error){if(!str(s.error,1500))throw Error('Invalid schedule note.');return}
+  if(s.error&&!str(s.error,1500))throw Error('Invalid schedule note.');
+  if(s.reviewOnly===true){
+   if(!s.error||!Array.isArray(s.rows)||!s.rows.length||s.rows.length>250||s.finish!==''||s.links?.length||s.actualIssues!==undefined&&(!Array.isArray(s.actualIssues)||s.actualIssues.length>20||s.actualIssues.some(x=>!str(x,500))))throw Error('Invalid schedule review snapshot.');
+   workdays(s.calendar,s.workdays);date(s.statusDate);if(s.plannedFinish)date(s.plannedFinish);
+   if(s.baseline){if(!str(s.baseline.name,80))throw Error('Invalid baseline review.');date(s.baseline.finish)}
+   const ids=new Set();
+   for(const r of s.rows){
+    if(!r||!str(r.id,100)||!r.id||ids.has(r.id)||!str(r.code,30)||!str(r.description,2500)||!str(r.wbs,150)||!Number.isFinite(r.progress)||r.progress<0||r.progress>100||r.forecastStart||r.forecastFinish||r.remaining!==null)throw Error('Invalid schedule review activity.');
+    ids.add(r.id);for(const k of ['plannedStart','plannedFinish','baselineStart','baselineFinish','actualStart','actualFinish'])if(r[k])date(r[k]);
+    if(r.actualStart>s.statusDate||r.actualFinish>s.statusDate||r.actualFinish&&(!r.actualStart||r.actualStart>r.actualFinish))throw Error('Invalid actual dates in schedule review.');
+   }
+   return;
+  }
+  if(s.error)return;
   if(!CAL.includes(s.calendar)||!Array.isArray(s.rows)||s.rows.length>250||!Array.isArray(s.warnings)||s.warnings.length>20||s.warnings.some(w=>!str(w,500)))throw Error('Invalid saved schedule forecast.');
   workdays(s.calendar,s.workdays);date(s.statusDate);date(s.plannedFinish);date(s.finish);
+  if(s.method){
+   const m=s.method;
+   if(!LOGIC.includes(m.logic)||!['estimated','calendarExceptions','nonWorkingActuals'].every(k=>int(m[k],0,366))||!Array.isArray(m.drivers)||m.drivers.length>250||m.drivers.some(c=>!str(c,30))||!str(m.deadline,10)||!(m.deadlineVariance===null||Number.isInteger(m.deadlineVariance)))throw Error('Invalid schedule forecast method.');
+   if(m.deadline)date(m.deadline);validateExceptions(m.calendarChanges);
+   if(m.calendarChanges&&m.calendarChanges.length!==m.calendarExceptions)throw Error('Invalid forecast calendar exceptions.');
+   if(m.handover){if(!str(m.handover.code,30)||!str(m.handover.name,2500)||m.handover.achieved!==undefined&&typeof m.handover.achieved!=='boolean')throw Error('Invalid handover forecast.');date(m.handover.finish)}
+  }
   if(s.baseline){if(!str(s.baseline.name,80)||!Number.isFinite(s.slipDays)||(![s.target,s.actual,s.variance,s.coverage].every(Number.isFinite)&&![s.target,s.actual,s.variance,s.coverage].every(x=>x===null))||[s.target,s.actual,s.coverage].some(n=>n<0||n>100)||Math.abs(s.variance)>100)throw Error('Invalid baseline comparison.');date(s.baseline.finish)}
   const ids=new Set(s.rows.map(r=>r?.id));
   if(s.links!==undefined&&(!Array.isArray(s.links)||s.links.length>1200||s.links.some(l=>!l||!ids.has(l.from)||!ids.has(l.to)||l.from===l.to||!TYPES.includes(l.type)||!int(l.lag,-3650,3650))))throw Error('Invalid schedule relationships in report.');
-  for(const r of s.rows){if(!r||!str(r.code,30)||!str(r.description,2500)||!(r.kind==='milestone'?r.days===0:int(r.days,1,3650))||!int(r.remaining,0,3650)||!Number.isFinite(r.progress)||r.progress<0||r.progress>100)throw Error('Invalid saved schedule activity.');for(const k of ['plannedStart','plannedFinish','forecastStart','forecastFinish'])date(r[k]);for(const k of ['baselineStart','baselineFinish','actualStart','actualFinish','remainingStart'])if(r[k])date(r[k]);if(r.varianceDays!==null&&!Number.isFinite(r.varianceDays))throw Error('Invalid schedule variance.')}
+  for(const r of s.rows){if(!r||!str(r.code,30)||!str(r.description,2500)||!(r.kind==='milestone'?r.days===0:int(r.days,1,3650))||!int(r.remaining,0,3650)||!Number.isFinite(r.progress)||r.progress<0||r.progress>100)throw Error('Invalid saved schedule activity.');for(const k of ['plannedStart','plannedFinish','forecastStart','forecastFinish'])date(r[k]);for(const k of ['baselineStart','baselineFinish','actualStart','actualFinish','remainingStart','expectedFinish'])if(r[k])date(r[k]);if(r.remainingSource!==undefined&&!['none','estimated','entered'].includes(r.remainingSource)||r.driving!==undefined&&typeof r.driving!=='boolean'||r.floatDays!==undefined&&r.floatDays!==null&&!int(r.floatDays,0,110000))throw Error('Invalid schedule forecast row.');if(r.varianceDays!==null&&!Number.isFinite(r.varianceDays))throw Error('Invalid schedule variance.')}
  }
- return {TYPES,CAL,WEEK,LABELS,workdays,calendarLabel,nodes,wbsRows,blank,prepare,validateSchedule,validateReport,networkCheck,makeBaseline,calculate,paymentMilestone};
+ return {TYPES,CAL,WEEK,LABELS,LOGIC,workdays,calendarLabel,nodes,wbsRows,blank,prepare,validateSchedule,validateReport,networkCheck,makeBaseline,calculate,review,paymentMilestone};
 });

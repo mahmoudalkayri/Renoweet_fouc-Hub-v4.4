@@ -1,3 +1,27 @@
+# Schedule forecasts and progress reports — 15 November 2026 · v4.4.4.68
+
+In **Progress Reports → Schedule**, set the status date to the last day covered by your update. Record actual dates only for work already done. In **Activities**, enter physical progress. In **Schedule**, enter remaining workdays if you know them; otherwise the forecast estimates them and marks them as estimated. Use **Expected finish** for a date the forecast should not finish before, and **Agreed deadline** to measure lateness without rescheduling the work.
+
+- Add a **calendar exception** for a holiday, site closure or extra working day. A saved baseline keeps the calendar that was used when you saved it.
+- **Retain dependencies** keeps unfinished predecessor requirements for remaining work. **Progress override** lets work that has already started continue despite an unfinished predecessor. Neither setting moves recorded actual dates.
+- Choose a **handover milestone** to see the activities and links driving handover. Without one, the path leads to overall finish. The Gantt shows these in red; the activity table shows float in working days against overall finish. The report distinguishes handover from overall finish when they differ.
+
+New reports freeze the forecast, baseline comparison and schedule assumptions. The first page shows the key dates and flags; **Include Gantt chart in report** adds the chart pages. Existing reports retain what was originally saved. New PDFs keep the **Project#-PR##-date.pdf** format. The scheduler works at whole-day granularity and does not perform resource leveling or import/export P6 schedules.
+
+Validation: 33 regression suites and seven interface suites passed, including independently checked early dates and float, calendar exceptions, overlapping dependencies, both out-of-sequence rules, and report snapshots. The Gantt SVG was visually checked. Direct comparison in Primavera P6 and live browser PDF export were not verified.
+
+---
+
+# Gantt review with invalid actual dates, and report filenames — 15 November 2026 · v4.4.4.67
+
+When actual dates conflict with the status date or the activity's completion percentage, Schedule lists the affected fields and lets you jump to each one. The chart still shows the selected baseline (or working plan when available) and valid actuals. Forecast bars and finish dates return when the inputs are corrected. The app never changes the recorded dates or completion percentage automatically. If there are no usable dates and a chart is requested, report saving explains how to proceed instead of silently omitting it.
+
+The report chart selection remains optional. Reports which already exist keep their original schedule data; save a new report to include a corrected schedule. New downloads and print-to-PDF suggestions use **Project#-PR##-date.pdf**, for example **P26-045-PR03-2026-11-15.pdf**. If the project reference is blank, the quotation number is used.
+
+Validation: 32 regression suites and seven interface suites passed, including the future-actual-date and incomplete-activity cases, chart fallback, restored forecast, report option and filename. The fallback chart was visually checked as SVG. Live browser PDF export was not verified.
+
+---
+
 # Schedule review Gantt chart — 15 November 2026 · v4.4.4.66
 
 In **Progress Reports → Schedule**, the **Schedule review · Gantt chart** compares the selected baseline and current schedule. Grey shows the baseline, green shows actual dates recorded through the status date, and blue shows the remaining forecast. The work-complete percentage is shown separately; it is not inferred from the length of the actual bar. Dashed amber marks estimated spans where actual dates are missing. The chart includes a date grid, status date, milestone diamonds, WBS labels and dependency arrows. Arrows can be hidden for a cleaner view. The chart can still be used without a baseline.
